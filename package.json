@@ -25,6 +25,7 @@
     "@types/react-dom": "19.2.7",
     "prettier": "3.9.6",
     "tsx": "4.23.13",
-    "typescript": "7.0.2"
+    "typescript": "7.0.2",
+    "vercel": "59.11.7"
   }
 }

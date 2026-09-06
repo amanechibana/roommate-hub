@@ -48,6 +48,20 @@ All household members can read and edit the household’s entries. Only the owne
 
 ## Deploy to Vercel
 
+The Vercel CLI is included as a development dependency. Deploy directly from this folder; no extra repository clone is needed:
+
+```sh
+npx vercel login
+npx vercel link
+npx vercel env add NEXT_PUBLIC_SUPABASE_URL production
+npx vercel env add NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY production
+npx vercel --prod
+```
+
+Use the HTTPS Supabase project URL for `NEXT_PUBLIC_SUPABASE_URL`, never a PostgreSQL connection string. The local `.env` file does not configure Vercel's hosted environment. Configure the database and email authentication as described above before deploying for household use.
+
+Alternatively, import the GitHub repository through Vercel's website:
+
 1. Push this repository to your Git provider and import it into [Vercel](https://vercel.com/new), using the detected Next.js preset.
 2. Add `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` as [Vercel environment variables](https://vercel.com/docs/environment-variables) for the desired environments.
 3. Deploy. These public variables are embedded during the build; changing them requires a new deployment.
