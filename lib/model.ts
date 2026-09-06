@@ -11,11 +11,9 @@ export type Entry = {
   amount: number | null;
   url: string;
   done: boolean;
-  series_id: string | null;
   created_by: string;
   created_at: string;
 };
-export type Repeat = "weekly" | "biweekly" | "monthly";
 export type Member = { user_id: string; household_id: string; name: string };
 export type Household = { id: string; name: string; owner_id: string };
 
@@ -24,27 +22,6 @@ export function dateKey(date: Date): string {
 }
 export function parseDate(value: string): Date {
   return new Date(`${value}T12:00:00`);
-}
-// Mirrors the server's expansion: monthly steps clamp to shorter months the
-// way Postgres date + interval does (Jan 31 -> Feb 28 -> Mar 31).
-export function seriesDates(
-  start: string,
-  repeat: Repeat,
-  until: string,
-): string[] {
-  const first = parseDate(start);
-  const end = parseDate(until);
-  const dates: string[] = [];
-  for (let n = 0; dates.length < 106; n++) {
-    const next = new Date(first);
-    if (repeat === "monthly") {
-      next.setMonth(first.getMonth() + n);
-      if (next.getDate() !== first.getDate()) next.setDate(0);
-    } else next.setDate(first.getDate() + n * (repeat === "weekly" ? 7 : 14));
-    if (next > end) break;
-    dates.push(dateKey(next));
-  }
-  return dates;
 }
 export function safeUrl(value: string): string | null {
   try {
@@ -143,7 +120,6 @@ export function demoData(): {
     amount: null,
     url: "",
     done: false,
-    series_id: null,
     created_by: "you",
     created_at: new Date().toISOString(),
   };

@@ -48,8 +48,7 @@ body:has(.fitted-app) {
   flex-direction: column;
   padding: 14px 30px 16px;
 }
-.fitted-app .content > footer,
-.fitted-app .footer-spacer {
+.fitted-app .content > footer {
   display: none;
 }
 .fitted-app .demo-banner {
@@ -291,23 +290,11 @@ body:has(.fitted-app) {
   .fitted-app .sidebar .brand {
     margin-bottom: 20px;
   }
+  .fitted-app .sidebar .house-selector {
+    margin-bottom: 15px;
+  }
 }
 @media (max-width: 650px) {
-  .fitted-app .pulse-row {
-    flex-wrap: nowrap;
-    overflow-x: auto;
-    scrollbar-width: none;
-    margin-top: 6px;
-    gap: 5px;
-  }
-  .fitted-app .pulse-chip {
-    flex-shrink: 0;
-    padding: 3px 7px;
-    font-size: 10px;
-  }
-  .fitted-app .pulse-chip select {
-    font-size: 10px;
-  }
   .fitted-app .main-shell {
     height: calc(100dvh - 67px);
     margin-bottom: 0;
