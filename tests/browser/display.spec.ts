@@ -59,15 +59,15 @@ test("display paginates a busy household, pauses, rotates, and survives reload",
   }
   await page.getByRole("button", { name: "Display mode", exact: true }).click();
   await expect(page).toHaveURL(/display=1/);
-  await expect(page.locator(".wall-pager > span")).toHaveText("1 / 3");
+  await expect(page.locator(".wall-pager > span")).toHaveText("1 / 4");
   await page.getByRole("button", { name: "Pause rotation" }).click();
   await page.clock.fastForward(21000);
-  await expect(page.locator(".wall-pager > span")).toHaveText("1 / 3");
+  await expect(page.locator(".wall-pager > span")).toHaveText("1 / 4");
   await page.getByRole("button", { name: "Resume rotation" }).click();
   await page.clock.fastForward(21000);
-  await expect(page.locator(".wall-pager > span")).toHaveText("2 / 3");
+  await expect(page.locator(".wall-pager > span")).toHaveText("2 / 4");
   await page.getByRole("button", { name: "Next display page" }).click();
-  await expect(page.locator(".wall-pager > span")).toHaveText("3 / 3");
+  await expect(page.locator(".wall-pager > span")).toHaveText("3 / 4");
   expect(
     await page
       .locator(".board-rows")
