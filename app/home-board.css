@@ -1,0 +1,832 @@
+/* A shared kitchen noticeboard: warm paper, gingham, and handwritten notes. */
+.mobile-agenda {
+  display: none;
+}
+.board-welcome > div:first-child {
+  min-width: 0;
+}
+.board-kicker {
+  overflow-wrap: anywhere;
+}
+@media (max-width: 650px) {
+  .calendar-scroll,
+  .desktop-calendar-help {
+    display: none;
+  }
+  .mobile-agenda {
+    display: block;
+  }
+  .agenda-entry {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    padding: 15px 20px;
+    background: transparent;
+    border: 0;
+    border-top: 1px solid var(--line);
+    text-align: left;
+  }
+  .agenda-entry > span:nth-child(2) {
+    flex: 1;
+    min-width: 0;
+  }
+  .agenda-entry strong {
+    display: block;
+    font-size: 14px;
+    font-weight: 500;
+    overflow-wrap: anywhere;
+  }
+  .agenda-entry > span > small {
+    display: block;
+    margin-top: 5px;
+    font-size: 11px;
+    color: #84735d;
+  }
+  .agenda-entry > svg {
+    flex-shrink: 0;
+    color: #9a896c;
+  }
+}
+:root {
+  --bg: #f8f2e8;
+  --paper: #fffdf7;
+  --ink: #453d33;
+  --muted: #807467;
+  --line: #e7ddce;
+  --green: #646e50;
+}
+body {
+  background-image: radial-gradient(#a8866120 0.6px, transparent 0.6px);
+  background-size: 6px 6px;
+}
+.sidebar {
+  background: #eee6d8;
+  border-color: #ded4c4;
+}
+.house-selector {
+  background: #e7ddca;
+  border-color: #ddd0b9;
+}
+.sidebar-note {
+  background: #e3d7bf;
+  color: #75634b;
+}
+.sidebar-note span,
+.house-selector small {
+  color: #776d59;
+}
+.topbar {
+  background: #fbf7ef;
+  height: 66px;
+}
+.topbar .private-label {
+  display: none;
+}
+.display-toggle {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  border: 1px solid #d8cebd;
+  border-radius: 7px;
+  background: #f6efdf;
+  padding: 9px 12px;
+  color: #6c604f;
+  font-size: 11px;
+  min-height: 40px;
+}
+.home-content {
+  max-width: 1260px;
+  padding-top: 18px;
+  padding-bottom: 22px;
+}
+.home-content .demo-banner {
+  margin-bottom: 17px;
+  background: #eee6d5;
+  color: #796c55;
+}
+.home-content > footer {
+  display: none;
+}
+.board-welcome {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+  margin: 0 0 22px;
+}
+.board-kicker {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: 0 0 8px;
+  color: #8c694e;
+  font-size: 12px;
+  font-weight: 500;
+}
+.board-welcome h1 {
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 38px;
+  font-weight: 400;
+  letter-spacing: -1px;
+  margin: 0 0 8px;
+}
+.board-summary {
+  font-size: 12px;
+  color: #807363;
+  margin: 0;
+}
+.board-quick-actions {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+.board-quick-actions button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 11px 13px;
+  min-height: 44px;
+  border: 1px solid #ded2bf;
+  background: #fff9ed;
+  border-radius: 9px;
+  color: #796048;
+  font-size: 12px;
+}
+.board-quick-actions button:first-child {
+  color: #fffaf1;
+  background: #a4664d;
+  border-color: #a4664d;
+}
+.noticeboard-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px;
+}
+.board-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  padding: 19px 22px 12px;
+  border: 1px solid #e0d5c4;
+  border-radius: 5px 7px 6px 8px;
+  background: #fffcf5;
+  box-shadow:
+    1px 3px 0 #8f73550b,
+    0 5px 16px #5c402008;
+}
+.board-card-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 9px;
+}
+.board-card-heading h2 {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-family: Georgia, serif;
+  font-weight: 400;
+  font-size: 21px;
+  color: #5d4939;
+  margin: 0;
+  letter-spacing: -0.3px;
+}
+.board-card-heading > span {
+  color: #857764;
+  font-size: 10px;
+  flex-shrink: 0;
+}
+.board-card-heading svg {
+  color: #a07555;
+  flex-shrink: 0;
+}
+.board-rows {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+.board-plan,
+.board-task,
+.board-shopping {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 0;
+  min-height: 56px;
+  border-bottom: 1px solid #e5d9c880;
+}
+.board-rows > :last-child {
+  border-bottom: 0;
+}
+.board-entry-copy {
+  flex: 1;
+  min-width: 0;
+}
+.board-entry-title,
+.board-entry-copy > strong {
+  display: block;
+  font-family: "DM Sans", sans-serif;
+  border: 0;
+  background: transparent;
+  padding: 0;
+  font-size: 13px;
+  color: #514536;
+  font-weight: 500;
+  text-align: left;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+.board-entry-title {
+  min-height: 24px;
+}
+.board-entry-copy > small {
+  display: block;
+  font-size: 11px;
+  color: #86745f;
+  margin-top: 3px;
+  line-height: 1.4;
+}
+.board-entry-copy > .board-overdue {
+  color: #a5533d;
+}
+.board-date {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: #ebdfcd;
+  border-radius: 6px;
+  width: 42px;
+  height: 43px;
+  flex-shrink: 0;
+  color: #876346;
+}
+.board-date small {
+  text-transform: uppercase;
+  font-size: 9px;
+  line-height: 1;
+}
+.board-date b {
+  font-family: Georgia, serif;
+  font-size: 24px;
+  font-weight: 400;
+  line-height: 1.2;
+}
+.chores-card {
+  background: #f1f1e4;
+  border-color: #d8dbc4;
+}
+.chores-card .board-card-heading h2,
+.chores-card .board-card-heading svg {
+  color: #62684e;
+}
+.board-check,
+.board-buy {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+  border: 1px solid #c5c9b0;
+  background: #fffff380;
+  color: #7f8967;
+  border-radius: 50%;
+}
+.board-check svg {
+  opacity: 0.25;
+}
+.board-check:hover svg,
+.board-check:focus-visible svg {
+  opacity: 1;
+}
+.board-buy {
+  width: 38px;
+  height: 38px;
+  border-radius: 8px;
+  border-color: #daccb5;
+  color: #9d7856;
+}
+.groceries-card {
+  background:
+    linear-gradient(90deg, #bd84621a 1px, transparent 1px),
+    linear-gradient(#bd84621a 1px, transparent 1px), #fff9eb;
+  background-size: 22px 22px;
+}
+.groceries-card .board-entry-copy {
+  background: #fff9ebcc;
+}
+.grocery-bullet {
+  width: 8px;
+  height: 8px;
+  border: 1.5px solid #b18c62;
+  border-radius: 50%;
+  margin: 0 7px;
+  flex-shrink: 0;
+}
+.fridge-card {
+  background: #f5e1b5;
+  border-color: #e7d1a5;
+}
+.board-tape {
+  position: absolute;
+  top: -7px;
+  left: 40%;
+  width: 70px;
+  height: 17px;
+  transform: rotate(-4deg);
+  background: repeating-linear-gradient(
+    90deg,
+    #bd876331 0 7px,
+    #c9a07b21 7px 14px
+  );
+  border-left: 2px dashed #f4ead070;
+  border-right: 2px dashed #f4ead070;
+}
+.fridge-message {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+.fridge-message h3,
+.fridge-message h3 button {
+  font-family: Georgia, serif;
+  font-size: 23px;
+  font-style: italic;
+  font-weight: 400;
+  color: #775238;
+  margin: 7px 0 10px;
+  overflow-wrap: anywhere;
+}
+.fridge-message h3 button {
+  padding: 0;
+  margin: 0;
+  border: 0;
+  background: none;
+  text-align: left;
+}
+.fridge-message > p {
+  font-family: Georgia, serif;
+  color: #846648;
+  font-size: 16px;
+  line-height: 1.55;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  margin-bottom: 12px;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.fridge-message > span {
+  display: block;
+  margin-top: auto;
+  padding: 7px 0;
+  font-size: 11px;
+  color: #8a6847;
+}
+.board-more {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  border: 0;
+  background: transparent;
+  color: #826548;
+  font-size: 11px;
+  padding: 8px 0;
+  margin-top: auto;
+  min-height: 35px;
+}
+.board-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 13px;
+  color: #96856c;
+  min-height: 125px;
+  flex: 1;
+}
+.board-empty p {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.8;
+}
+.wall-display {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  height: 100dvh;
+  width: 100%;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  background: radial-gradient(#986e4420 0.8px, transparent 0.8px), #efe4d3;
+  background-size: 7px 7px;
+  padding: clamp(14px, 2.6vh, 36px) clamp(16px, 3vw, 64px);
+}
+.wall-display .board-welcome {
+  flex-shrink: 0;
+  margin-bottom: clamp(12px, 2.5vh, 28px);
+}
+.wall-display .board-kicker {
+  font-size: clamp(12px, 1.3vw, 25px);
+}
+.wall-display .board-welcome h1 {
+  font-size: clamp(26px, 3vw, 62px);
+  max-width: none;
+}
+.wall-display .board-summary {
+  font-size: clamp(12px, 1.1vw, 24px);
+}
+.wall-clock {
+  display: flex;
+  flex-direction: column;
+  text-align: right;
+  gap: 5px;
+  flex-shrink: 0;
+}
+.wall-clock time {
+  font-family: Georgia, serif;
+  font-size: clamp(27px, 3.2vw, 68px);
+  font-variant-numeric: tabular-nums;
+}
+.wall-clock span {
+  font-size: clamp(11px, 1.05vw, 24px);
+  color: #897052;
+}
+.wall-display .noticeboard-grid {
+  flex: 1;
+  min-height: 0;
+  grid-template-rows: repeat(2, minmax(0, 1fr));
+  gap: clamp(12px, 2vh, 30px);
+}
+.wall-display .board-card {
+  min-height: 0;
+  padding: clamp(12px, 2vh, 28px) clamp(16px, 2vw, 36px);
+  overflow: hidden;
+}
+.wall-display .board-card-heading {
+  flex-shrink: 0;
+  margin-bottom: clamp(7px, 1.5vh, 20px);
+}
+.wall-display .board-card-heading h2 {
+  font-size: clamp(19px, 1.7vw, 38px);
+}
+.wall-display .board-card-heading > span {
+  font-size: clamp(10px, 0.9vw, 20px);
+}
+.wall-display .board-card-heading svg {
+  width: clamp(18px, 1.6vw, 32px);
+  height: auto;
+}
+.wall-display .board-plan,
+.wall-display .board-task,
+.wall-display .board-shopping {
+  flex: 1;
+  min-height: 0;
+  padding: clamp(5px, 1vh, 14px) 0;
+}
+.wall-display .board-entry-copy > strong {
+  font-size: clamp(15px, 1.45vw, 30px);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.wall-display .board-entry-copy > small {
+  font-size: clamp(11px, 1vw, 23px);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow: hidden;
+}
+.wall-display .board-date {
+  width: clamp(38px, 3.5vw, 70px);
+  height: clamp(42px, 5.5vh, 76px);
+}
+.wall-display .board-date b {
+  font-size: clamp(24px, 2.4vw, 45px);
+}
+.wall-display .board-date small {
+  font-size: clamp(9px, 0.8vw, 17px);
+}
+.wall-task-dot {
+  width: 11px;
+  height: 11px;
+  border: 1.5px solid #8e977a;
+  border-radius: 50%;
+  flex-shrink: 0;
+  margin-right: 6px;
+}
+.wall-display .fridge-message h3 {
+  font-size: clamp(21px, 2vw, 40px);
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+.wall-display .fridge-message > p {
+  font-size: clamp(17px, 1.65vw, 34px);
+  -webkit-line-clamp: 3;
+  margin: 0 0 6px;
+}
+.wall-display .fridge-message > span {
+  font-size: clamp(11px, 1vw, 22px);
+  flex-shrink: 0;
+}
+.wall-display .board-empty {
+  min-height: 0;
+}
+.wall-display .board-empty p {
+  font-size: clamp(14px, 1.2vw, 26px);
+}
+.wall-controls {
+  flex-shrink: 0;
+  display: flex;
+  gap: 15px;
+  align-items: center;
+  justify-content: space-between;
+  border: 0;
+  margin: 12px 0 0;
+  padding: 0;
+  min-height: 38px;
+  color: #826e56;
+}
+.wall-status {
+  font-size: clamp(10px, 0.8vw, 18px);
+}
+.wall-pager,
+.wall-actions {
+  display: flex;
+  gap: 5px;
+  align-items: center;
+}
+.wall-pager > span {
+  min-width: 43px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  font-size: 12px;
+}
+.wall-controls button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 8px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  min-height: 36px;
+  font-size: 11px;
+}
+.wall-controls button:hover {
+  background: #fff8eb88;
+}
+.wall-controls button:focus-visible {
+  outline: 2px solid #8a5f3e;
+  outline-offset: 1px;
+}
+.wall-controls button:disabled {
+  cursor: default;
+  opacity: 0.35;
+}
+.wall-warning {
+  font-size: 12px;
+  margin: 0 0 8px;
+  color: #a34e31;
+}
+.fullscreen-hint {
+  position: fixed;
+  bottom: 70px;
+  right: 30px;
+  padding: 12px 18px;
+  max-width: 350px;
+  background: #fff7e6;
+  border: 1px solid #d8c3a5;
+  border-radius: 6px;
+  font-size: 12px;
+}
+@media (max-width: 1100px) {
+  .board-welcome {
+    align-items: flex-start;
+  }
+  .board-welcome h1 {
+    font-size: 33px;
+  }
+  .board-quick-actions {
+    gap: 5px;
+  }
+  .board-quick-actions button {
+    padding: 10px;
+  }
+  .board-card {
+    padding: 16px 17px 10px;
+  }
+}
+@media (max-width: 650px) {
+  .topbar {
+    height: 57px;
+    padding: 0 15px;
+  }
+  .topbar > span {
+    gap: 7px;
+  }
+  .topbar > div {
+    gap: 6px;
+  }
+  .display-toggle {
+    min-height: 40px;
+    padding: 8px;
+  }
+  .display-toggle > span {
+    display: none;
+  }
+  .home-content {
+    padding: 12px 14px 18px;
+  }
+  .home-content .demo-banner {
+    margin-bottom: 18px;
+    padding: 6px 9px;
+  }
+  .board-welcome {
+    display: block;
+    margin-bottom: 18px;
+  }
+  .board-kicker {
+    font-size: 11px;
+  }
+  .board-welcome h1 {
+    font-size: 32px;
+    max-width: none;
+  }
+  .board-summary {
+    font-size: 12px;
+    line-height: 1.5;
+  }
+  .board-quick-actions {
+    margin-top: 14px;
+  }
+  .board-quick-actions button {
+    flex: 1;
+    font-size: 12px;
+  }
+  .noticeboard-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+  .board-card {
+    padding: 17px 19px 10px;
+  }
+  .board-card-heading h2 {
+    font-size: 22px;
+  }
+  .board-entry-title {
+    font-size: 14px;
+    min-height: 30px;
+  }
+  .board-entry-copy > small {
+    font-size: 12px;
+  }
+  .board-check,
+  .board-buy {
+    width: 44px;
+    height: 44px;
+  }
+  .board-more {
+    min-height: 44px;
+  }
+  input,
+  select,
+  textarea {
+    font-size: 16px;
+  }
+  .icon-button {
+    min-width: 40px;
+    min-height: 40px;
+  }
+  .task-row > .checkbox {
+    width: 36px;
+    height: 36px;
+  }
+  .wall-display .board-welcome {
+    display: flex;
+    gap: 10px;
+  }
+  .wall-display .board-welcome h1 {
+    font-size: 25px;
+  }
+  .wall-display .board-kicker {
+    font-size: 10px;
+  }
+  .wall-display .board-summary {
+    font-size: 10px;
+    max-width: 210px;
+  }
+  .wall-clock time {
+    font-size: 24px;
+  }
+  .wall-clock span {
+    font-size: 9px;
+    max-width: 95px;
+  }
+  .wall-display .noticeboard-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .wall-display .board-card {
+    padding: 12px 10px;
+  }
+  .wall-display .board-card-heading h2 {
+    font-size: 16px;
+    gap: 5px;
+  }
+  .wall-display .board-card-heading h2 svg {
+    display: none;
+  }
+  .wall-display .board-card-heading > span {
+    display: none;
+  }
+  .wall-display .board-entry-copy > strong {
+    font-size: 12px;
+  }
+  .wall-display .board-entry-copy > small {
+    font-size: 9px;
+  }
+  .wall-display .board-plan {
+    gap: 7px;
+  }
+  .wall-display .board-date {
+    width: 28px;
+    height: 36px;
+  }
+  .wall-display .board-date b {
+    font-size: 20px;
+  }
+  .wall-display .wall-task-dot,
+  .wall-display .grocery-bullet {
+    display: none;
+  }
+  .wall-display .fridge-message h3 {
+    font-size: 18px;
+  }
+  .wall-display .fridge-message > p {
+    font-size: 14px;
+  }
+  .wall-display .fridge-message > span {
+    font-size: 10px;
+  }
+  .wall-controls {
+    gap: 5px;
+    flex-wrap: wrap;
+  }
+  .wall-status {
+    flex-basis: 100%;
+    font-size: 9px;
+  }
+  .wall-pager {
+    margin-right: auto;
+  }
+  .wall-actions button {
+    font-size: 10px;
+    gap: 4px;
+  }
+  .wall-actions button:first-child > span {
+    display: none;
+  }
+}
+@media (max-height: 650px) and (min-width: 651px) {
+  .wall-display .board-welcome h1 {
+    font-size: 28px;
+  }
+  .wall-display .board-welcome {
+    margin-bottom: 10px;
+  }
+  .wall-display .board-kicker {
+    margin-bottom: 4px;
+    font-size: 11px;
+  }
+  .wall-display .board-summary {
+    font-size: 11px;
+  }
+  .wall-display .board-card-heading {
+    margin-bottom: 5px;
+  }
+  .wall-display .board-card-heading h2 {
+    font-size: 20px;
+  }
+  .wall-display .board-entry-copy > strong {
+    font-size: 15px;
+  }
+  .wall-display .fridge-message > p {
+    font-size: 16px;
+    -webkit-line-clamp: 2;
+  }
+  .wall-display .fridge-message h3 {
+    font-size: 20px;
+    margin: 3px 0 5px;
+  }
+}

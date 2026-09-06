@@ -1,0 +1,458 @@
+/* Home and calendar own the viewport; lists paginate instead of growing it. */
+html:has(.fitted-app),
+body:has(.fitted-app) {
+  overscroll-behavior: none;
+}
+@media (max-width: 650px) and (max-height: 700px) {
+  .fitted-app .board-summary {
+    display: none;
+  }
+  .fitted-app .board-card .board-more {
+    display: none;
+  }
+  .fitted-app .board-card .board-card-heading > span {
+    display: none;
+  }
+  .fitted-app .board-card .board-card-heading h2 {
+    font-size: 15px;
+  }
+  .fitted-app .board-card .fridge-message h3 {
+    margin: 3px 0;
+  }
+  .fitted-app .board-card .fridge-message > p {
+    -webkit-line-clamp: 2;
+    font-size: 12px;
+  }
+  .fitted-app .board-card .fridge-message > span {
+    padding: 3px 0;
+  }
+}
+.fitted-app {
+  height: 100dvh;
+  min-height: 0;
+}
+.fitted-app .main-shell {
+  height: 100%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+.fitted-app .topbar {
+  flex-shrink: 0;
+}
+.fitted-app .content {
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  padding: 14px 30px 16px;
+}
+.fitted-app .content > footer {
+  display: none;
+}
+.fitted-app .demo-banner {
+  flex-shrink: 0;
+  margin: 0 0 12px;
+  padding: 6px 10px;
+}
+.fitted-app .sidebar-bottom {
+  padding-top: 15px;
+}
+.fitted-app .sidebar-note {
+  display: none;
+}
+.fitted-app .home-board {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+.fitted-app .board-welcome {
+  flex-shrink: 0;
+  margin-bottom: 14px;
+}
+.fitted-app .board-welcome h1 {
+  font-size: 32px;
+  margin-bottom: 5px;
+}
+.fitted-app .board-kicker {
+  margin-bottom: 5px;
+}
+.fitted-app .noticeboard-grid {
+  flex: 1;
+  min-height: 0;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-rows: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+.fitted-app .board-card {
+  min-height: 0;
+  padding: 14px 18px 8px;
+}
+.fitted-app .board-card-heading {
+  flex-shrink: 0;
+  margin-bottom: 7px;
+}
+.fitted-app .board-card-heading h2 {
+  font-size: 20px;
+}
+.fitted-app .board-rows {
+  min-height: 0;
+}
+.fitted-app .board-plan,
+.fitted-app .board-task,
+.fitted-app .board-shopping {
+  flex: 1;
+  min-height: 0;
+  padding: 5px 0;
+}
+.fitted-app .board-entry-title {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  min-height: 0;
+}
+.fitted-app .board-entry-copy small {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.fitted-app .board-more {
+  flex-shrink: 0;
+  min-height: 28px;
+  padding: 4px 0;
+}
+.fitted-app .board-empty {
+  min-height: 0;
+}
+.fitted-app .fridge-message h3 {
+  font-size: 21px;
+  flex-shrink: 0;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
+}
+.fitted-app .fridge-message > p {
+  min-height: 0;
+  font-size: 15px;
+  margin-bottom: 5px;
+}
+.fitted-app .fridge-message > span {
+  flex-shrink: 0;
+}
+.home-pager,
+.agenda-pager {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+  min-height: 34px;
+  gap: 7px;
+  color: #88745c;
+  font-size: 11px;
+}
+.home-pager {
+  margin-top: 6px;
+}
+.home-pager > div {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+.home-pager button,
+.agenda-pager button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 34px;
+  height: 32px;
+  padding: 4px;
+  border: 0;
+  background: transparent;
+  border-radius: 5px;
+}
+.home-pager button:disabled,
+.agenda-pager button:disabled {
+  cursor: default;
+  opacity: 0.3;
+}
+.fitted-app .calendar-content .page-heading {
+  margin: 0 0 12px;
+  flex-shrink: 0;
+  align-items: center;
+}
+.calendar-content .page-heading .eyebrow,
+.calendar-content .page-heading .subtitle {
+  display: none;
+}
+.calendar-content .page-heading h1 {
+  font-size: 28px;
+  margin: 0;
+}
+.calendar-content .page-heading > .button {
+  margin: 0;
+}
+.fitted-app .calendar-panel {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+.calendar-panel > .panel-heading {
+  flex-shrink: 0;
+  padding: 12px 16px;
+}
+.calendar-panel .calendar-help {
+  display: none;
+}
+.calendar-panel .calendar-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow: visible;
+}
+.calendar-panel .calendar-grid {
+  height: 100%;
+  min-width: 0;
+  grid-template-rows: 30px repeat(var(--weeks), minmax(0, 1fr));
+}
+.calendar-panel .weekday {
+  padding: 7px;
+}
+.calendar-panel .calendar-cell {
+  min-height: 0;
+  padding: 4px;
+  gap: 3px;
+  position: relative;
+}
+.calendar-panel .day-number {
+  flex-shrink: 0;
+  height: 22px;
+  width: 22px;
+}
+.calendar-panel .calendar-event {
+  padding: 2px 4px;
+  line-height: 18px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex-shrink: 0;
+}
+.day-more {
+  position: absolute;
+  right: 4px;
+  top: 4px;
+  border: 0;
+  padding: 3px 5px;
+  border-radius: 4px;
+  background: #e8ddc9;
+  color: #85684a;
+  font-size: 10px;
+  min-width: 26px;
+  height: 22px;
+}
+.agenda-pager {
+  display: none;
+}
+.entry-dialog .agenda-entry {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 15px;
+  width: 100%;
+  border: 0;
+  border-top: 1px solid var(--line);
+  padding: 15px 0;
+  text-align: left;
+  background: transparent;
+}
+@media (max-height: 650px) and (min-width: 651px) {
+  .fitted-app .topbar {
+    height: 48px;
+  }
+  .fitted-app .board-welcome h1 {
+    font-size: 27px;
+  }
+  .fitted-app .board-summary {
+    display: none;
+  }
+  .fitted-app .board-card {
+    padding: 10px 14px 5px;
+  }
+  .fitted-app .board-card-heading h2 {
+    font-size: 18px;
+  }
+  .fitted-app .fridge-message > p {
+    -webkit-line-clamp: 2;
+  }
+  .fitted-app .sidebar .brand {
+    margin-bottom: 20px;
+  }
+  .fitted-app .sidebar .house-selector {
+    margin-bottom: 15px;
+  }
+}
+@media (max-width: 650px) {
+  .fitted-app .main-shell {
+    height: calc(100dvh - 67px);
+    margin-bottom: 0;
+  }
+  .fitted-app .content {
+    padding: 8px 12px 6px;
+  }
+  .fitted-app .demo-banner {
+    margin-bottom: 8px;
+    font-size: 9px;
+    padding: 4px 7px;
+  }
+  .fitted-app .demo-banner > span {
+    font-size: 0;
+    gap: 0;
+  }
+  .fitted-app .demo-banner > span:after {
+    content: "Sample home";
+    font-size: 9px;
+    margin-left: 5px;
+  }
+  .fitted-app .demo-banner button {
+    min-width: auto;
+  }
+  .fitted-app .board-welcome {
+    margin-bottom: 10px;
+  }
+  .fitted-app .board-welcome h1 {
+    font-size: 27px;
+  }
+  .fitted-app .board-kicker {
+    display: none;
+  }
+  .fitted-app .board-summary {
+    font-size: 10px;
+  }
+  .fitted-app .board-quick-actions {
+    margin-top: 9px;
+  }
+  .fitted-app .board-quick-actions button {
+    min-height: 36px;
+    padding: 7px;
+    font-size: 11px;
+  }
+  .fitted-app .noticeboard-grid {
+    gap: 10px;
+  }
+  .fitted-app .board-card {
+    padding: 10px 9px 5px;
+  }
+  .fitted-app .board-card-heading {
+    gap: 4px;
+    flex-wrap: wrap;
+    margin-bottom: 5px;
+  }
+  .fitted-app .board-card-heading h2 {
+    font-size: 17px;
+    gap: 4px;
+  }
+  .fitted-app .board-card-heading h2 svg {
+    display: none;
+  }
+  .fitted-app .board-card-heading > span {
+    font-size: 9px;
+  }
+  .fitted-app .board-plan,
+  .fitted-app .board-task,
+  .fitted-app .board-shopping {
+    gap: 5px;
+  }
+  .fitted-app .board-entry-title {
+    font-size: 12px;
+    line-height: 1.35;
+  }
+  .fitted-app .board-entry-copy small {
+    font-size: 9px;
+  }
+  .fitted-app .board-date {
+    width: 27px;
+    height: 35px;
+  }
+  .fitted-app .board-date b {
+    font-size: 20px;
+  }
+  .fitted-app .board-date small {
+    font-size: 8px;
+  }
+  .fitted-app .board-check,
+  .fitted-app .board-buy {
+    width: 28px;
+    height: 36px;
+    border-radius: 7px;
+  }
+  .fitted-app .grocery-bullet {
+    display: none;
+  }
+  .fitted-app .board-more {
+    font-size: 9px;
+  }
+  .fitted-app .fridge-message h3,
+  .fitted-app .fridge-message h3 button {
+    font-size: 17px;
+  }
+  .fitted-app .fridge-message > p {
+    font-size: 13px;
+    -webkit-line-clamp: 3;
+  }
+  .fitted-app .fridge-message > span {
+    font-size: 9px;
+  }
+  .fitted-app .board-empty {
+    display: block;
+  }
+  .fitted-app .board-empty > svg {
+    display: none;
+  }
+  .fitted-app .board-empty p {
+    font-size: 11px;
+  }
+  .fitted-app .home-pager > span {
+    font-size: 9px;
+  }
+  .fitted-app .calendar-content .page-heading {
+    display: flex;
+    margin-bottom: 8px;
+  }
+  .calendar-content .page-heading h1 {
+    font-size: 26px;
+  }
+  .calendar-panel .panel-heading {
+    padding: 9px 12px;
+    gap: 8px;
+  }
+  .calendar-panel .calendar-scroll {
+    display: none;
+  }
+  .calendar-panel .mobile-agenda {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+  }
+  .calendar-panel .agenda-entry {
+    flex: 1;
+    min-height: 0;
+    max-height: 85px;
+    padding: 8px 14px;
+  }
+  .calendar-panel .agenda-entry strong {
+    font-size: 13px;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .agenda-pager {
+    display: flex;
+    justify-content: center;
+    border-top: 1px solid var(--line);
+  }
+}
