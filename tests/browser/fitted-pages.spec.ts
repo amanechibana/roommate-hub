@@ -45,14 +45,12 @@ for (const [width, height] of [
       await page.mouse.wheel(0, 700);
       await page.waitForTimeout(100);
       expect(
-        await page
-          .locator(".topbar")
-          .evaluate((el) => ({
-            top: el.getBoundingClientRect().top,
-            scrollers: [...document.querySelectorAll("*")]
-              .filter((e) => e.scrollTop)
-              .map((e) => [e.className, e.scrollTop]),
-          })),
+        await page.locator(".topbar").evaluate((el) => ({
+          top: el.getBoundingClientRect().top,
+          scrollers: [...document.querySelectorAll("*")]
+            .filter((e) => e.scrollTop)
+            .map((e) => [e.className, e.scrollTop]),
+        })),
       ).toEqual({ top: 0, scrollers: [] });
       expect(await page.evaluate(() => window.scrollY)).toBe(0);
       await page.screenshot({
