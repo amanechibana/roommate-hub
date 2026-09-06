@@ -27,6 +27,7 @@ import {
   type Kind,
   type Member,
 } from "@/lib/model";
+import Pulse from "@/components/pulse";
 
 type Props = {
   household: Household;
@@ -201,6 +202,7 @@ export default function HomeBoard({
               ? `${due} ${due === 1 ? "thing needs" : "things need"} a little love today.`
               : "Nothing urgent. Make yourself a cup of something."}
           </p>
+          <Pulse demo={demo} />
         </div>
         {display ? (
           <div className="wall-clock">

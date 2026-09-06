@@ -8,7 +8,6 @@ import {
   type FormEvent,
   type CSSProperties,
 } from "react";
-import type { Session } from "@supabase/supabase-js";
 import {
   ArrowDownToLine,
   ArrowRight,
@@ -17,7 +16,6 @@ import {
   ChevronLeft,
   ChevronRight,
   ClipboardList,
-  Copy,
   ExternalLink,
   Home,
   Leaf,
@@ -33,7 +31,7 @@ import {
   Users,
   X,
 } from "lucide-react";
-import { supabase } from "@/lib/supabase";
+import { hasDatabase, homeRequest } from "@/lib/home-client";
 import HomeBoard from "@/components/home-board";
 import {
   calendarFile,
@@ -42,11 +40,19 @@ import {
   googleCalendarUrl,
   parseDate,
   safeUrl,
+  seriesDates,
   type Entry,
   type Household,
   type Kind,
   type Member,
+  type Repeat,
 } from "@/lib/model";
+
+type SaveValues = Partial<Entry> & {
+  repeat?: Repeat;
+  repeat_until?: string;
+  scope?: "series";
+};
 
 type Tab =
   | "Overview"
@@ -84,7 +90,7 @@ const categories: Record<Kind, string[]> = {
 export default function Hub() {
   const [ready, setReady] = useState(false);
   const [loaded, setLoaded] = useState(false);
-  const [session, setSession] = useState<Session | null>(null);
+  const [session, setSession] = useState(false);
   const [demo, setDemo] = useState(false);
   const [household, setHousehold] = useState<Household | null>(null);
   const [members, setMembers] = useState<Member[]>([]);
@@ -98,7 +104,6 @@ export default function Hub() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
-  const [invite, setInvite] = useState("");
   const [month, setMonth] = useState(new Date());
   const [agendaPage, setAgendaPage] = useState(0);
   const [agendaLimit, setAgendaLimit] = useState(3);
@@ -106,7 +111,7 @@ export default function Hub() {
   const agendaRef = useRef<HTMLDivElement>(null);
   const [filter, setFilter] = useState("All");
   const [display, setDisplay] = useState(false);
-  const uid = demo ? "you" : session?.user.id;
+  const uid = demo ? "you" : household?.owner_id;
   const today = dateKey(new Date());
   const loadSequence = useRef(0);
   const weeks = Math.ceil(
@@ -147,56 +152,35 @@ export default function Hub() {
     window.scrollTo(0, 0);
   }
 
-  const refresh = useCallback(async () => {
-    if (!supabase) return;
-    const sequence = ++loadSequence.current;
-    const { data: houses, error: houseError } = await supabase
-      .from("households")
-      .select("*")
-      .limit(1);
-    if (sequence !== loadSequence.current) return;
-    if (houseError) {
-      setError(houseError.message);
-      setLoaded(true);
-      return;
-    }
-    const house = houses?.[0] ?? null;
-    setHousehold(house);
-    if (!house) {
-      setMembers([]);
-      setEntries([]);
-      setLoaded(true);
-      return;
-    }
-    const [people, records] = await Promise.all([
-      supabase
-        .from("members")
-        .select("*")
-        .eq("household_id", house.id)
-        .order("name"),
-      supabase
-        .from("entries")
-        .select("*")
-        .eq("household_id", house.id)
-        .order("created_at", { ascending: false }),
-    ]);
-    if (sequence !== loadSequence.current) return;
-    if (people.error || records.error) {
-      setError(
-        people.error?.message ||
-          records.error?.message ||
-          "Could not load your home.",
-      );
-      setLoaded(true);
-      return;
-    }
-    setMembers(people.data ?? []);
-    setEntries(records.data ?? []);
-    setLoaded(true);
+  const clearSession = useCallback(() => {
+    ++loadSequence.current;
+    setSession(false);
+    setHousehold(null);
+    setEntries([]);
+    setMembers([]);
+    setLoaded(false);
+    setEditing(null);
+    setSelectedDay(null);
+    setError("");
+    setReady(true);
   }, []);
-
+  const refresh = useCallback(async () => {
+    const sequence = ++loadSequence.current;
+    try {
+      const data = await homeRequest("/api/home");
+      if (sequence !== loadSequence.current) return;
+      setHousehold(data.household);
+      setMembers(data.members);
+      setEntries(data.entries);
+      setError("");
+    } catch (err) {
+      if (sequence === loadSequence.current) setError((err as Error).message);
+    } finally {
+      if (sequence === loadSequence.current) setLoaded(true);
+    }
+  }, []);
   useEffect(() => {
-    if (!supabase) {
+    if (!hasDatabase) {
       const data = demoData();
       setHousehold(data.household);
       setMembers(data.members);
@@ -205,27 +189,32 @@ export default function Hub() {
       setReady(true);
       return;
     }
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, nextSession) => {
-      setSession(nextSession);
-      if (!nextSession) {
-        ++loadSequence.current;
-        setHousehold(null);
-        setEntries([]);
-        setMembers([]);
-        setInvite("");
-        setLoaded(false);
-        setEditing(null);
-        setError("");
-      }
-      setReady(true);
-    });
+    let active = true;
+    homeRequest("/api/session")
+      .then((data) => {
+        if (active) {
+          setSession(data.authenticated);
+          setReady(true);
+        }
+      })
+      .catch(() => {
+        if (active) setReady(true);
+      });
+    window.addEventListener("household-signed-out", clearSession);
     return () => {
+      active = false;
       ++loadSequence.current;
-      subscription.unsubscribe();
+      window.removeEventListener("household-signed-out", clearSession);
     };
-  }, []);
+  }, [clearSession]);
+  async function signOut() {
+    try {
+      await homeRequest("/api/session", "DELETE");
+      clearSession();
+    } catch (err) {
+      setError((err as Error).message);
+    }
+  }
 
   useEffect(() => {
     if (!session || demo) return;
@@ -252,40 +241,55 @@ export default function Hub() {
     }
   }, [notice]);
 
-  async function save(values: Partial<Entry>) {
+  async function save(values: SaveValues) {
     if (!household) return;
     setBusy(true);
     setError("");
     try {
       if (demo) {
-        if (editing?.entry)
+        if (editing?.entry) {
+          const { scope, ...rest } = values;
+          const { date: _date, ...shared } = rest;
           setEntries((current) =>
             current.map((e) =>
-              e.id === editing.entry!.id ? { ...e, ...values } : e,
+              e.id === editing.entry!.id
+                ? { ...e, ...rest }
+                : scope === "series" &&
+                    editing.entry!.series_id &&
+                    e.series_id === editing.entry!.series_id
+                  ? { ...e, ...shared }
+                  : e,
             ),
           );
-        else
-          setEntries((current) => [
-            {
-              ...values,
-              id: crypto.randomUUID(),
-              household_id: household.id,
-              created_by: uid!,
-              created_at: new Date().toISOString(),
-              done: false,
-            } as Entry,
-            ...current,
-          ]);
+        } else {
+          const { repeat, repeat_until, ...rest } = values;
+          const stamp = {
+            household_id: household.id,
+            created_by: uid!,
+            created_at: new Date().toISOString(),
+            done: false,
+          };
+          const sid = crypto.randomUUID();
+          const copies =
+            repeat && repeat_until && rest.date
+              ? seriesDates(rest.date, repeat, repeat_until).map((date) => ({
+                  ...rest,
+                  ...stamp,
+                  date,
+                  id: crypto.randomUUID(),
+                  series_id: sid,
+                }))
+              : [{ ...rest, ...stamp, id: crypto.randomUUID(), series_id: null }];
+          setEntries((current) => [...(copies as Entry[]), ...current]);
+        }
       } else {
-        const response = editing?.entry
-          ? await supabase!
-              .from("entries")
-              .update(values)
-              .eq("id", editing.entry.id)
-          : await supabase!
-              .from("entries")
-              .insert({ ...values, household_id: household.id });
-        if (response.error) throw response.error;
+        await homeRequest("/api/home", "POST", {
+          operation: editing?.entry ? "update" : "create",
+          payload: {
+            ...values,
+            ...(editing?.entry ? { id: editing.entry.id } : {}),
+          },
+        });
         await refresh();
       }
       setEditing(null);
@@ -304,39 +308,59 @@ export default function Hub() {
     if (busy) return;
     setBusy(true);
     setError("");
-    if (demo)
-      setEntries((current) =>
-        current.map((e) => (e.id === entry.id ? { ...e, done: !e.done } : e)),
-      );
-    else {
-      const { error } = await supabase!
-        .from("entries")
-        .update({ done: !entry.done })
-        .eq("id", entry.id);
-      if (error) setError(error.message);
-      else await refresh();
+    try {
+      if (demo)
+        setEntries((current) =>
+          current.map((e) => (e.id === entry.id ? { ...e, done: !e.done } : e)),
+        );
+      else {
+        await homeRequest("/api/home", "POST", {
+          operation: "update",
+          payload: { id: entry.id, done: !entry.done },
+        });
+        await refresh();
+      }
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setBusy(false);
     }
-    setBusy(false);
   }
-  async function remove(entry: Entry) {
-    if (!window.confirm(`Delete “${entry.title}” for everyone?`)) return;
+  async function remove(entry: Entry, scope?: "series") {
+    const wholeSeries = scope === "series" && entry.series_id;
+    if (
+      !window.confirm(
+        wholeSeries
+          ? `Delete every occurrence of “${entry.title}”?`
+          : `Delete “${entry.title}” for everyone?`,
+      )
+    )
+      return;
     setBusy(true);
     setError("");
-    if (demo) setEntries((current) => current.filter((e) => e.id !== entry.id));
-    else {
-      const { error } = await supabase!
-        .from("entries")
-        .delete()
-        .eq("id", entry.id);
-      if (error) {
-        setError(error.message);
-        setBusy(false);
-        return;
+    try {
+      if (demo)
+        setEntries((current) =>
+          current.filter((e) =>
+            wholeSeries ? e.series_id !== entry.series_id : e.id !== entry.id,
+          ),
+        );
+      else {
+        await homeRequest("/api/home", "POST", {
+          operation: "delete",
+          payload: {
+            id: entry.id,
+            ...(wholeSeries ? { scope: "series" } : {}),
+          },
+        });
+        await refresh();
       }
-      await refresh();
+      setEditing(null);
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setBusy(false);
     }
-    setEditing(null);
-    setBusy(false);
   }
   function exportCalendar() {
     const blob = new Blob([calendarFile(entries)], {
@@ -352,18 +376,32 @@ export default function Hub() {
       "Calendar exported. Import it into Apple, Google, or Outlook Calendar.",
     );
   }
-  async function makeInvite() {
-    if (demo) {
-      setNotice(
-        "Invites become available when your shared database is connected.",
-      );
-      return;
-    }
+  async function addMember(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const form = event.currentTarget;
+    const name = String(new FormData(form).get("name") || "").trim();
+    if (!name) return;
     setBusy(true);
-    const { data, error } = await supabase!.rpc("rotate_invite");
-    if (error) setError(error.message);
-    else setInvite(data);
-    setBusy(false);
+    setError("");
+    try {
+      if (demo)
+        setMembers((current) => [
+          ...current,
+          { user_id: crypto.randomUUID(), household_id: household!.id, name },
+        ]);
+      else {
+        await homeRequest("/api/home", "POST", {
+          operation: "member",
+          payload: { name },
+        });
+        await refresh();
+      }
+      form.reset();
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setBusy(false);
+    }
   }
   const tasks = entries.filter((e) => e.kind === "task");
   const shopping = entries.filter((e) => e.kind === "request");
@@ -437,7 +475,7 @@ export default function Hub() {
         <p>Making room for you…</p>
       </main>
     );
-  if (!demo && !session) return <Auth />;
+  if (!demo && !session) return <Auth onSuccess={() => setSession(true)} />;
   if (!demo && !loaded)
     return (
       <main className="auth-wrap">
@@ -445,7 +483,21 @@ export default function Hub() {
         <p>Opening your home…</p>
       </main>
     );
-  if (!household) return <Onboarding error={error} refresh={refresh} />;
+  if (!household)
+    return (
+      <main className="auth-wrap">
+        <section className="auth-card">
+          <h1>Your home is taking a moment.</h1>
+          <p role="alert">{error || "Could not load your household."}</p>
+          <button className="button" onClick={() => void refresh()}>
+            Try again
+          </button>
+          <button className="text-button" onClick={() => void signOut()}>
+            Sign out
+          </button>
+        </section>
+      </main>
+    );
 
   const boardProps = {
     household,
@@ -481,15 +533,6 @@ export default function Hub() {
             ground<span className="brand-dot">.</span>
           </span>
         </a>
-        <div className="house-selector">
-          <span className="house-icon">
-            <Home size={17} />
-          </span>
-          <div>
-            <strong>{household.name}</strong>
-            <small>Our little corner of the world</small>
-          </div>
-        </div>
         <span className="nav-label">A LITTLE MORE TOGETHER</span>
         <nav aria-label="Main navigation">
           {tabs.map(({ name, icon: Icon }) => (
@@ -536,10 +579,7 @@ export default function Hub() {
               <button
                 aria-label="Sign out"
                 className="icon-button"
-                onClick={async () => {
-                  const result = await supabase!.auth.signOut();
-                  if (result.error) setError(result.error.message);
-                }}
+                onClick={() => void signOut()}
               >
                 <LogOut size={17} />
               </button>
@@ -577,10 +617,7 @@ export default function Hub() {
               <button
                 className="icon-button"
                 aria-label="Sign out of household"
-                onClick={async () => {
-                  const result = await supabase!.auth.signOut();
-                  if (result.error) setError(result.error.message);
-                }}
+                onClick={() => void signOut()}
               >
                 <LogOut size={16} />
               </button>
@@ -1045,51 +1082,31 @@ export default function Hub() {
                     <strong>{member.name}</strong>
                     <span className="subtle">
                       {member.user_id === household.owner_id
-                        ? "Owner"
+                        ? "Shared home"
                         : "Housemate"}
                     </span>
                   </div>
                 ))}
-                {uid === household.owner_id && (
-                  <>
-                    <h3>Invite a housemate</h3>
-                    <p className="subtle">
-                      Generate a private invite code valid for 7 days. A new
-                      code replaces the previous one. Your housemate signs in
-                      with their own email, then joins using this code.
-                    </p>
-                    <button
-                      className="button secondary"
-                      disabled={busy}
-                      onClick={() => void makeInvite()}
-                    >
-                      <Plus size={16} /> Generate invite code
-                    </button>
-                    {invite && (
-                      <div className="invite-box">
-                        <code>{invite}</code>
-                        <button
-                          className="icon-button"
-                          aria-label="Copy invite code"
-                          onClick={async () => {
-                            try {
-                              await navigator.clipboard.writeText(invite);
-                              setNotice(
-                                "Invite copied. Share it privately with your housemate.",
-                              );
-                            } catch {
-                              setError(
-                                "Could not copy. Select the code and copy it manually.",
-                              );
-                            }
-                          }}
-                        >
-                          <Copy size={17} />
-                        </button>
-                      </div>
-                    )}
-                  </>
-                )}
+                <h3>Add your housemates</h3>
+                <p className="subtle">
+                  Everyone uses the same household code. Add names here to
+                  assign chores and leave notes for each other.
+                </p>
+                <form onSubmit={addMember}>
+                  <label>
+                    Housemate’s name
+                    <input
+                      name="name"
+                      required
+                      maxLength={50}
+                      placeholder="Their name"
+                    />
+                  </label>
+                  <button className="button secondary" disabled={busy}>
+                    <Plus size={16} />
+                    Add housemate
+                  </button>
+                </form>
               </section>
               <section className="panel settings-panel">
                 <h2>
@@ -1098,8 +1115,8 @@ export default function Hub() {
                 </h2>
                 <p>
                   {demo
-                    ? "You’re exploring a sample home. Connect Supabase to enable email sign-in and save your household across devices."
-                    : "Only signed-in members of your household can access your shared records. Changes from housemates refresh every 15 seconds while this page is visible."}
+                    ? "You’re exploring a sample home. Connect Supabase and configure your household code to save across devices."
+                    : "Anyone with your household code can use this home. Keep it between housemates. Changes refresh every 15 seconds while this page is visible."}
                 </p>
                 {demo && (
                   <p className="subtle">
@@ -1163,6 +1180,7 @@ export default function Hub() {
               </section>
             </div>
           )}
+          <div className="footer-spacer" />
           <footer>
             <span>Made for the place you share.</span>
             <Leaf size={15} />
@@ -1293,12 +1311,14 @@ function EntryDialog({
   busy: boolean;
   error: string;
   onClose: () => void;
-  onSave: (values: Partial<Entry>) => Promise<void>;
-  onDelete: (entry: Entry) => Promise<void>;
+  onSave: (values: SaveValues) => Promise<void>;
+  onDelete: (entry: Entry, scope?: "series") => Promise<void>;
 }) {
   const dialog = useRef<HTMLDialogElement>(null);
   const [kind, setKind] = useState<Kind>(editing.kind);
   const [validation, setValidation] = useState("");
+  const [repeat, setRepeat] = useState<Repeat | "">("");
+  const [wholeSeries, setWholeSeries] = useState(false);
   const entry = editing.entry;
   useEffect(() => {
     dialog.current?.showModal();
@@ -1316,16 +1336,30 @@ function EntryDialog({
       setValidation("Use a full http or https product link.");
       return;
     }
+    const date = String(data.get("date") || "") || null;
+    const until = String(data.get("repeat_until") || "");
+    const repeating =
+      !entry && repeat && ["task", "event"].includes(kind) ? repeat : null;
+    if (repeating && !date) {
+      setValidation("Pick a start date for a repeating plan.");
+      return;
+    }
+    if (repeating && until < date!) {
+      setValidation("The repeat end date should be after the start.");
+      return;
+    }
     setValidation("");
     await onSave({
       ...(entry ? {} : { kind }),
       title,
       description: String(data.get("description") || "").trim(),
       category: String(data.get("category") || categories[kind][0]),
-      date: String(data.get("date") || "") || null,
+      date,
       assignee: String(data.get("assignee") || "") || null,
       amount: data.get("amount") ? Number(data.get("amount")) : null,
       url,
+      ...(repeating ? { repeat: repeating, repeat_until: until } : {}),
+      ...(entry?.series_id && wholeSeries ? { scope: "series" as const } : {}),
     });
   }
   return (
@@ -1432,6 +1466,29 @@ function EntryDialog({
               />
             </label>
           )}
+          {!entry && ["task", "event"].includes(kind) && (
+            <label>
+              Repeats
+              <select
+                name="repeat"
+                value={repeat}
+                onChange={(event) =>
+                  setRepeat(event.target.value as Repeat | "")
+                }
+              >
+                <option value="">Never</option>
+                <option value="weekly">Weekly</option>
+                <option value="biweekly">Every 2 weeks</option>
+                <option value="monthly">Monthly</option>
+              </select>
+            </label>
+          )}
+          {!entry && ["task", "event"].includes(kind) && repeat && (
+            <label>
+              Repeat until
+              <input name="repeat_until" type="date" required />
+            </label>
+          )}
           {["event", "request"].includes(kind) && (
             <label>
               Amount in USD (optional)
@@ -1459,6 +1516,16 @@ function EntryDialog({
             />
           </label>
         )}
+        {entry?.series_id && (
+          <label className="checkbox-row">
+            <input
+              type="checkbox"
+              checked={wholeSeries}
+              onChange={(event) => setWholeSeries(event.target.checked)}
+            />
+            Apply to every occurrence of this plan
+          </label>
+        )}
         {(error || validation) && (
           <p className="error" role="alert">
             {validation || error}
@@ -1482,7 +1549,9 @@ function EntryDialog({
               className="icon-button danger"
               aria-label="Delete entry"
               disabled={busy}
-              onClick={() => void onDelete(entry)}
+              onClick={() =>
+                void onDelete(entry, wholeSeries ? "series" : undefined)
+              }
             >
               <Trash2 size={18} />
             </button>
@@ -1505,26 +1574,22 @@ function EntryDialog({
   );
 }
 
-function Auth() {
-  const [sent, setSent] = useState(false);
-  const [email, setEmail] = useState("");
+function Auth({ onSuccess }: { onSuccess: () => void }) {
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setBusy(true);
     setError("");
-    const data = new FormData(event.currentTarget);
-    const result = sent
-      ? await supabase!.auth.verifyOtp({
-          email,
-          token: String(data.get("code")).trim(),
-          type: "email",
-        })
-      : await supabase!.auth.signInWithOtp({ email });
-    if (result.error) setError(result.error.message);
-    else setSent(true);
-    setBusy(false);
+    const code = String(new FormData(event.currentTarget).get("code") || "");
+    try {
+      await homeRequest("/api/session", "POST", { code });
+      onSuccess();
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setBusy(false);
+    }
   }
   return (
     <main className="auth-wrap">
@@ -1535,183 +1600,41 @@ function Auth() {
         <span className="stat-icon sage">
           <Home size={26} />
         </span>
-        <p className="eyebrow">YOUR SHARED LIFE, IN ONE PLACE</p>
-        <h1>
-          A good place
-          <br />
-          to come home to.
-        </h1>
+        <p className="eyebrow">YOUR LITTLE CORNER OF THE WORLD</p>
+        <h1>Welcome home.</h1>
         <p className="subtitle">
-          {sent
-            ? "Check your email for a sign-in code."
-            : "Your people, your plans, your little corner of the world."}
+          A shared space for your people. Enter your household code to come on
+          in.
         </p>
         <form onSubmit={submit}>
-          {!sent ? (
-            <label>
-              Your email
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="you@example.com"
-                required
-                autoComplete="email"
-              />
-            </label>
-          ) : (
-            <label>
-              Code sent to {email}
-              <input
-                name="code"
-                inputMode="numeric"
-                autoComplete="one-time-code"
-                pattern="[0-9]{6,10}"
-                maxLength={10}
-                required
-                autoFocus
-                placeholder="Your sign-in code"
-              />
-            </label>
-          )}
+          <label>
+            Household code
+            <input
+              name="code"
+              type="password"
+              required
+              maxLength={128}
+              autoComplete="current-password"
+              autoCapitalize="none"
+              spellCheck={false}
+              placeholder="Your household code"
+              autoFocus
+            />
+          </label>
           {error && (
             <p className="error" role="alert">
               {error}
             </p>
           )}
           <button className="button" disabled={busy}>
-            {busy
-              ? "One moment…"
-              : sent
-                ? "Come on in"
-                : "Email me a sign-in code"}
+            {busy ? "Opening the door…" : "Come on in"}
             <ArrowRight size={17} />
           </button>
-          {sent && (
-            <button
-              type="button"
-              className="text-button"
-              disabled={busy}
-              onClick={() => {
-                setSent(false);
-                setError("");
-              }}
-            >
-              Use another email or resend
-            </button>
-          )}
         </form>
         <p className="auth-footnote">
-          <ShieldCheck size={15} /> Your household is invite-only. No password
-          to remember.
+          <ShieldCheck size={15} />
+          We’ll remember this device for 30 days. No email needed.
         </p>
-      </section>
-    </main>
-  );
-}
-
-function Onboarding({
-  error: loadError,
-  refresh,
-}: {
-  error: string;
-  refresh: () => Promise<void>;
-}) {
-  const [joining, setJoining] = useState(false);
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState("");
-  async function submit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setBusy(true);
-    setError("");
-    const data = new FormData(event.currentTarget);
-    const result = await supabase!.rpc(
-      joining ? "join_household" : "create_household",
-      {
-        member_name: String(data.get("name")).trim(),
-        ...(joining
-          ? { invite_code: String(data.get("house")).trim() }
-          : { house_name: String(data.get("house")).trim() }),
-      },
-    );
-    if (result.error) setError(result.error.message);
-    else await refresh();
-    setBusy(false);
-  }
-  return (
-    <main className="auth-wrap">
-      <a href="/" className="auth-brand">
-        <Leaf /> common ground.
-      </a>
-      <section className="auth-card">
-        <h1>
-          Make yourself
-          <br />
-          <em>at home.</em>
-        </h1>
-        <p className="subtitle">Start a household or join your people.</p>
-        <div className="filters">
-          <button
-            className={!joining ? "active" : ""}
-            onClick={() => setJoining(false)}
-          >
-            Create a home
-          </button>
-          <button
-            className={joining ? "active" : ""}
-            onClick={() => setJoining(true)}
-          >
-            Join a home
-          </button>
-        </div>
-        <form onSubmit={submit}>
-          <label>
-            What should we call you?
-            <input
-              name="name"
-              required
-              maxLength={50}
-              placeholder="Your name"
-            />
-          </label>
-          <label>
-            {joining ? "Household invite code" : "Give your home a name"}
-            <input
-              name="house"
-              key={String(joining)}
-              required
-              maxLength={joining ? 32 : 80}
-              minLength={joining ? 32 : 1}
-              placeholder={
-                joining
-                  ? "Paste the code from your housemate"
-                  : "e.g. The Maple House"
-              }
-            />
-          </label>
-          {(error || loadError) && (
-            <p className="error" role="alert">
-              {error || loadError}
-            </p>
-          )}
-          <button className="button" disabled={busy}>
-            {busy
-              ? "Making room…"
-              : joining
-                ? "Join our home"
-                : "Create our home"}
-            <ArrowRight size={17} />
-          </button>
-        </form>
-        <button
-          className="text-button"
-          onClick={async () => {
-            const result = await supabase!.auth.signOut();
-            if (result.error) setError(result.error.message);
-          }}
-        >
-          Sign out
-        </button>
       </section>
     </main>
   );
