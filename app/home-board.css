@@ -830,3 +830,561 @@ body {
     margin: 3px 0 5px;
   }
 }
+
+/* Weather and departures ------------------------------------------------ */
+/* A band above the noticeboard rather than a fifth card, so the fitted 2x2
+   grids on the home screen and the wall display keep their proportions. */
+.commute-strip {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  flex-shrink: 0;
+  margin: 0 0 18px;
+  padding: 11px 16px;
+  border: 1px solid #e0d5c4;
+  border-radius: 6px 8px 5px 7px;
+  background: linear-gradient(#fffcf5, #fdf8ee);
+  box-shadow:
+    1px 3px 0 #8f73550b,
+    0 5px 16px #5c402008;
+}
+.commute-weather {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  flex-shrink: 0;
+  padding-right: 18px;
+  border-right: 1px solid #ece2d2;
+}
+.commute-weather > svg {
+  width: 30px;
+  height: 30px;
+  color: #b07f4f;
+  flex-shrink: 0;
+}
+.commute-weather-copy {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  line-height: 1.25;
+}
+.commute-weather-copy strong {
+  font-family: Georgia, "Times New Roman", serif;
+  font-weight: 400;
+  font-size: 25px;
+  color: #5d4939;
+}
+.commute-weather-copy small {
+  font-size: 11px;
+  color: #857764;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.commute-trains {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+}
+.commute-train {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  flex: 1;
+  padding: 4px 9px 4px 4px;
+  border-radius: 999px;
+  background: #fbf5e9;
+  border: 1px solid #efe5d4;
+}
+.commute-badge {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  /* A circle for single-character subway routes; the same shape stretches
+     into a pill for wider labels such as "PATH". */
+  min-width: 25px;
+  height: 25px;
+  padding: 0 6px;
+  box-sizing: border-box;
+  border-radius: 999px;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: -0.2px;
+  text-shadow: 0 1px 1px #0000002e;
+}
+.commute-train-copy {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  line-height: 1.2;
+}
+.commute-train-copy strong {
+  font-size: 12px;
+  font-weight: 600;
+  color: #4d4034;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.commute-train-copy small {
+  font-size: 10px;
+  color: #8b7d6a;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.commute-when {
+  margin-left: auto;
+  flex-shrink: 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: #646e50;
+  font-variant-numeric: tabular-nums;
+}
+.commute-late {
+  color: #a4664d;
+}
+.commute-empty {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-size: 12px;
+  color: #8b7d6a;
+}
+.commute-empty svg {
+  color: #b0997c;
+  flex-shrink: 0;
+}
+/* The origin station is the one thing every departure must answer. */
+.commute-origin {
+  color: #6d5b46;
+  font-weight: 600;
+}
+.commute-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+.commute-icon {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 1px solid #e6dccb;
+  background: #fffdf7;
+  color: #97846c;
+  cursor: pointer;
+}
+.commute-icon:hover:not(:disabled) {
+  background: #f7efe1;
+  color: #6d5b46;
+}
+.commute-icon:disabled {
+  cursor: default;
+  opacity: 0.7;
+}
+@keyframes commute-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.commute-spin {
+  animation: commute-spin 0.9s linear infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .commute-spin {
+    animation-duration: 2.4s;
+  }
+}
+
+/* Wall display: same band, sized for a room away from the screen. */
+.commute-wall {
+  margin-bottom: clamp(12px, 2.2vh, 26px);
+  padding: clamp(8px, 1.4vh, 18px) clamp(14px, 1.6vw, 30px);
+  gap: clamp(14px, 1.8vw, 34px);
+  background: #fffcf5d9;
+}
+.commute-wall .commute-weather > svg {
+  width: clamp(30px, 2.7vw, 54px);
+  height: clamp(30px, 2.7vw, 54px);
+}
+.commute-wall .commute-weather-copy strong {
+  font-size: clamp(26px, 2.4vw, 50px);
+}
+.commute-wall .commute-weather-copy small {
+  font-size: clamp(11px, 0.85vw, 19px);
+}
+.commute-wall .commute-badge {
+  min-width: clamp(26px, 2.1vw, 44px);
+  height: clamp(26px, 2.1vw, 44px);
+  padding: 0 clamp(6px, 0.5vw, 11px);
+  font-size: clamp(11px, 0.9vw, 20px);
+}
+.commute-wall .commute-train-copy strong {
+  font-size: clamp(12px, 1vw, 22px);
+}
+.commute-wall .commute-train-copy small {
+  font-size: clamp(10px, 0.8vw, 17px);
+}
+.commute-wall .commute-when {
+  font-size: clamp(12px, 1vw, 23px);
+}
+.commute-wall .commute-empty {
+  font-size: clamp(12px, 0.95vw, 21px);
+}
+.commute-wall .commute-icon {
+  width: clamp(30px, 2.1vw, 44px);
+  height: clamp(30px, 2.1vw, 44px);
+}
+.commute-wall .commute-icon svg {
+  width: clamp(15px, 1.05vw, 22px);
+  height: auto;
+}
+
+/* Station picker -------------------------------------------------------- */
+.commute-hint {
+  margin: 0 0 14px;
+  font-size: 12px;
+  color: #857764;
+  line-height: 1.5;
+}
+.commute-chosen {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: -4px 0 14px;
+  font-size: 12px;
+  color: #6d5b46;
+}
+.commute-chosen svg {
+  color: #a07555;
+  flex-shrink: 0;
+}
+.commute-chosen span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.commute-chosen button {
+  margin-left: auto;
+  flex-shrink: 0;
+  border: none;
+  background: none;
+  padding: 4px 6px;
+  font-size: 12px;
+  color: #a4664d;
+  text-decoration: underline;
+  cursor: pointer;
+}
+.commute-results {
+  list-style: none;
+  margin: -4px 0 14px;
+  padding: 0;
+  max-height: 210px;
+  overflow-y: auto;
+  border: 1px solid #e7ddce;
+  border-radius: 6px;
+}
+.commute-results li + li {
+  border-top: 1px solid #f0e8da;
+}
+.commute-results button {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: 100%;
+  padding: 9px 12px;
+  border: none;
+  background: none;
+  text-align: left;
+  cursor: pointer;
+}
+.commute-results button:hover,
+.commute-results button:focus-visible {
+  background: #faf3e7;
+}
+.commute-results button span {
+  font-size: 13px;
+  color: #4d4034;
+}
+.commute-results button small {
+  font-size: 11px;
+  color: #8b7d6a;
+}
+
+@media (max-width: 650px) {
+  .commute-strip {
+    gap: 12px;
+    padding: 9px 12px;
+    margin-bottom: 14px;
+  }
+  .commute-weather {
+    padding-right: 12px;
+  }
+  .commute-weather-copy strong {
+    font-size: 21px;
+  }
+  /* Only the soonest train fits comfortably on a phone. */
+  .commute-train:nth-child(n + 2) {
+    display: none;
+  }
+}
+/* Short phones already drop the summary line; the band goes too. */
+@media (max-width: 650px) and (max-height: 700px) {
+  .fitted-app .commute-strip {
+    display: none;
+  }
+}
+/* On a 720p screen the cards need every pixel back, so the band tightens
+   rather than the cards giving up another item. */
+@media (max-height: 820px) {
+  .commute-wall {
+    padding-top: 5px;
+    padding-bottom: 5px;
+  }
+  .commute-wall .commute-badge {
+    min-width: 24px;
+    height: 24px;
+  }
+  /* The buttons must not become the tallest thing in the band. */
+  .commute-wall .commute-icon {
+    width: 26px;
+    height: 26px;
+  }
+}
+/* A phone-sized wall display has no room to spare above the cards. */
+@media (max-width: 480px) and (max-height: 640px) {
+  .commute-wall {
+    display: none;
+  }
+}
+
+/* Managed station list -------------------------------------------------- */
+.commute-note {
+  margin: -4px 0 12px;
+  font-size: 12px;
+  color: #a4664d;
+}
+.commute-list {
+  list-style: none;
+  margin: 4px 0 16px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.commute-list li {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid #e7ddce;
+  border-radius: 6px;
+  background: #fffcf5;
+}
+.commute-row-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 8px 7px 10px;
+}
+.commute-row.open {
+  border-color: #d8c9b1;
+  background: #fffdf8;
+}
+.commute-list-tag {
+  flex-shrink: 0;
+  padding: 3px 7px;
+  border-radius: 999px;
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  color: #fff;
+}
+.commute-list-tag[data-system="path"] {
+  background: #b8453a;
+}
+.commute-list-tag[data-system="subway"] {
+  background: #4d6180;
+}
+.commute-list-name {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex: 1;
+  min-width: 0;
+  font-size: 13px;
+  color: #4d4034;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+/* The first station drives the weather, so say so rather than leave it implied. */
+.commute-list-name small {
+  flex-shrink: 0;
+  padding: 2px 6px;
+  border-radius: 999px;
+  background: #eee4d2;
+  color: #7d6a52;
+  font-size: 9.5px;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+}
+.commute-row-head > button {
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border: 1px solid #e7ddce;
+  border-radius: 5px;
+  background: #fffdf7;
+  color: #8b7d6a;
+  cursor: pointer;
+}
+.commute-row-head > button:hover:not(:disabled) {
+  background: #f7efe1;
+  color: #6d5b46;
+}
+.commute-row-head > button:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+.commute-row-head > button:last-child:hover {
+  border-color: #e0bdb0;
+  background: #fbeee9;
+  color: #a4664d;
+}
+.commute-list-empty {
+  align-items: center;
+  padding: 10px;
+  justify-content: center;
+  border-style: dashed !important;
+  color: #8b7d6a;
+  font-size: 12px;
+}
+.commute-results button:disabled {
+  cursor: default;
+  opacity: 0.5;
+}
+@media (max-width: 650px) {
+  .commute-row-head > button {
+    width: 34px;
+    height: 34px;
+  }
+}
+
+/* Per-station train filters --------------------------------------------- */
+.commute-expand svg {
+  transition: transform 0.15s ease;
+}
+.commute-expand.open svg {
+  transform: rotate(180deg);
+}
+.commute-filters {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 2px 10px 11px;
+  border-top: 1px dashed #ece2d2;
+  margin-top: 2px;
+  padding-top: 10px;
+}
+.commute-chiprow {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+.commute-legend {
+  flex-shrink: 0;
+  width: 62px;
+  font-size: 10px;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+  color: #97846c;
+}
+.commute-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+.commute-chip {
+  padding: 4px 10px;
+  border: 1px solid #e2d7c5;
+  border-radius: 999px;
+  background: #fffdf7;
+  color: #9c8c76;
+  font-size: 11.5px;
+  cursor: pointer;
+}
+.commute-chip:hover:not(:disabled) {
+  border-color: #cdbb9d;
+}
+/* Selected chips carry the sage the rest of the app uses for "on". */
+.commute-chip.on {
+  border-color: #a8b192;
+  background: #eef1e4;
+  color: #4f5940;
+  font-weight: 600;
+}
+.commute-chip:disabled {
+  cursor: default;
+}
+.commute-loading {
+  margin: 0;
+  font-size: 12px;
+  color: #8b7d6a;
+}
+@media (max-width: 650px) {
+  .commute-chiprow {
+    flex-direction: column;
+    gap: 5px;
+  }
+  .commute-chip {
+    padding: 6px 12px;
+    font-size: 12.5px;
+  }
+}
+
+/* Imminent trains and non-live data -------------------------------------- */
+/* The one you might still catch should be the one your eye lands on. */
+.commute-due {
+  border-color: #e0c9b4;
+  background: #fdf3e7;
+}
+.commute-due .commute-when {
+  color: #a4664d;
+  font-weight: 700;
+}
+.commute-stale {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex-shrink: 0;
+  padding: 4px 9px;
+  border-radius: 999px;
+  background: #f4ece0;
+  color: #8a7256;
+  font-size: 10.5px;
+  letter-spacing: 0.2px;
+}
+.commute-stale svg {
+  flex-shrink: 0;
+}
+.commute-wall .commute-stale {
+  font-size: clamp(10.5px, 0.8vw, 17px);
+  padding: clamp(4px, 0.5vh, 8px) clamp(9px, 0.8vw, 15px);
+}
+@media (max-width: 650px) {
+  /* The phone band only has room for the icon. */
+  .commute-stale span {
+    display: none;
+  }
+}

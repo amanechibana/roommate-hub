@@ -27,6 +27,7 @@ import {
   type Kind,
   type Member,
 } from "@/lib/model";
+import CommuteStrip from "@/components/commute-strip";
 
 type Props = {
   household: Household;
@@ -129,10 +130,14 @@ export default function HomeBoard({
   }, []);
   useEffect(() => {
     if (!display) return;
-    const resize = () =>
-      setLimit(
-        window.innerHeight >= 950 ? 4 : window.innerHeight >= 700 ? 3 : 2,
-      );
+    const resize = () => {
+      // The commute band sits above the grid and is hidden on small screens,
+      // so measure it rather than assuming the cards own the whole viewport.
+      const strip = board.current?.querySelector(".commute-strip");
+      const usable =
+        window.innerHeight - (strip?.getBoundingClientRect().height ?? 0);
+      setLimit(usable >= 950 ? 4 : usable >= 700 ? 3 : 2);
+    };
     resize();
     window.addEventListener("resize", resize);
     const syncFull = () => setFull(Boolean(document.fullscreenElement));
@@ -240,6 +245,7 @@ export default function HomeBoard({
           Updates unavailable. Showing the last loaded home.
         </p>
       )}
+      <CommuteStrip display={display} />
       <div className="noticeboard-grid">
         <section className="board-card plans-card">
           <div className="board-card-heading">

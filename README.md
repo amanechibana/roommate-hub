@@ -10,6 +10,88 @@ Choose **Display mode** in the top bar for a monitor/TV, or bookmark `/?display=
 
 Display mode uses the same signed-in household session and refreshes shared records every 15 seconds. It does not create a public sharing link or grant extra access. The URL keeps the display preference across reloads. Set the TV/computer's sleep settings separately if you want an always-on display.
 
+## Weather and train times
+
+A band above the noticeboard shows the current weather beside the next few
+departures, on both the home screen and the wall display. PATH and subway
+arrivals are interleaved so one busy station cannot crowd out the other, and
+each departure names the station it leaves from so the two are never confused.
+
+Departures carry an absolute arrival time, so the minutes count down on their
+own between the 30-second polls instead of freezing on whatever the last
+response said, and a train that has gone drops off without waiting for a
+refresh. Anything a minute out is highlighted, since that is the one you might
+still catch. How many departures appear is measured from the space available,
+and never falls below one per station you added.
+
+When an agency feed cannot be reached the board keeps its last known times but
+marks itself **Not live** rather than passing them off as current; the same
+marker appears when one station of several fails. The refresh button reloads
+the weather and departures immediately; hover it to see when the board last
+updated. It appears in display mode too, which otherwise refreshes departures
+every 30 seconds on its own.
+
+The gear button opens a managed list of stations. One search box covers both
+systems, so "14 st" finds PATH's 14th Street and the MTA's 14 St platforms
+together. Add up to six stops, reorder them, or remove them; the weather
+follows whichever station sits first in the list.
+
+Expand a station to choose which of its trains you actually care about. A
+subway stop offers its routes and its two platform directions, so W 4 St can
+show only the A downtown. PATH has one line, so it offers destinations
+instead, letting Journal Square show World Trade Center trains and skip the
+33rd Street ones.
+
+Each row starts on **All**. Clicking a named option selects just that option,
+and further clicks add to the selection; clicking All, deselecting the last
+option, or selecting every option all return to showing everything. A stop can
+never end up blank.
+
+The subway's options come from the station list; PATH's come from its live
+board, since only the feed knows which destinations are running. Anything
+already saved is folded into the options, so a filter set for a train that is
+not running right now stays visible and undoable. Filtering happens in the
+browser, so every household shares one cached upstream response no matter how
+differently they have each set things up.
+
+The list is saved in `localStorage`, per device, so the TV and each phone can
+show different stops. The wall display is read only apart from refresh, so set
+its stations before switching into display mode.
+
+Three upstream sources are used, none of which needs an API key:
+
+| Data | Source | Notes |
+| --- | --- | --- |
+| Weather | [Open-Meteo](https://open-meteo.com) | Current conditions plus the day's high, low, and chance of rain. |
+| PATH | `panynj.gov/bin/portauthority/ridepath.json` | The endpoint behind the RidePATH app. **Unofficial** and undocumented; it can change without notice. |
+| NYC Subway | [MTA GTFS-realtime](https://api.mta.info/) | Protocol buffer feeds, split by line group. No key required. |
+
+Requests go through route handlers in `app/api/` rather than the browser: the
+subway feeds are protobuf and are not reachable directly from a page. Responses
+are cached in memory for 20 seconds (10 minutes for weather) and concurrent
+requests are coalesced, so a TV polling all day makes about three upstream
+requests a minute regardless of how many housemates have the page open. When an
+upstream fails, the last good board keeps showing instead of going blank.
+
+These are third-party requests. The servers involved see your deployment's IP
+address and the station and coordinates being asked about; no household data is
+sent. The PATH widget is the most likely to break, so treat it as a nicety
+rather than something to catch a train by, and check the platform clock.
+
+`lib/subway-stations.json` holds the 496 subway stations and is committed so
+the app never depends on `data.ny.gov` at request time. It is read only by
+`lib/subway-data.ts`, which the route handlers import; keeping it out of
+`lib/transit.ts` is deliberate, since that module reaches the browser and the
+station file would otherwise be bundled with it. Regenerate it when the MTA
+opens or re-routes a station:
+
+```sh
+node scripts/build-subway-stations.mjs
+```
+
+Departure predictions come from the agencies and are only as good as their
+feeds. Service changes, skipped stops, and planned diversions are not shown.
+
 ## Run locally
 
 Requires Node.js 22+ and npm.
@@ -27,6 +109,8 @@ Open the localhost address printed by Next.js. Without Supabase environment vari
 - Monthly calendar for all-day events and dated chores, including rent reminders.
 - Assigned to-dos with completion, overdue indicators, and All / Mine / Open / Done filters.
 - Shopping requests separated into needs and wants, estimated USD prices, store links, and bought status.
+- Weather and live train departures for PATH and the NYC subway, shown above the
+  noticeboard on both the home screen and the wall display.
 - Shared house notes. Create, edit, and delete entries through accessible dialogs.
 - `.ics` calendar export and per-event Google Calendar links. These create snapshots/copies, not subscriptions or two-way synchronization.
 - Email OTP authentication, household creation, and expiring household invite codes when Supabase is configured.
