@@ -1,5 +1,9 @@
 "use client";
 
+import { m } from "motion/react";
+import { Button } from "@/components/ui/button";
+import { useHouseMotion } from "@/components/ui/motion-provider";
+
 import { useEffect, useRef, useState } from "react";
 import {
   ArrowRight,
@@ -28,6 +32,7 @@ import {
   type Member,
 } from "@/lib/model";
 import { billPaid, isBill } from "@/lib/household-actions";
+import { AmbientToggle } from "@/components/ui/display-button";
 import CommuteStrip from "@/components/commute-strip";
 
 type Props = {
@@ -63,6 +68,7 @@ export default function HomeBoard({
   onNavigate,
   onToggle,
 }: Props) {
+  const { reduced } = useHouseMotion();
   const [now, setNow] = useState(new Date());
   const board = useRef<HTMLElement>(null);
   const [page, setPage] = useState(0);
@@ -188,20 +194,20 @@ export default function HomeBoard({
     tab: "Calendar" | "To-dos" | "Shopping list" | "House notes",
   ) =>
     !display && count > limit ? (
-      <button className="board-more" onClick={() => onNavigate(tab)}>
+      <Button className="board-more" onClick={() => onNavigate(tab)}>
         See all {count} <ArrowRight size={14} />
-      </button>
+      </Button>
     ) : null;
   const title = (entry: Entry) =>
     display ? (
       <strong title={entry.title}>{entry.title}</strong>
     ) : (
-      <button
+      <Button
         className="board-entry-title"
         onClick={() => onOpen(entry.kind, entry)}
       >
         {entry.title}
-      </button>
+      </Button>
     );
 
   return (
@@ -210,6 +216,13 @@ export default function HomeBoard({
       className={display ? "home-board wall-display" : "home-board"}
       aria-label={display ? "Household display" : "Household noticeboard"}
     >
+      {display && (
+        <div className="wall-ambient" aria-hidden="true">
+          <i />
+          <i />
+          <i />
+        </div>
+      )}
       <header className="board-welcome">
         <div>
           <p className="board-kicker">
@@ -225,6 +238,7 @@ export default function HomeBoard({
         </div>
         {display ? (
           <div className="wall-clock">
+            <span className="clock-breath" aria-hidden="true" />
             <time>
               {now.toLocaleTimeString("en-US", {
                 hour: "numeric",
@@ -241,18 +255,18 @@ export default function HomeBoard({
           </div>
         ) : (
           <div className="board-quick-actions">
-            <button onClick={() => onOpen("task")}>
+            <Button onClick={() => onOpen("task")}>
               <Plus size={16} />
               To-do
-            </button>
-            <button onClick={() => onOpen("request")}>
+            </Button>
+            <Button onClick={() => onOpen("request")}>
               <ShoppingBasket size={16} />
               Item
-            </button>
-            <button onClick={() => onOpen("event")}>
+            </Button>
+            <Button onClick={() => onOpen("event")}>
               <CalendarDays size={16} />
               Plan
-            </button>
+            </Button>
           </div>
         )}
       </header>
@@ -263,7 +277,12 @@ export default function HomeBoard({
       )}
       <CommuteStrip display={display} />
       <div className="noticeboard-grid">
-        <section className="board-card plans-card">
+        <m.section
+          initial={reduced ? false : { opacity: 0.65 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.3 }}
+          className="board-card plans-card"
+        >
           <div className="board-card-heading">
             <h2>
               <CalendarDays size={19} />
@@ -276,7 +295,13 @@ export default function HomeBoard({
           <div className="board-rows">
             {(display ? visible(events) : events.slice(0, limit)).map(
               (entry) => (
-                <div className="board-plan" key={entry.id}>
+                <m.div
+                  initial={reduced ? false : { opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ duration: 0.22 }}
+                  className="board-plan"
+                  key={entry.id}
+                >
                   <span className="board-date">
                     <small>
                       {parseDate(entry.date!).toLocaleDateString("en-US", {
@@ -298,7 +323,7 @@ export default function HomeBoard({
                         : ""}
                     </small>
                   </div>
-                </div>
+                </m.div>
               ),
             )}
             {!events.length && (
@@ -313,8 +338,13 @@ export default function HomeBoard({
             )}
           </div>
           {more(events.length, "Calendar")}
-        </section>
-        <section className="board-card chores-card">
+        </m.section>
+        <m.section
+          initial={reduced ? false : { opacity: 0.65 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.3 }}
+          className="board-card chores-card"
+        >
           <div className="board-card-heading">
             <h2>
               <CheckCheck size={19} />A little housework
@@ -323,17 +353,23 @@ export default function HomeBoard({
           </div>
           <div className="board-rows">
             {visible(tasks).map((entry) => (
-              <div className="board-task" key={entry.id}>
+              <m.div
+                initial={reduced ? false : { opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.22 }}
+                className="board-task"
+                key={entry.id}
+              >
                 {display ? (
                   <span className="wall-task-dot" />
                 ) : (
-                  <button
+                  <Button
                     className="board-check"
                     onClick={() => onToggle(entry)}
                     aria-label={`Complete ${entry.title}`}
                   >
                     <Check size={18} />
-                  </button>
+                  </Button>
                 )}
                 <div className="board-entry-copy">
                   {title(entry)}
@@ -347,7 +383,7 @@ export default function HomeBoard({
                     {entry.series_id ? " · ↻" : ""}
                   </small>
                 </div>
-              </div>
+              </m.div>
             ))}
             {!tasks.length && (
               <div className="board-empty">
@@ -361,8 +397,13 @@ export default function HomeBoard({
             )}
           </div>
           {more(tasks.length, "To-dos")}
-        </section>
-        <section className="board-card groceries-card">
+        </m.section>
+        <m.section
+          initial={reduced ? false : { opacity: 0.65 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.3 }}
+          className="board-card groceries-card"
+        >
           <div className="board-card-heading">
             <h2>
               <ShoppingBasket size={19} />
@@ -374,7 +415,13 @@ export default function HomeBoard({
           </div>
           <div className="board-rows">
             {visible(shopping).map((entry) => (
-              <div className="board-shopping" key={entry.id}>
+              <m.div
+                initial={reduced ? false : { opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.22 }}
+                className="board-shopping"
+                key={entry.id}
+              >
                 <span className="grocery-bullet" aria-hidden="true" />
                 <div className="board-entry-copy">
                   {title(entry)}
@@ -386,15 +433,15 @@ export default function HomeBoard({
                   </small>
                 </div>
                 {!display && (
-                  <button
+                  <Button
                     className="board-buy"
                     aria-label={`Mark ${entry.title} as bought`}
                     onClick={() => onToggle(entry)}
                   >
                     <Check size={17} />
-                  </button>
+                  </Button>
                 )}
-              </div>
+              </m.div>
             ))}
             {!shopping.length && (
               <div className="board-empty">
@@ -408,8 +455,13 @@ export default function HomeBoard({
             )}
           </div>
           {more(shopping.length, "Shopping list")}
-        </section>
-        <section className="board-card fridge-card">
+        </m.section>
+        <m.section
+          initial={reduced ? false : { opacity: 0.65 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.3 }}
+          className="board-card fridge-card"
+        >
           <span className="board-tape" aria-hidden="true" />
           <div className="board-card-heading">
             <h2>
@@ -426,9 +478,9 @@ export default function HomeBoard({
                     {display ? (
                       note.title
                     ) : (
-                      <button onClick={() => onOpen("note", note)}>
+                      <Button onClick={() => onOpen("note", note)}>
                         {note.title}
-                      </button>
+                      </Button>
                     )}
                   </h3>
                   <p title={note.description}>{note.description}</p>
@@ -446,22 +498,22 @@ export default function HomeBoard({
                 in the fridge.”
               </p>
               {!display && (
-                <button className="board-more" onClick={() => onOpen("note")}>
+                <Button className="board-more" onClick={() => onOpen("note")}>
                   <Plus size={15} />
                   Leave a note
-                </button>
+                </Button>
               )}
             </div>
           )}
           {!display && notes.length > 1 && (
-            <button
+            <Button
               className="board-more"
               onClick={() => onNavigate("House notes")}
             >
               All {notes.length} notes <ArrowRight size={14} />
-            </button>
+            </Button>
           )}
-        </section>
+        </m.section>
       </div>
       {!display && (
         <div className="home-pager">
@@ -471,23 +523,23 @@ export default function HomeBoard({
               : "Everything in one place"}
           </span>
           <div>
-            <button
+            <Button
               aria-label="Previous home page"
               disabled={pages === 1}
               onClick={() => setPage((activePage + pages - 1) % pages)}
             >
               <ChevronLeft size={18} />
-            </button>
+            </Button>
             <span>
               {activePage + 1} / {pages}
             </span>
-            <button
+            <Button
               aria-label="Next home page"
               disabled={pages === 1}
               onClick={() => setPage((activePage + 1) % pages)}
             >
               <ChevronRight size={18} />
-            </button>
+            </Button>
           </div>
         </div>
       )}
@@ -499,41 +551,42 @@ export default function HomeBoard({
               : "Private household · updates every 15 seconds"}
           </span>
           <div className="wall-pager">
-            <button
+            <Button
               aria-label="Previous display page"
               disabled={pages === 1}
               onClick={() => setPage((activePage + pages - 1) % pages)}
             >
               <ChevronLeft size={17} />
-            </button>
+            </Button>
             <span aria-live="off">
               {activePage + 1} / {pages}
             </span>
-            <button
+            <Button
               aria-label="Next display page"
               disabled={pages === 1}
               onClick={() => setPage((activePage + 1) % pages)}
             >
               <ChevronRight size={17} />
-            </button>
+            </Button>
             {pages > 1 && (
-              <button
+              <Button
                 aria-label={paused ? "Resume rotation" : "Pause rotation"}
                 onClick={() => setPaused((p) => !p)}
               >
                 {paused ? <Play size={16} /> : <Pause size={16} />}
-              </button>
+              </Button>
             )}
           </div>
           <div className="wall-actions">
-            <button
+            <AmbientToggle />
+            <Button
               onClick={() => void fullscreen()}
               aria-label={full ? "Leave fullscreen" : "Enter fullscreen"}
             >
               {full ? <Minimize size={17} /> : <Maximize size={17} />}
               <span>Full screen</span>
-            </button>
-            <button
+            </Button>
+            <Button
               onClick={() => {
                 if (document.fullscreenElement)
                   void document.exitFullscreen().catch(() => {});
@@ -542,7 +595,7 @@ export default function HomeBoard({
             >
               <X size={17} />
               <span>Exit display</span>
-            </button>
+            </Button>
           </div>
           {fullscreenError && (
             <p className="fullscreen-hint" role="status">

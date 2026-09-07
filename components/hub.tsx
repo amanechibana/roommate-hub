@@ -1,5 +1,10 @@
 "use client";
 
+import { m } from "motion/react";
+import { Button } from "@/components/ui/button";
+import { AnimatedCheck } from "@/components/ui/animated-check";
+import { useHouseMotion } from "@/components/ui/motion-provider";
+
 import {
   useCallback,
   useEffect,
@@ -12,7 +17,6 @@ import {
   ArrowDownToLine,
   ArrowRight,
   CalendarDays,
-  Check,
   ChevronLeft,
   ChevronRight,
   ClipboardList,
@@ -20,7 +24,6 @@ import {
   Home,
   Leaf,
   LogOut,
-  Monitor,
   Plus,
   Settings,
   ShieldCheck,
@@ -32,6 +35,8 @@ import {
   X,
 } from "lucide-react";
 import { hasDatabase, homeRequest } from "@/lib/home-client";
+import { DisplayButton, AmbientToggle } from "@/components/ui/display-button";
+import { SegmentedControl } from "@/components/ui/segmented-control";
 import BillChecks from "@/components/bill-checks";
 import {
   UNDO_DURATION,
@@ -100,6 +105,7 @@ const categories: Record<Kind, string[]> = {
 };
 
 export default function Hub() {
+  const { reduced } = useHouseMotion();
   const [ready, setReady] = useState(false);
   const [loaded, setLoaded] = useState(false);
   const [session, setSession] = useState(false);
@@ -619,29 +625,34 @@ export default function Hub() {
         required
         maxLength={160}
       />
-      <button className="button small" aria-label={`Quick add ${labels[kind]}`}>
+      <Button className="button small" aria-label={`Quick add ${labels[kind]}`}>
         <Plus size={16} />
         Add
-      </button>
+      </Button>
     </form>
   );
   const addButton = (kind: Kind, text = `Add ${labels[kind]}`) => (
-    <button className="button small" onClick={() => setEditing({ kind })}>
+    <Button className="button small" onClick={() => setEditing({ kind })}>
       <Plus size={16} />
       {text}
-    </button>
+    </Button>
   );
   const taskRow = (entry: Entry) => (
-    <div className={`task-row ${entry.done ? "completed" : ""}`} key={entry.id}>
-      <button
+    <m.div
+      layout={reduced ? false : "position"}
+      initial={false}
+      className={`task-row ${entry.done ? "completed" : ""}`}
+      key={entry.id}
+    >
+      <Button
         className="checkbox"
         aria-label={`${entry.done ? "Reopen" : "Complete"} ${entry.title}`}
         aria-pressed={entry.done}
         onClick={() => void toggle(entry)}
       >
-        {entry.done && <Check size={14} />}
-      </button>
-      <button
+        {entry.done && <AnimatedCheck size={14} />}
+      </Button>
+      <Button
         className="entry-label"
         onClick={() => setEditing({ kind: entry.kind, entry })}
       >
@@ -663,7 +674,7 @@ export default function Hub() {
             ? ` · Added by ${person(entry.created_by)}`
             : ""}
         </small>
-      </button>
+      </Button>
       {members.some(
         (m) => m.user_id === entry.assignee && m.name !== "Housemates",
       ) && (
@@ -679,7 +690,7 @@ export default function Hub() {
           {person(entry.assignee)}
         </span>
       )}
-    </div>
+    </m.div>
   );
 
   if (!ready)
@@ -703,12 +714,12 @@ export default function Hub() {
         <section className="auth-card">
           <h1>Your home is taking a moment.</h1>
           <p role="alert">{error || "Could not load your household."}</p>
-          <button className="button" onClick={() => void refresh()}>
+          <Button className="button" onClick={() => void refresh()}>
             Try again
-          </button>
-          <button className="text-button" onClick={() => void signOut()}>
+          </Button>
+          <Button className="text-button" onClick={() => void signOut()}>
             Sign out
-          </button>
+          </Button>
         </section>
       </main>
     );
@@ -724,7 +735,7 @@ export default function Hub() {
             {members
               .filter((m) => m.name !== "Housemates")
               .map((member, i) => (
-                <button
+                <Button
                   className="button secondary"
                   key={member.user_id}
                   aria-label={member.name}
@@ -733,7 +744,7 @@ export default function Hub() {
                 >
                   {avatar(member, i)}
                   {member.name}
-                </button>
+                </Button>
               ))}
           </div>
           {error && (
@@ -742,9 +753,9 @@ export default function Hub() {
             </p>
           )}
           {!demo && (
-            <button className="text-button" onClick={() => void signOut()}>
+            <Button className="text-button" onClick={() => void signOut()}>
               Sign out
-            </button>
+            </Button>
           )}
         </section>
       </main>
@@ -753,24 +764,36 @@ export default function Hub() {
   const toasts = (
     <div className="toast-stack">
       {notice && (
-        <div className="toast" role="status">
+        <m.div
+          initial={reduced ? false : { opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="toast"
+          role="status"
+        >
           {notice}
-        </div>
+        </m.div>
       )}
       {undoDeletes.map((item) => (
-        <div className="toast" role="status" key={item.token}>
+        <m.div
+          layout={reduced ? false : "position"}
+          initial={reduced ? false : { opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="toast"
+          role="status"
+          key={item.token}
+        >
           <span>
             {item.entries.length > 1
               ? `${item.entries.length} occurrences deleted`
               : `Deleted “${item.entries[0]?.title}”`}
           </span>
-          <button
+          <Button
             className="undo-button"
             onClick={() => undoDelete(item.token)}
           >
             Undo
-          </button>
-        </div>
+          </Button>
+        </m.div>
       ))}
     </div>
   );
@@ -812,7 +835,7 @@ export default function Hub() {
         <span className="nav-label">A LITTLE MORE TOGETHER</span>
         <nav aria-label="Main navigation">
           {tabs.map(({ name, icon: Icon }) => (
-            <button
+            <Button
               key={name}
               className={tab === name ? "active" : ""}
               aria-current={tab === name ? "page" : undefined}
@@ -825,7 +848,7 @@ export default function Hub() {
                   {shopping.filter((e) => !e.done).length}
                 </span>
               )}
-            </button>
+            </Button>
           ))}
         </nav>
         <div className="sidebar-bottom">
@@ -837,12 +860,12 @@ export default function Hub() {
             </p>
             <span>You’ve got this, together.</span>
           </div>
-          <button
+          <Button
             className={`settings-link ${tab === "Our household" ? "selected" : ""}`}
             onClick={() => setTab("Our household")}
           >
             <Settings size={18} /> Our household
-          </button>
+          </Button>
           <div className="sidebar-profile">
             <span
               className={`avatar tone-${
@@ -855,23 +878,23 @@ export default function Hub() {
               {person(uid || null).slice(0, 1)}
             </span>
             <div>
-              <button
+              <Button
                 className="text-button"
                 onClick={() => setChoosingPerson(true)}
                 aria-label="Switch person"
               >
                 {person(uid || null)}
-              </button>
+              </Button>
               <small>{demo ? "Exploring the demo" : "Right at home"}</small>
             </div>
             {!demo && (
-              <button
+              <Button
                 aria-label="Sign out"
                 className="icon-button"
                 onClick={() => void signOut()}
               >
                 <LogOut size={17} />
-              </button>
+              </Button>
             )}
           </div>
         </div>
@@ -883,33 +906,26 @@ export default function Hub() {
             <strong>{tab}</strong>
           </span>
           <div>
-            <button
-              className="display-toggle"
-              aria-label="Display mode"
-              onClick={() => changeDisplay(true)}
-            >
-              <Monitor size={17} />
-              <span>Display mode</span>
-            </button>
+            <DisplayButton onClick={() => changeDisplay(true)} />
             <span className="private-label">
               <ShieldCheck size={14} />
               {demo ? "Demo home" : "Private household"}
             </span>
-            <button
+            <Button
               className="icon-button avatar-stack"
               aria-label="Open household settings"
               onClick={() => setTab("Our household")}
             >
               {members.map(avatar)}
-            </button>
+            </Button>
             {!demo && (
-              <button
+              <Button
                 className="icon-button"
                 aria-label="Sign out of household"
                 onClick={() => void signOut()}
               >
                 <LogOut size={16} />
-              </button>
+              </Button>
             )}
           </div>
         </header>
@@ -922,25 +938,30 @@ export default function Hub() {
                 <Sparkles size={15} /> Sample household · Try everything.
                 Changes last until you reload.
               </span>
-              <button onClick={() => setTab("Our household")}>
+              <Button onClick={() => setTab("Our household")}>
                 Connect your home <ArrowRight size={14} />
-              </button>
+              </Button>
             </div>
           )}
           {error && (
             <div className="error" role="alert">
               {error}
-              <button
+              <Button
                 className="icon-button"
                 aria-label="Dismiss error"
                 onClick={() => setError("")}
               >
                 <X size={16} />
-              </button>
+              </Button>
             </div>
           )}
           {tab !== "Overview" && (
-            <div className="page-heading">
+            <m.div
+              key={tab}
+              initial={reduced ? false : { opacity: 0.5 }}
+              animate={{ opacity: 1 }}
+              className="page-heading"
+            >
               <div>
                 <p className="eyebrow">
                   {new Date()
@@ -980,7 +1001,7 @@ export default function Hub() {
                         ? "note"
                         : "task",
                 )}
-            </div>
+            </m.div>
           )}
 
           {tab === "Overview" && <HomeBoard {...boardProps} />}
@@ -989,7 +1010,7 @@ export default function Hub() {
             <section className="panel calendar-panel">
               <div className="panel-heading">
                 <div className="month-control">
-                  <button
+                  <Button
                     className="icon-button"
                     aria-label="Previous month"
                     onClick={() =>
@@ -999,14 +1020,14 @@ export default function Hub() {
                     }
                   >
                     <ChevronLeft size={20} />
-                  </button>
+                  </Button>
                   <h2>
                     {month.toLocaleDateString("en-US", {
                       month: "long",
                       year: "numeric",
                     })}
                   </h2>
-                  <button
+                  <Button
                     className="icon-button"
                     aria-label="Next month"
                     onClick={() =>
@@ -1016,21 +1037,21 @@ export default function Hub() {
                     }
                   >
                     <ChevronRight size={20} />
-                  </button>
+                  </Button>
                 </div>
                 <div className="actions">
-                  <button
+                  <Button
                     className="button secondary small"
                     onClick={() => setMonth(new Date())}
                   >
                     Today
-                  </button>
-                  <button
+                  </Button>
+                  <Button
                     className="button secondary small"
                     onClick={exportCalendar}
                   >
                     <ArrowDownToLine size={16} /> Export .ics
-                  </button>
+                  </Button>
                 </div>
               </div>
               <p className="calendar-help desktop-calendar-help">
@@ -1059,7 +1080,7 @@ export default function Hub() {
                       agendaLimit,
                   )
                   .map((entry) => (
-                    <button
+                    <Button
                       className="agenda-entry"
                       key={entry.id}
                       onClick={() => setEditing({ kind: entry.kind, entry })}
@@ -1083,20 +1104,20 @@ export default function Hub() {
                         </small>
                       </span>
                       <ChevronRight size={17} />
-                    </button>
+                    </Button>
                   ))}
                 {!monthEntries.length && (
                   <Empty text="No plans this month. Add something to look forward to." />
                 )}
               </div>
               <div className="agenda-pager">
-                <button
+                <Button
                   aria-label="Previous agenda page"
                   disabled={agendaPage === 0}
                   onClick={() => setAgendaPage((p) => Math.max(0, p - 1))}
                 >
                   <ChevronLeft size={18} />
-                </button>
+                </Button>
                 <span>
                   {Math.min(
                     agendaPage + 1,
@@ -1104,7 +1125,7 @@ export default function Hub() {
                   )}{" "}
                   / {Math.max(1, Math.ceil(monthEntries.length / agendaLimit))}
                 </span>
-                <button
+                <Button
                   aria-label="Next agenda page"
                   disabled={
                     (agendaPage + 1) * agendaLimit >= monthEntries.length
@@ -1112,7 +1133,7 @@ export default function Hub() {
                   onClick={() => setAgendaPage((p) => p + 1)}
                 >
                   <ChevronRight size={18} />
-                </button>
+                </Button>
               </div>
               <div className="calendar-scroll">
                 <div
@@ -1165,7 +1186,7 @@ export default function Hub() {
                           className={`calendar-cell ${date.getMonth() !== month.getMonth() ? "outside" : ""} ${key === today ? "is-today" : ""}`}
                           key={key}
                         >
-                          <button
+                          <Button
                             className="day-number"
                             aria-label={`Add event on ${key}`}
                             onClick={() =>
@@ -1173,18 +1194,18 @@ export default function Hub() {
                             }
                           >
                             {date.getDate()}
-                          </button>
+                          </Button>
                           {dayEntries.length > 1 && (
-                            <button
+                            <Button
                               className="day-more"
                               aria-label={`Show all ${dayEntries.length} entries on ${key}`}
                               onClick={() => setSelectedDay(key)}
                             >
                               +{dayEntries.length - 1}
-                            </button>
+                            </Button>
                           )}
                           {dayEntries.slice(0, 1).map((entry) => (
-                            <button
+                            <Button
                               key={entry.id}
                               className={`calendar-event person-color-${
                                 Math.max(
@@ -1208,7 +1229,7 @@ export default function Hub() {
                                   ? " · Paid"
                                   : " · Payment due"
                                 : ""}
-                            </button>
+                            </Button>
                           ))}
                         </div>
                       );
@@ -1222,18 +1243,12 @@ export default function Hub() {
           {tab === "To-dos" && (
             <section className="panel">
               <div className="panel-heading">
-                <div className="filters">
-                  {["All", "Mine", "Open", "Done"].map((value) => (
-                    <button
-                      key={value}
-                      aria-pressed={filter === value}
-                      className={filter === value ? "active" : ""}
-                      onClick={() => setFilter(value)}
-                    >
-                      {value}
-                    </button>
-                  ))}
-                </div>
+                <SegmentedControl
+                  label="To-do filters"
+                  values={["All", "Mine", "Open", "Done"]}
+                  value={filter}
+                  onChange={setFilter}
+                />
                 <span className="subtle">
                   {tasks.filter((e) => e.done).length} of {tasks.length} done
                 </span>
@@ -1257,30 +1272,24 @@ export default function Hub() {
               ).length && (
                 <Empty text="Nothing here. A little breathing room." />
               )}
-              <button
+              <Button
                 className="add-row"
                 onClick={() => setEditing({ kind: "task" })}
               >
                 <Plus size={16} /> Add a to-do
-              </button>
+              </Button>
             </section>
           )}
 
           {tab === "Shopping list" && (
             <>
               <div className="list-toolbar">
-                <div className="filters">
-                  {["All", "Need", "Want", "Bought"].map((value) => (
-                    <button
-                      key={value}
-                      aria-pressed={filter === value}
-                      className={filter === value ? "active" : ""}
-                      onClick={() => setFilter(value)}
-                    >
-                      {value}
-                    </button>
-                  ))}
-                </div>
+                <SegmentedControl
+                  label="Shopping filters"
+                  values={["All", "Need", "Want", "Bought"]}
+                  value={filter}
+                  onChange={setFilter}
+                />
                 {shopping.some((e) => !e.done && e.amount != null) && (
                   <span className="subtle">
                     Estimated total ·{" "}
@@ -1303,19 +1312,21 @@ export default function Hub() {
                       : !e.done && (filter === "All" || e.category === filter),
                   )
                   .map((entry) => (
-                    <article
+                    <m.article
+                      layout={reduced ? false : "position"}
+                      initial={false}
                       className={`task-row shopping-row ${entry.done ? "completed" : ""}`}
                       key={entry.id}
                     >
-                      <button
+                      <Button
                         className="checkbox"
                         aria-label={`${entry.done ? "Reopen" : "Mark as bought"}: ${entry.title}`}
                         aria-pressed={entry.done}
                         onClick={() => void toggle(entry)}
                       >
-                        {entry.done && <Check size={14} />}
-                      </button>
-                      <button
+                        {entry.done && <AnimatedCheck size={14} />}
+                      </Button>
+                      <Button
                         className="entry-label"
                         onClick={() => setEditing({ kind: "request", entry })}
                       >
@@ -1329,7 +1340,7 @@ export default function Hub() {
                             m.user_id === entry.created_by &&
                             m.name !== "Housemates",
                         ) && <small>Added by {person(entry.created_by)}</small>}
-                      </button>
+                      </Button>
                       {entry.amount != null && (
                         <strong className="row-price">
                           {money(entry.amount)}
@@ -1346,7 +1357,7 @@ export default function Hub() {
                           <ExternalLink size={16} />
                         </a>
                       )}
-                    </article>
+                    </m.article>
                   ))}
               </div>
               {!shopping.filter((e) =>
@@ -1364,14 +1375,14 @@ export default function Hub() {
               {notes.map((entry) => (
                 <article className="notice-board" key={entry.id}>
                   <span className="tape" />
-                  <button
+                  <Button
                     className="note-preview"
                     onClick={() => setEditing({ kind: "note", entry })}
                   >
                     <h3>{entry.title}</h3>
                     <p>{entry.description}</p>
                     <span>— {person(entry.assignee || entry.created_by)}</span>
-                  </button>
+                  </Button>
                 </article>
               ))}
               {!notes.length && (
@@ -1413,10 +1424,10 @@ export default function Hub() {
                       placeholder="Their name"
                     />
                   </label>
-                  <button className="button secondary" disabled={busy}>
+                  <Button className="button secondary" disabled={busy}>
                     <Plus size={16} />
                     Add housemate
-                  </button>
+                  </Button>
                 </form>
               </section>
               <section className="panel settings-panel">
@@ -1436,14 +1447,20 @@ export default function Hub() {
                     add your project URL and publishable key.
                   </p>
                 )}
+                <h3>A little background motion</h3>
+                <p className="subtle">
+                  Gentle details for this device. Your system’s reduced-motion
+                  preference is always respected.
+                </p>
+                <AmbientToggle />
                 <h3>Bring your calendar along</h3>
                 <p className="subtle">
                   Download your dated chores and events for Apple Calendar,
                   Google Calendar, or Outlook.
                 </p>
-                <button className="button secondary" onClick={exportCalendar}>
+                <Button className="button secondary" onClick={exportCalendar}>
                   <ArrowDownToLine size={16} /> Export calendar
-                </button>
+                </Button>
                 <h3>Shopping, with fewer tabs</h3>
                 <p className="subtle">
                   Paste an Amazon or other store’s product link when adding an
@@ -1567,7 +1584,9 @@ function DayDialog({
     dialog.current?.showModal();
   }, []);
   return (
-    <dialog
+    <m.dialog
+      initial={false}
+      animate={{ opacity: 1 }}
       ref={dialog}
       className="entry-dialog"
       aria-labelledby="day-title"
@@ -1580,29 +1599,29 @@ function DayDialog({
             day: "numeric",
           })}
         </h2>
-        <button
+        <Button
           className="icon-button"
           aria-label="Close day"
           onClick={onClose}
         >
           <X size={20} />
-        </button>
+        </Button>
       </div>
       {entries.map((entry) => (
-        <button
+        <Button
           className="agenda-entry"
           key={entry.id}
           onClick={() => onOpen(entry)}
         >
           {entry.title}
           <ChevronRight size={16} />
-        </button>
+        </Button>
       ))}
-      <button className="button" onClick={onAdd}>
+      <Button className="button" onClick={onAdd}>
         <Plus size={16} />
         Add event
-      </button>
-    </dialog>
+      </Button>
+    </m.dialog>
   );
 }
 
@@ -1697,7 +1716,9 @@ function EntryDialog({
     });
   }
   return (
-    <dialog
+    <m.dialog
+      initial={false}
+      animate={{ opacity: 1 }}
       ref={dialog}
       className="entry-dialog"
       aria-labelledby="dialog-title"
@@ -1716,14 +1737,14 @@ function EntryDialog({
             {entry ? "Edit" : "Add"} {labels[kind]}
           </h2>
         </div>
-        <button
+        <Button
           className="icon-button"
           aria-label="Close dialog"
           disabled={busy}
           onClick={onClose}
         >
           <X size={21} />
-        </button>
+        </Button>
       </div>
       {entry && (
         <BillChecks
@@ -1737,7 +1758,7 @@ function EntryDialog({
         {!entry && (
           <div className="filters kind-picker">
             {(["task", "event", "request", "note"] as Kind[]).map((value) => (
-              <button
+              <Button
                 type="button"
                 key={value}
                 className={kind === value ? "active" : ""}
@@ -1747,7 +1768,7 @@ function EntryDialog({
                 }}
               >
                 {labels[value]}
-              </button>
+              </Button>
             ))}
           </div>
         )}
@@ -1939,7 +1960,7 @@ function EntryDialog({
         )}
         <div className="dialog-actions">
           {entry && (
-            <button
+            <Button
               type="button"
               className="icon-button danger"
               aria-label="Delete entry"
@@ -1949,23 +1970,23 @@ function EntryDialog({
               }
             >
               <Trash2 size={18} />
-            </button>
+            </Button>
           )}
-          <button
+          <Button
             type="button"
             className="button secondary"
             disabled={busy}
             onClick={onClose}
           >
             Cancel
-          </button>
-          <button className="button" disabled={busy}>
+          </Button>
+          <Button className="button" disabled={busy}>
             {busy ? "Saving…" : "Save to our home"}
             <ArrowRight size={16} />
-          </button>
+          </Button>
         </div>
       </form>
-    </dialog>
+    </m.dialog>
   );
 }
 
@@ -2021,10 +2042,10 @@ function Auth({ onSuccess }: { onSuccess: () => void }) {
               {error}
             </p>
           )}
-          <button className="button" disabled={busy}>
+          <Button className="button" disabled={busy}>
             {busy ? "Opening the door…" : "Come on in"}
             <ArrowRight size={17} />
-          </button>
+          </Button>
         </form>
         <p className="auth-footnote">
           <ShieldCheck size={15} />

@@ -1,6 +1,8 @@
 "use client";
 
-import { Check } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { AnimatedCheck } from "@/components/ui/animated-check";
+
 import type { Entry, Member } from "@/lib/model";
 import { billPaid, isBill } from "@/lib/household-actions";
 
@@ -28,7 +30,7 @@ export default function BillChecks({
           const name = member?.name || "Housemate";
           const paid = entry.paid_by?.includes(id) ?? false;
           return (
-            <button
+            <Button
               key={id}
               type="button"
               className={`bill-person ${paid ? "paid" : ""}`}
@@ -51,8 +53,10 @@ export default function BillChecks({
                 <strong>{name}</strong>
                 <small>{paid ? "Paid" : "Not paid yet"}</small>
               </span>
-              <span className="bill-tick">{paid && <Check size={16} />}</span>
-            </button>
+              <span className="bill-tick">
+                {paid && <AnimatedCheck size={16} />}
+              </span>
+            </Button>
           );
         })}
       </div>

@@ -1,0 +1,391 @@
+/* Warm, tactile controls. Motion decorates actions; it never delays a save. */
+:root {
+  --ui-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --ui-ring: #899477;
+}
+.ui-button {
+  transition:
+    background-color 160ms ease,
+    border-color 160ms ease,
+    color 160ms ease,
+    box-shadow 180ms ease;
+  touch-action: manipulation;
+}
+.ui-button:focus-visible,
+.segmented-control button:focus-visible {
+  outline: 2px solid var(--ui-ring);
+  outline-offset: 3px;
+}
+.button {
+  border-radius: 10px;
+  box-shadow:
+    inset 0 1px 0 #ffffff19,
+    0 2px 3px #51412e12;
+}
+.button:hover:not(:disabled) {
+  box-shadow:
+    inset 0 1px 0 #ffffff26,
+    0 4px 10px #51412e17;
+}
+.button.secondary {
+  background: #fffcf5;
+  border-color: #ded6c7;
+}
+.icon-button {
+  border-radius: 9px;
+}
+.icon-button:hover:not(:disabled) {
+  background: #e9e3d655;
+}
+input:not([type="checkbox"]),
+select,
+textarea {
+  border-radius: 9px;
+  transition:
+    border-color 160ms ease,
+    box-shadow 160ms ease;
+}
+input:focus,
+select:focus,
+textarea:focus {
+  border-color: var(--ui-ring);
+  box-shadow: 0 0 0 3px #8994771b;
+}
+.panel {
+  box-shadow:
+    0 2px 5px #634b2a05,
+    0 12px 28px #634b2a03;
+}
+.task-row {
+  transition: background-color 160ms ease;
+}
+.task-row:hover {
+  background: #e9eee322;
+}
+.checkbox {
+  border-radius: 8px;
+  transition:
+    background-color 160ms ease,
+    border-color 160ms ease,
+    box-shadow 160ms ease;
+}
+.checkbox[aria-pressed="true"] {
+  box-shadow: 0 0 0 3px #89947713;
+}
+.board-check:hover,
+.board-buy:hover {
+  box-shadow: 0 0 0 4px #89947716;
+}
+
+/* Radix toggle groups keep arrow-key navigation and a single active filter. */
+.segmented-control {
+  display: inline-flex;
+  gap: 2px;
+  padding: 4px;
+  border: 1px solid #e7dfd2;
+  border-radius: 12px;
+  background: #eee9df99;
+  isolation: isolate;
+}
+.segmented-control button {
+  position: relative;
+  flex-shrink: 0;
+  border-radius: 8px;
+  padding: 8px 13px;
+  background: transparent;
+  color: #837965;
+  font-size: 11px;
+}
+.segmented-control button.active {
+  background: transparent;
+  color: #4d5c42;
+  font-weight: 600;
+}
+.segment-highlight {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border: 1px solid #e1dccd;
+  border-radius: 8px;
+  background: #fffdf8;
+  box-shadow: 0 1px 3px #55432b10;
+  pointer-events: none;
+}
+.segment-label {
+  position: relative;
+}
+
+/* A tiny live noticeboard inside the TV button. */
+.display-toggle {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+  padding: 8px 13px;
+  min-height: 42px;
+  border-radius: 11px;
+  border-color: #cbd2ba;
+  background: linear-gradient(145deg, #f6f7eb, #ecefdd);
+  color: #606b4b;
+  box-shadow:
+    inset 0 1px 0 #ffffffcc,
+    0 2px 5px #5967440b;
+}
+.display-toggle:hover:not(:disabled) {
+  border-color: #a7b293;
+  box-shadow:
+    0 0 0 3px #b9c6a224,
+    0 4px 12px #59674415;
+}
+.display-toggle::after {
+  content: "";
+  position: absolute;
+  inset: -50%;
+  z-index: -1;
+  background: linear-gradient(
+    110deg,
+    transparent 35%,
+    #fffefa99 50%,
+    transparent 65%
+  );
+  transform: translateX(-100%);
+  pointer-events: none;
+}
+.tv-icon {
+  flex-shrink: 0;
+  overflow: visible;
+}
+.tv-screen {
+  fill: #d9e2c7;
+}
+.tv-window {
+  opacity: 0.65;
+}
+.tv-ready {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #879868;
+  margin-left: 2px;
+  box-shadow: 0 0 0 3px #87986812;
+}
+html[data-ambient="on"] .display-toggle::after {
+  animation: tv-glint 9s ease-in-out infinite;
+}
+html[data-ambient="on"] .tv-screen {
+  animation: screen-breathe 6s ease-in-out infinite;
+}
+html[data-ambient="on"] .tv-ready {
+  animation: ready-breathe 6s ease-in-out infinite;
+}
+@keyframes tv-glint {
+  0%,
+  72% {
+    transform: translateX(-100%);
+  }
+  95%,
+  100% {
+    transform: translateX(100%);
+  }
+}
+@keyframes screen-breathe {
+  0%,
+  100% {
+    opacity: 0.45;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+@keyframes ready-breathe {
+  0%,
+  100% {
+    opacity: 0.65;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+.ui-tooltip {
+  z-index: 200;
+  max-width: 250px;
+  padding: 9px 12px;
+  background: #4d5643;
+  color: #fffdf4;
+  font-size: 11px;
+  line-height: 1.5;
+  border: 1px solid #5e6853;
+  border-radius: 8px;
+  box-shadow: 0 6px 18px #3229181f;
+  transform-origin: var(--radix-tooltip-content-transform-origin);
+  animation: tooltip-in 130ms ease-out;
+}
+.ui-tooltip-arrow {
+  fill: #4d5643;
+}
+@keyframes tooltip-in {
+  from {
+    opacity: 0;
+    transform: translateY(3px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.entry-dialog[open] {
+  animation: dialog-in 190ms var(--ui-ease);
+}
+.entry-dialog[open]::backdrop {
+  animation: backdrop-in 160ms ease-out;
+}
+@keyframes dialog-in {
+  from {
+    opacity: 0;
+    translate: 0 8px;
+    scale: 0.99;
+  }
+  to {
+    opacity: 1;
+    translate: 0 0;
+    scale: 1;
+  }
+}
+@keyframes backdrop-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+.toast-stack .toast {
+  border: 1px solid #ffffff20;
+  border-radius: 12px;
+  box-shadow: 0 8px 28px #3b43252b;
+}
+
+/* Low-contrast color drifts behind the TV's readable, stationary cards. */
+.wall-display {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+}
+.wall-ambient {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  overflow: hidden;
+  pointer-events: none;
+}
+.wall-ambient i {
+  position: absolute;
+  width: 65vw;
+  height: 65vw;
+  border-radius: 50%;
+  background: radial-gradient(ellipse, #b5c3942b, transparent 68%);
+}
+.wall-ambient i:nth-child(1) {
+  top: -35vw;
+  right: -15vw;
+}
+.wall-ambient i:nth-child(2) {
+  bottom: -35vw;
+  left: -22vw;
+  background: radial-gradient(ellipse, #d9a98226, transparent 68%);
+}
+.wall-ambient i:nth-child(3) {
+  top: 10vh;
+  left: 20vw;
+  background: radial-gradient(ellipse, #e4c78b18, transparent 68%);
+}
+html[data-ambient="on"] .wall-ambient i {
+  animation: wall-drift 28s ease-in-out infinite alternate;
+}
+html[data-ambient="on"] .wall-ambient i:nth-child(2) {
+  animation-duration: 34s;
+  animation-direction: alternate-reverse;
+}
+html[data-ambient="on"] .wall-ambient i:nth-child(3) {
+  animation-duration: 40s;
+}
+@keyframes wall-drift {
+  from {
+    transform: translate3d(-2%, 0, 0);
+  }
+  to {
+    transform: translate3d(4%, 5%, 0);
+  }
+}
+.wall-clock {
+  position: relative;
+}
+.wall-clock .clock-breath {
+  position: absolute;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #a3ad87;
+  top: 14px;
+  left: -19px;
+}
+html[data-ambient="on"] .clock-breath {
+  animation: ready-breathe 8s ease-in-out infinite;
+}
+.ambient-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  border: 1px solid #ded5c4;
+  border-radius: 8px;
+  background: #fff9ef;
+  padding: 9px 11px;
+  font-size: 11px;
+  color: #706b53;
+}
+.ambient-toggle[aria-pressed="true"] {
+  color: #62704b;
+}
+.wall-controls .ambient-toggle {
+  gap: 6px;
+}
+
+@media (max-width: 650px) {
+  .display-toggle {
+    padding: 8px;
+  }
+  .display-toggle .tv-ready {
+    display: none;
+  }
+  .segmented-control {
+    max-width: 100%;
+  }
+  .segmented-control button {
+    padding: 8px 11px;
+  }
+  .wall-controls .ambient-toggle span {
+    display: none;
+  }
+}
+@media (max-width: 400px) {
+  .segmented-control button {
+    padding: 8px 10px;
+  }
+}
+/* No idle effects while hidden, paused, or following reduced motion. */
+html[data-ambient="off"] .wall-ambient i,
+html[data-ambient="off"] .tv-screen,
+html[data-ambient="off"] .tv-ready,
+html[data-ambient="off"] .clock-breath {
+  animation: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+    scroll-behavior: auto !important;
+  }
+}

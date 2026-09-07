@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
+import MotionProvider from "@/components/ui/motion-provider";
 import "./globals.css";
 import "./home-board.css";
 import "./fitted-pages.css";
+import "./delight.css";
 
 export const metadata: Metadata = {
   title: "Common Ground · A little more together",
@@ -15,7 +17,9 @@ export default function RootLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body>
+        <MotionProvider>{children}</MotionProvider>
+      </body>
     </html>
   );
 }

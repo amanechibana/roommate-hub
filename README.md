@@ -10,6 +10,8 @@ Choose **Display mode** in the top bar for a monitor/TV, or bookmark `/?display=
 
 Display mode uses the same signed-in household session and refreshes shared records every 15 seconds. It does not create a public sharing link or grant extra access. The URL keeps the display preference across reloads. Set the TV/computer's sleep settings separately if you want an always-on display.
 
+Controls use Radix UI primitives and Motion, styled to match the house: sliding filter highlights, tactile buttons, drawn checkmarks, and gentle entrances. The TV button has a soft idle shimmer, and display mode has slowly drifting background color. Use **Motion on/off** in display mode or household settings to pause ambient effects; the choice stays on this device. Idle effects stop in hidden tabs, and system reduced-motion preferences are respected.
+
 ## Weather and train times
 
 A band above the noticeboard shows the current weather beside the next few
@@ -60,11 +62,11 @@ its stations before switching into display mode.
 
 Three upstream sources are used, none of which needs an API key:
 
-| Data | Source | Notes |
-| --- | --- | --- |
-| Weather | [Open-Meteo](https://open-meteo.com) | Current conditions plus the day's high, low, and chance of rain. |
-| PATH | `panynj.gov/bin/portauthority/ridepath.json` | The endpoint behind the RidePATH app. **Unofficial** and undocumented; it can change without notice. |
-| NYC Subway | [MTA GTFS-realtime](https://api.mta.info/) | Protocol buffer feeds, split by line group. No key required. |
+| Data       | Source                                       | Notes                                                                                                |
+| ---------- | -------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| Weather    | [Open-Meteo](https://open-meteo.com)         | Current conditions plus the day's high, low, and chance of rain.                                     |
+| PATH       | `panynj.gov/bin/portauthority/ridepath.json` | The endpoint behind the RidePATH app. **Unofficial** and undocumented; it can change without notice. |
+| NYC Subway | [MTA GTFS-realtime](https://api.mta.info/)   | Protocol buffer feeds, split by line group. No key required.                                         |
 
 Requests go through route handlers in `app/api/` rather than the browser: the
 subway feeds are protobuf and are not reachable directly from a page. Responses
