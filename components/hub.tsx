@@ -1,5 +1,7 @@
 "use client";
 
+import styles from "./hub.module.css";
+
 import { m } from "motion/react";
 import { Button } from "@/components/ui/button";
 import { AnimatedCheck } from "@/components/ui/animated-check";
@@ -798,6 +800,11 @@ export default function Hub() {
     </div>
   );
 
+  const PageIcon = tabs.find((item) => item.name === tab)?.icon || Settings;
+  const openTasks = tasks.filter((entry) => !entry.done);
+  const doneCount = tasks.length - openTasks.length;
+  const neededItems = shopping.filter((entry) => !entry.done);
+
   const boardProps = {
     household,
     entries,
@@ -819,7 +826,7 @@ export default function Hub() {
 
   return (
     <div
-      className={`app-shell ${tab === "Overview" || tab === "Calendar" ? "fitted-app" : ""}`}
+      className={`${styles.shell} app-shell ${tab === "Overview" || tab === "Calendar" ? "fitted-app" : ""}`}
     >
       <aside className="sidebar">
         <a className="brand" href="/" aria-label="Common Ground home">
@@ -832,7 +839,7 @@ export default function Hub() {
             ground<span className="brand-dot">.</span>
           </span>
         </a>
-        <span className="nav-label">A LITTLE MORE TOGETHER</span>
+        <span className="nav-label">{household.name}</span>
         <nav aria-label="Main navigation">
           {tabs.map(({ name, icon: Icon }) => (
             <Button
@@ -852,14 +859,6 @@ export default function Hub() {
           ))}
         </nav>
         <div className="sidebar-bottom">
-          <div className="sidebar-note">
-            <Sparkles size={20} />
-            <p>
-              A happy home is
-              <br />a team effort.
-            </p>
-            <span>You’ve got this, together.</span>
-          </div>
           <Button
             className={`settings-link ${tab === "Our household" ? "selected" : ""}`}
             onClick={() => setTab("Our household")}
@@ -962,34 +961,27 @@ export default function Hub() {
               animate={{ opacity: 1 }}
               className="page-heading"
             >
-              <div>
-                <p className="eyebrow">
-                  {new Date()
-                    .toLocaleDateString("en-US", {
-                      weekday: "long",
-                      month: "long",
-                      day: "numeric",
-                    })
-                    .toUpperCase()}
-                </p>
-                <h1>{tab}</h1>
-                <p className="subtitle">
-                  {
+              <div className="heading-copy">
+                {tab !== "Calendar" && (
+                  <span className="page-symbol" aria-hidden="true">
+                    <PageIcon size={23} />
+                  </span>
+                )}
+                <div>
+                  <h1>{tab}</h1>
+                  <p className="subtitle">
                     {
-                      Overview:
-                        "Less coordinating. More living. Here’s what’s happening at home.",
-                      Calendar:
-                        "Make room for the plans, the practical stuff, and each other.",
-                      "To-dos": "Many hands. A lighter load.",
-                      "Shopping list":
-                        "The things we need. The things that make it home.",
-                      "House notes":
-                        "Little reminders for the people you live with.",
-                      "Our household":
-                        "Your people, your space, your shared rhythm.",
-                    }[tab]
-                  }
-                </p>
+                      {
+                        Calendar: "Plans and dated to-dos for your home.",
+                        "To-dos": `${openTasks.length} open · ${openTasks.filter((entry) => entry.assignee === uid).length} assigned to you`,
+                        "Shopping list": `${neededItems.length} ${neededItems.length === 1 ? "item" : "items"} to pick up`,
+                        "House notes": `${notes.length} ${notes.length === 1 ? "note" : "notes"} shared with your home`,
+                        "Our household": `${household.name} · ${members.length} ${members.length === 1 ? "housemate" : "housemates"}`,
+                        Overview: "",
+                      }[tab]
+                    }
+                  </p>
+                </div>
               </div>
               {tab !== "Our household" &&
                 addButton(
@@ -1241,7 +1233,7 @@ export default function Hub() {
           )}
 
           {tab === "To-dos" && (
-            <section className="panel">
+            <section className="panel entry-panel">
               <div className="panel-heading">
                 <SegmentedControl
                   label="To-do filters"
@@ -1249,9 +1241,16 @@ export default function Hub() {
                   value={filter}
                   onChange={setFilter}
                 />
-                <span className="subtle">
-                  {tasks.filter((e) => e.done).length} of {tasks.length} done
-                </span>
+                <div className="list-progress">
+                  <span>
+                    {doneCount} of {tasks.length} done
+                  </span>
+                  <progress
+                    aria-label="To-do completion"
+                    value={doneCount}
+                    max={Math.max(1, tasks.length)}
+                  />
+                </div>
               </div>
               {quickAdd("task")}
               {tasks
@@ -1272,18 +1271,12 @@ export default function Hub() {
               ).length && (
                 <Empty text="Nothing here. A little breathing room." />
               )}
-              <Button
-                className="add-row"
-                onClick={() => setEditing({ kind: "task" })}
-              >
-                <Plus size={16} /> Add a to-do
-              </Button>
             </section>
           )}
 
           {tab === "Shopping list" && (
-            <>
-              <div className="list-toolbar">
+            <section className="panel entry-panel">
+              <div className="panel-heading">
                 <SegmentedControl
                   label="Shopping filters"
                   values={["All", "Need", "Want", "Bought"]}
@@ -1304,7 +1297,7 @@ export default function Hub() {
                 )}
               </div>
               {quickAdd("request")}
-              <div className="panel shopping-list">
+              <div className="shopping-list">
                 {shopping
                   .filter((e) =>
                     filter === "Bought"
@@ -1367,7 +1360,7 @@ export default function Hub() {
               ).length && (
                 <Empty text="Nothing on this list yet. Add something for your home." />
               )}
-            </>
+            </section>
           )}
 
           {tab === "House notes" && (
@@ -1397,7 +1390,7 @@ export default function Hub() {
                 <h2>
                   <Users size={20} /> {household.name}
                 </h2>
-                <p className="subtle">A home is better with good people.</p>
+                <p className="subtle">People who share this home.</p>
                 {members.map((member, i) => (
                   <div className="member-row" key={member.user_id}>
                     {avatar(member, i)}
@@ -1447,13 +1440,13 @@ export default function Hub() {
                     add your project URL and publishable key.
                   </p>
                 )}
-                <h3>A little background motion</h3>
+                <h3>Display motion</h3>
                 <p className="subtle">
                   Gentle details for this device. Your system’s reduced-motion
                   preference is always respected.
                 </p>
                 <AmbientToggle />
-                <h3>Bring your calendar along</h3>
+                <h3>Calendar export</h3>
                 <p className="subtle">
                   Download your dated chores and events for Apple Calendar,
                   Google Calendar, or Outlook.
@@ -1468,52 +1461,8 @@ export default function Hub() {
                   prices aren’t connected.
                 </p>
               </section>
-              <section className="panel settings-panel ideas-panel">
-                <h2>
-                  <Sparkles size={20} /> Room to grow
-                </h2>
-                <div className="idea-grid">
-                  {[
-                    [
-                      "Split the little things",
-                      "Shared expenses, balances, and who paid for the groceries.",
-                    ],
-                    [
-                      "A fair chore rotation",
-                      "Recurring chores that automatically take turns.",
-                    ],
-                    [
-                      "What’s for dinner?",
-                      "A meal plan and shared pantry, linked to the shopping list.",
-                    ],
-                    [
-                      "The house handbook",
-                      "Wi-Fi details, bin days, landlord contacts, and appliance manuals.",
-                    ],
-                    [
-                      "A quick house vote",
-                      "Pick a movie, a new sofa, or the next house dinner.",
-                    ],
-                    [
-                      "Give each other a heads-up",
-                      "Guest visits, quiet hours, and work-from-home plans.",
-                    ],
-                  ].map(([title, text]) => (
-                    <div key={title}>
-                      <h3>{title}</h3>
-                      <p>{text}</p>
-                    </div>
-                  ))}
-                </div>
-              </section>
             </div>
           )}
-          <div className="footer-spacer" />
-          <footer>
-            <span>Made for the place you share.</span>
-            <Leaf size={15} />
-            <span>A little more together.</span>
-          </footer>
         </main>
       </div>
       {toasts}

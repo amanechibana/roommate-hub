@@ -60,9 +60,6 @@ body:has(.fitted-app) {
 .fitted-app .sidebar-bottom {
   padding-top: 15px;
 }
-.fitted-app .sidebar-note {
-  display: none;
-}
 .fitted-app .home-board {
   flex: 1;
   min-height: 0;

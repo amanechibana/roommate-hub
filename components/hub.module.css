@@ -1,0 +1,605 @@
+/* The application frame and working pages share one visual system. */
+.shell {
+  --ink: #303a32;
+  --muted: #6e766b;
+  --green: #49634d;
+  --line: #e1e4d9;
+  --paper: #fffefa;
+  background: #f5f5ee;
+}
+.shell :global(.sidebar) {
+  background: #2e4538;
+  border-color: #2e4538;
+  color: #f5f2df;
+  padding-top: 28px;
+}
+.shell :global(.brand) {
+  font-size: 24px;
+  color: #f8f4e6;
+  margin-bottom: 40px;
+}
+.shell :global(.brand-icon) {
+  background: #ffffff12;
+  border: 1px solid #ffffff20;
+  color: #e4e9c9;
+  border-radius: 14px;
+}
+.shell :global(.brand-dot) {
+  color: #d9ba84;
+}
+.shell :global(.nav-label) {
+  color: #b7c8b6;
+  font-size: 10px;
+  letter-spacing: 1px;
+  overflow-wrap: anywhere;
+}
+.shell :global(.sidebar nav button) {
+  color: #d1dccc;
+  min-height: 46px;
+  border-radius: 10px;
+}
+.shell :global(.sidebar nav button:hover) {
+  background: #ffffff0c;
+}
+.shell :global(.sidebar nav button.active) {
+  color: #273f30;
+  background: #e5ecd7;
+  box-shadow: 0 3px 12px #14291b20;
+  font-weight: 650;
+}
+.shell :global(.nav-count) {
+  color: #e6edda;
+  background: #ffffff14;
+  border-radius: 6px;
+  min-width: 22px;
+  text-align: center;
+}
+.shell :global(.active .nav-count) {
+  color: #334c38;
+  background: #cbd7bc;
+}
+.shell :global(.sidebar-bottom) {
+  padding-top: 24px;
+}
+.shell :global(.settings-link) {
+  color: #d1dccc;
+  border-radius: 10px;
+}
+.shell :global(.settings-link:hover),
+.shell :global(.settings-link.selected) {
+  background: #ffffff10;
+  color: #fff9e9;
+}
+.shell :global(.sidebar-profile) {
+  border-color: #ffffff20;
+  padding-top: 20px;
+}
+.shell :global(.sidebar-profile .avatar) {
+  border-color: #2e4538;
+}
+.shell :global(.sidebar-profile .text-button),
+.shell :global(.sidebar-profile .icon-button) {
+  color: #f0f1df;
+}
+.shell :global(.sidebar-profile small) {
+  color: #bac9b9;
+  font-size: 11px;
+}
+.shell :global(.sidebar nav:after) {
+  content: none;
+}
+.shell :global(.topbar) {
+  background: #fbfcf7;
+  border-color: #e2e7dc;
+}
+.shell :global(.topbar > span) {
+  color: #687566;
+}
+.shell :global(.content:not(.home-content):not(.calendar-content)) {
+  padding: 26px 32px 40px;
+  max-width: 1240px;
+}
+.shell :global(.demo-banner) {
+  background: #e9eee1;
+  color: #53664e;
+  margin-bottom: 20px;
+}
+.shell :global(.page-heading) {
+  gap: 16px;
+}
+.shell :global(.content > .page-heading) {
+  margin: 0 0 24px;
+}
+.shell :global(.heading-copy) {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  min-width: 0;
+}
+.shell :global(.heading-copy > div) {
+  min-width: 0;
+}
+.shell :global(.page-symbol) {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 52px;
+  height: 52px;
+  color: #58744d;
+  background: #e4ebd9;
+  border: 1px solid #d8e1ca;
+  border-radius: 16px;
+}
+.shell :global(.content > .page-heading h1) {
+  font-family: Georgia, serif;
+  font-weight: 400;
+  font-size: 34px;
+  letter-spacing: -1px;
+  margin: 0 0 5px;
+}
+.shell :global(.subtitle) {
+  color: #657061;
+  font-size: 13px;
+  line-height: 1.5;
+}
+.shell :global(.page-heading > .button) {
+  margin: 0;
+  min-height: 42px;
+}
+.shell :global(.button) {
+  background: #49634d;
+  border-color: #49634d;
+  font-size: 13px;
+  border-radius: 10px;
+}
+.shell :global(.button.secondary) {
+  color: #426045;
+  border-color: #d3ddc9;
+  background: #f8faf2;
+}
+.shell :global(.panel) {
+  border-color: #dce2d4;
+  border-radius: 16px;
+  box-shadow: 0 4px 20px #273f3005;
+}
+.shell :global(.entry-panel) {
+  flex: 0 0 auto;
+}
+.shell :global(.entry-panel > .panel-heading) {
+  padding: 18px 20px 12px;
+  min-width: 0;
+}
+.shell :global(.entry-panel .panel-heading > .subtle) {
+  font-size: 12px;
+  color: #6c7667;
+  text-align: right;
+}
+.shell :global(.segmented-control) {
+  border-color: #e1e6d9;
+  background: #edf1e7;
+}
+.shell :global(.segmented-control button) {
+  font-size: 12px;
+  color: #62705b;
+  padding: 8px 14px;
+}
+.shell :global(.segment-highlight) {
+  background: #fffefa;
+  border-color: #d6decb;
+  box-shadow: 0 2px 4px #31432b10;
+}
+.shell :global(.list-progress) {
+  display: grid;
+  gap: 7px;
+  width: 110px;
+  flex-shrink: 0;
+  color: #6c7667;
+  font-size: 11px;
+  text-align: right;
+}
+.shell :global(.list-progress progress) {
+  width: 100%;
+  height: 4px;
+  border: none;
+  border-radius: 4px;
+  overflow: hidden;
+  background: #e9eee2;
+  accent-color: #719169;
+}
+.shell :global(.list-progress progress::-webkit-progress-bar) {
+  background: #e9eee2;
+}
+.shell :global(.list-progress progress::-webkit-progress-value) {
+  background: #719169;
+  border-radius: 4px;
+  transition: width 180ms;
+}
+.shell :global(.list-progress progress::-moz-progress-bar) {
+  background: #719169;
+}
+.shell :global(.quick-add) {
+  padding: 4px 20px 18px;
+  margin: 0;
+  gap: 8px;
+}
+.shell :global(.quick-add input) {
+  background: #f7f9f2;
+  border-color: #dce3d1;
+  padding: 12px 14px;
+  min-height: 44px;
+  font-size: 13px;
+}
+.shell :global(.quick-add input::placeholder) {
+  color: #788572;
+}
+.shell :global(.quick-add .button) {
+  min-width: 74px;
+}
+.shell :global(.task-row) {
+  padding: 18px 20px;
+  gap: 14px;
+  border-color: #e9ece2;
+  min-height: 78px;
+}
+.shell :global(.task-row:hover) {
+  background: #f4f7ec;
+}
+.shell :global(.checkbox) {
+  width: 24px;
+  height: 24px;
+  border-radius: 8px;
+  border-color: #b7c5ac;
+  background: #fbfcf7;
+}
+.shell :global(.completed .checkbox) {
+  background: #57754e;
+  border-color: #57754e;
+}
+.shell :global(.entry-label) {
+  gap: 5px;
+}
+.shell :global(.entry-label > span),
+.shell :global(.shopping-row .entry-label h2) {
+  font-family: "DM Sans", sans-serif;
+  font-size: 15px;
+  font-weight: 550;
+  line-height: 1.4;
+  color: #344232;
+}
+.shell :global(.entry-label small) {
+  font-size: 11px;
+  color: #717c68;
+  line-height: 1.5;
+}
+.shell :global(.entry-label small.overdue) {
+  color: #a34e36;
+}
+.shell :global(.completed .entry-label > span),
+.shell :global(.completed .entry-label h2) {
+  color: #84907d;
+  text-decoration: line-through;
+}
+.shell :global(.person-tag) {
+  background: #f0f4e8;
+  color: #536449;
+  padding: 7px 10px;
+  font-size: 11px;
+  border-radius: 20px;
+  border: 1px solid #e2e8d8;
+  max-width: 120px;
+}
+.shell :global(.shopping-row .row-price) {
+  font-size: 15px;
+  color: #526748;
+  font-variant-numeric: tabular-nums;
+}
+.shell :global(.empty) {
+  color: #68795e;
+  padding: 32px 20px;
+  border-top: 1px solid #e9ece2;
+}
+.shell :global(.notes-grid) {
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr));
+  align-items: start;
+  gap: 22px;
+}
+.shell :global(.notes-grid .notice-board) {
+  background: #fbf2d7;
+  border: 1px solid #e7d9ad;
+  border-radius: 3px 16px 16px 16px;
+  padding: 14px 0 0;
+  min-height: 200px;
+  box-shadow:
+    0 4px 0 #bca36b0b,
+    0 12px 24px #57492306;
+}
+.shell :global(.notes-grid .notice-board:nth-child(3n + 2)) {
+  background: #eaf0df;
+  border-color: #d5dfc1;
+}
+.shell :global(.notes-grid .notice-board:nth-child(3n + 3)) {
+  background: #f2e9e3;
+  border-color: #e3d5cb;
+}
+.shell :global(.note-preview) {
+  padding: 16px 24px 24px;
+}
+.shell :global(.note-preview h3) {
+  color: #534a34;
+  font-size: 25px;
+}
+.shell :global(.note-preview p) {
+  font-size: 14px;
+  color: #70674e;
+  line-height: 1.75;
+}
+.shell :global(.note-preview > span) {
+  color: #746b53;
+  font-size: 12px;
+  padding-top: 16px;
+  border-top: 1px solid #86734a20;
+}
+.shell :global(.settings-grid) {
+  align-items: start;
+  gap: 20px;
+}
+.shell :global(.settings-panel) {
+  padding: 24px;
+}
+.shell :global(.settings-panel > h2) {
+  font-size: 19px;
+  color: #41583e;
+}
+.shell :global(.settings-panel > p),
+.shell :global(.settings-panel .subtle) {
+  color: #6a7563;
+  line-height: 1.7;
+}
+.shell :global(.settings-panel h3) {
+  padding-top: 20px;
+  border-top: 1px solid #e6ebde;
+  margin-top: 24px;
+}
+.shell :global(.member-row) {
+  padding: 12px 0;
+  margin: 0;
+}
+.shell :global(.member-row + .member-row) {
+  border-top: 1px solid #edf0e7;
+}
+/* Preserve the noticeboard, with clearer edges and stronger text contrast. */
+.shell :global(.board-card) {
+  border-radius: 12px;
+  border-color: #d9dfce;
+  box-shadow: 0 3px 12px #30452d07;
+}
+.shell :global(.plans-card) {
+  border-top: 3px solid #b98560;
+}
+.shell :global(.chores-card) {
+  border-top: 3px solid #7e9467;
+  background: #eef2e4;
+}
+.shell :global(.groceries-card) {
+  border-top: 3px solid #c4a16a;
+}
+.shell :global(.fridge-card) {
+  border-top: 3px solid #c9ae72;
+}
+.shell :global(.board-card-heading > span) {
+  color: #6e7861;
+}
+.shell :global(.board-entry-copy small) {
+  color: #6f7665;
+}
+.shell :global(.calendar-panel .panel-heading) {
+  background: #f4f7ed;
+}
+.shell :global(.calendar-panel .weekday) {
+  color: #6f7c65;
+  background: #f9faf3;
+  font-weight: 600;
+}
+.shell :global(.calendar-panel .calendar-cell.today) {
+  background: #eef3e5;
+}
+.shell :global(.calendar-panel .calendar-event) {
+  border-radius: 5px;
+  font-weight: 500;
+}
+@media (min-width: 851px) {
+  .shell :global(.sidebar) {
+    width: 224px;
+    padding-inline: 16px;
+  }
+  .shell :global(.main-shell) {
+    margin-left: 224px;
+  }
+}
+@media (max-width: 850px) and (min-width: 651px) {
+  .shell :global(.sidebar) {
+    padding-inline: 10px;
+  }
+  .shell :global(.sidebar nav button) {
+    padding-inline: 10px;
+  }
+}
+@media (max-width: 650px) {
+  .shell :global(.sidebar) {
+    padding: 5px 5px max(5px, env(safe-area-inset-bottom));
+    border-color: #385341;
+  }
+  .shell :global(.sidebar nav button) {
+    min-height: 0;
+    font-size: 9px;
+    border-radius: 9px;
+  }
+  .shell :global(.sidebar nav button.active) {
+    background: #e5ecd7;
+  }
+  .shell :global(.content:not(.home-content):not(.calendar-content)) {
+    padding: 16px 12px 24px;
+  }
+  .shell :global(.topbar) {
+    padding-inline: 12px;
+  }
+  .shell :global(.demo-banner) {
+    padding: 6px 9px;
+    margin-bottom: 16px;
+  }
+  .shell :global(.demo-banner > span) {
+    font-size: 0;
+    gap: 0;
+    align-items: center;
+  }
+  .shell :global(.demo-banner > span:after) {
+    content: "Sample home";
+    font-size: 10px;
+    margin-left: 5px;
+  }
+  .shell :global(.demo-banner button) {
+    min-width: auto;
+  }
+  .shell :global(.content > .page-heading) {
+    gap: 10px;
+    margin-bottom: 18px;
+  }
+  .shell :global(.heading-copy) {
+    gap: 10px;
+  }
+  .shell :global(.page-symbol) {
+    width: 38px;
+    height: 42px;
+    border-radius: 12px;
+  }
+  .shell :global(.page-symbol svg) {
+    width: 19px;
+  }
+  .shell :global(.content > .page-heading h1) {
+    font-size: 27px;
+  }
+  .shell :global(.subtitle) {
+    font-size: 11px;
+  }
+  .shell :global(.page-heading > .button) {
+    font-size: 11px;
+    min-height: 38px;
+    padding: 9px 10px;
+  }
+  .shell :global(.entry-panel > .panel-heading) {
+    padding: 12px;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .shell :global(.segmented-control button) {
+    padding: 7px 11px;
+    font-size: 11px;
+  }
+  .shell :global(.list-progress) {
+    width: auto;
+    margin-left: auto;
+  }
+  .shell :global(.list-progress progress) {
+    display: none;
+  }
+  .shell :global(.quick-add) {
+    padding: 0 12px 14px;
+  }
+  .shell :global(.quick-add input) {
+    font-size: 16px;
+    padding: 10px;
+  }
+  .shell :global(.quick-add .button) {
+    min-width: 42px;
+    padding: 10px;
+    font-size: 12px;
+  }
+  .shell :global(.task-row) {
+    padding: 16px 12px;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  .shell :global(.entry-label > span),
+  .shell :global(.shopping-row .entry-label h2) {
+    font-size: 14px;
+  }
+  .shell :global(.entry-label small) {
+    font-size: 11px;
+  }
+  .shell :global(.person-tag) {
+    padding: 5px 7px;
+    font-size: 10px;
+    max-width: 84px;
+  }
+  .shell :global(.shopping-row .row-price) {
+    font-size: 13px;
+  }
+  .shell :global(.notes-grid) {
+    gap: 18px;
+  }
+  .shell :global(.settings-panel) {
+    padding: 20px;
+  }
+}
+@media (max-width: 380px) {
+  .shell :global(.page-symbol) {
+    display: none;
+  }
+  .shell :global(.segmented-control button) {
+    padding-inline: 9px;
+  }
+  .shell :global(.list-progress) {
+    font-size: 10px;
+  }
+}
+
+/* Keep the viewport budget unchanged on short displays. */
+.shell:global(.fitted-app) :global(.demo-banner) {
+  margin-bottom: 12px;
+}
+@media (max-width: 650px) {
+  .shell:global(.fitted-app) :global(.demo-banner) {
+    margin-bottom: 8px;
+  }
+  .shell :global(.commute-strip) {
+    gap: 8px;
+    padding: 9px;
+    border-radius: 12px;
+  }
+  .shell :global(.commute-weather) {
+    gap: 5px;
+    padding-right: 8px;
+  }
+  .shell :global(.commute-weather > svg) {
+    width: 22px;
+    height: 22px;
+  }
+  .shell :global(.commute-weather-copy small) {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+  .shell :global(.commute-actions) {
+    gap: 4px;
+  }
+  .shell :global(.commute-icon) {
+    width: 28px;
+    height: 32px;
+  }
+  .shell :global(.commute-train) {
+    gap: 5px;
+    padding-right: 6px;
+  }
+  .shell :global(.commute-badge) {
+    min-width: 22px;
+    height: 22px;
+    padding-inline: 4px;
+    font-size: 9px;
+  }
+  .shell :global(.commute-when) {
+    font-size: 11px;
+  }
+}

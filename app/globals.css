@@ -185,35 +185,6 @@ nav button.active {
   margin-top: auto;
   padding-top: 50px;
 }
-.sidebar-note {
-  padding: 24px 18px;
-  background: #e6eadc;
-  border-radius: 10px;
-  color: #6a795b;
-  margin-bottom: 20px;
-  position: relative;
-  overflow: hidden;
-}
-.sidebar-note:after {
-  content: "";
-  position: absolute;
-  width: 100px;
-  height: 100px;
-  border: 1px solid #cfd7bc;
-  border-radius: 50%;
-  right: -55px;
-  bottom: -40px;
-}
-.sidebar-note p {
-  font-family: Georgia, serif;
-  font-size: 21px;
-  line-height: 1.4;
-  margin: 12px 0 8px;
-}
-.sidebar-note span {
-  font-size: 10px;
-  color: #919b81;
-}
 .settings-link {
   background: none;
   border: 0;
@@ -1531,7 +1502,6 @@ textarea {
   .brand > span:nth-child(2),
   .nav-label,
   nav button > span,
-  .sidebar-note,
   .sidebar-profile,
   .settings-link {
     display: none;
