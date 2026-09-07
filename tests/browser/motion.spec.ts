@@ -142,6 +142,10 @@ test("cat fits the phone header across tabs and TV scene stays beside the clock"
       page.getByRole("button", { name: "Pet the house cat" }),
     ).toBeInViewport();
   }
+  await page.setViewportSize({ width: 1024, height: 600 });
+  await expect(
+    page.getByRole("button", { name: "Pet the house cat" }),
+  ).toBeInViewport();
   await page.setViewportSize({ width: 1280, height: 720 });
   await page.getByRole("button", { name: "Display mode", exact: true }).click();
   await expect(

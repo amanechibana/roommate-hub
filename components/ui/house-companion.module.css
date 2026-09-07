@@ -229,3 +229,8 @@
     animation: none !important;
   }
 }
+@media (max-height: 600px) and (min-width: 851px) {
+  .compact {
+    display: block;
+  }
+}
