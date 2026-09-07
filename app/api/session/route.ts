@@ -2,6 +2,7 @@ import { cookies } from "next/headers";
 import { createHmac } from "node:crypto";
 import {
   COOKIE_NAME,
+  MEMBER_COOKIE,
   configured,
   json,
   sameOrigin,
@@ -65,6 +66,37 @@ export async function POST(request: Request) {
     );
   }
 }
+export async function PATCH(request: Request) {
+  if (!sameOrigin(request)) return json({ error: "Request not allowed." }, 403);
+  if (!(await signedIn()))
+    return json({ error: "Please enter your household code." }, 401);
+  try {
+    const raw = await request.text();
+    if (raw.length > 1024) return json({ error: "Invalid person." }, 400);
+    const { member_id } = JSON.parse(raw);
+    const data = await sharedDatabase("get");
+    if (
+      !data.members.some(
+        (m: { user_id: string; name: string }) =>
+          m.user_id === member_id && m.name !== "Housemates",
+      )
+    )
+      return json({ error: "Choose a person from this household." }, 400);
+    (await cookies()).set(MEMBER_COOKIE, member_id, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "strict",
+      path: "/",
+      maxAge: SESSION_DURATION,
+    });
+    return json({ member_id });
+  } catch {
+    return json(
+      { error: "Couldn’t remember this person. Please try again." },
+      503,
+    );
+  }
+}
 export async function DELETE(request: Request) {
   if (!sameOrigin(request)) return json({ error: "Request not allowed." }, 403);
   (await cookies()).set(COOKIE_NAME, "", {
@@ -74,5 +106,6 @@ export async function DELETE(request: Request) {
     path: "/",
     maxAge: 0,
   });
+  (await cookies()).delete(MEMBER_COOKIE);
   return json({ authenticated: false });
 }

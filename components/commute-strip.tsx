@@ -320,10 +320,17 @@ export default function CommuteStrip({
               {departure.line}
             </span>
             <div className="commute-train-copy">
-              <strong title={departure.headsign}>{departure.headsign}</strong>
+              <strong title={departure.headsign}>
+                {departure.headsign
+                  .replace(/World Trade Cent(?:er|re)/gi, "WTC")
+                  .replace(/33rd (?:Street|St)(?: via Hoboken)?/gi, "33rd St")
+                  .replace(/^To /i, "")}
+              </strong>
               <small>
                 <span className="commute-origin">{departure.origin}</span>
-                {departure.note ? ` · ${departure.note}` : ""}
+                {departure.line !== "PATH" && departure.note
+                  ? ` · ${departure.note}`
+                  : ""}
               </small>
             </div>
             <span

@@ -454,3 +454,40 @@ body:has(.fitted-app) {
     border-top: 1px solid var(--line);
   }
 }
+
+/* Keep upcoming plans together at the top of their card. */
+.fitted-app .board-plan {
+  flex: 0 0 auto;
+  min-height: 56px;
+  padding: 4px 0;
+}
+.fitted-app .board-date {
+  width: 46px;
+  height: auto;
+  min-height: 46px;
+  padding: 6px;
+  gap: 3px;
+}
+.fitted-app .board-date b {
+  font-size: 21px;
+}
+.fridge-stack {
+  min-height: 0;
+  overflow-y: auto;
+  flex: 1;
+}
+.fridge-stack .fridge-message {
+  flex: none;
+  padding: 10px 0;
+}
+.fridge-stack .fridge-message + .fridge-message {
+  border-top: 1px solid #d9caaa;
+}
+.fridge-stack .fridge-message h3 {
+  font-size: 19px;
+  margin: 0 0 7px;
+}
+.fridge-stack .fridge-message p {
+  font-size: 14px;
+  margin: 0 0 8px;
+}

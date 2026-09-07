@@ -113,22 +113,38 @@ Open the localhost address printed by Next.js. Without Supabase environment vari
   noticeboard on both the home screen and the wall display.
 - Shared house notes. Create, edit, and delete entries through accessible dialogs.
 - `.ics` calendar export and per-event Google Calendar links. These create snapshots/copies, not subscriptions or two-way synchronization.
-- Email OTP authentication, household creation, and expiring household invite codes when Supabase is configured.
+- Shared household-code authentication and a remembered person picker.
 - Persistent shared records with database-enforced household isolation. Other housemates’ changes refresh every 15 seconds while the page is visible, and on window focus.
 - Responsive desktop/mobile layouts and keyboard support.
 
 ## Connect a real household
 
-1. Create a [Supabase project](https://supabase.com/dashboard). The [Free plan](https://supabase.com/pricing) is a starting option; check its current limits, inactivity behavior, and email allowances before relying on it.
-2. Run `supabase/migrations/001_household.sql` once against the **fresh** project using the SQL editor. It creates the tables, constraints, grants, row-level security policies, and household RPCs in a transaction.
-3. Copy `.env.example` to `.env.local` and fill in your Supabase URL and **publishable** key (the legacy anon key also works). Do not use a service-role or secret key. Restart the dev server after changing environment variables.
-4. In Supabase Authentication → Email Templates, configure both **Magic Link** and **Confirm signup** to show the OTP: `<p>Your Common Ground sign-in code is {{ .Token }}</p>`. The app expects the emailed numeric code, not a magic-link redirect. Enable email signups.
-5. Configure a production SMTP provider before inviting your roommates. Supabase’s built-in mail service is intended for development and restricts recipients/rate. See [SMTP setup](https://supabase.com/docs/guides/auth/auth-smtp). Configure Auth rate limits and OTP expiry for your deployment; email codes should be short-lived.
-6. Sign in, create your household, then open **Our household** and generate an invite. Share that code privately. Each roommate signs in using their own email and pastes the code into **Join a home**.
+The household code is the only authentication. After entering it, choose Amane
+or Barnatt. The choice is stored in an HTTP-only cookie for 30 days and can be
+changed from the sidebar footer. It controls attribution and the Mine filter;
+it does not grant different access rights. Existing entries keep their original
+creator, including the legacy shared Housemates identity.
 
-One user belongs to one household in this first version. Invitations have 128 bits of random entropy, are stored only as SHA-256 hashes, and expire after seven days. Generating an invite invalidates the previous code. Invitations permit joining after email verification; they are not a shared login password.
+For a fresh database, apply migrations in order: `001_household.sql`,
+`002_shared_code.sql` (using psql with `-v gateway_hash=<SHA-256 of your gateway token>`),
+`003_recurring_entries.sql`, then `004_device_identity.sql`.
+For an existing shared-code installation through migration 003, apply only 004.
+Migration 004 adds Amane and Barnatt if absent, validates the selected household
+member on writes, and returns saved entry IDs with create responses. **Apply it
+before deploying this frontend.** It preserves existing entries and members.
 
-All household members can read and edit the household’s entries. Only the owner can generate invitations. The browser gets a Supabase publishable key; RLS and restricted database privileges enforce access even when someone calls the API directly. Auth sessions are managed by the Supabase browser client; no household records are cached in browser storage. Member removal, owner transfer, and account deletion need an explicit follow-up workflow; until then these are administrative operations in Supabase.
+Configure the variables listed in `.env.example`: the Supabase URL and
+publishable key, `HOUSEHOLD_ACCESS_CODE`, `HOUSEHOLD_SESSION_SECRET`, and
+`HOUSEHOLD_DATA_TOKEN`. Keep the last three server-only. The data token must
+match the hash supplied to migration 002. Code rotation invalidates existing
+sessions; sign-out clears both authentication and person cookies.
+
+Entry creation, edits, check-offs, and deletion appear immediately. Background
+writes run in order so rapid clicks cannot arrive out of order, and polling
+waits for them to finish. Successful changes need no follow-up GET. A failed
+write shows a brief notice and quietly reloads after the queue drains. Normal
+cross-device updates still arrive every 15 seconds and on focus. Task and
+shopping pages also support typing a title and pressing Enter to add it.
 
 ## Deploy to Vercel
 
@@ -142,14 +158,14 @@ npx vercel env add NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY production
 npx vercel --prod
 ```
 
-Use the HTTPS Supabase project URL for `NEXT_PUBLIC_SUPABASE_URL`, never a PostgreSQL connection string. The local `.env` file does not configure Vercel's hosted environment. Configure the database and email authentication as described above before deploying for household use.
+Use the HTTPS Supabase project URL for `NEXT_PUBLIC_SUPABASE_URL`, never a PostgreSQL connection string. The local `.env` file does not configure Vercel's hosted environment. Configure all server-only household variables and apply the migrations described above before deploying for household use.
 
 Alternatively, import the GitHub repository through Vercel's website:
 
 1. Push this repository to your Git provider and import it into [Vercel](https://vercel.com/new), using the detected Next.js preset.
 2. Add `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` as [Vercel environment variables](https://vercel.com/docs/environment-variables) for the desired environments.
 3. Deploy. These public variables are embedded during the build; changing them requires a new deployment.
-4. Sign in with two household accounts and a separate outsider account to verify isolation using the checklist below before entering private data.
+4. Verify shared-code sign-in and select a different person on each device.
 
 This repository does not create cloud accounts, remote Git repositories, or paid resources. No live Supabase project or Vercel deployment is provisioned by the local scaffold. Google Fonts are loaded from Google with local fallback fonts if unavailable.
 
@@ -165,15 +181,21 @@ With the development server running and Google Chrome installed, run `npm run te
 
 Calendar tests cover all-day date boundaries, escaping of user text, UTF-8 line folding, filtering of exported records, and safe external links. `supabase/tests/isolation.sql` verifies RLS and write restrictions inside a transaction that rolls back its fixtures; run it against a disposable database with the schema installed. The local test harness requires a local PostgreSQL server and Supabase-compatible `auth.users`, `auth.uid()`, `anon`, and `authenticated` definitions.
 
-Before production, verify against your actual Supabase instance:
+The new database regression check is `supabase/tests/device-identity.sql`.
+Run it only in a disposable database with migrations 001–004 and the gateway
+hash set to SHA-256 of `test-gateway`. It checks creator attribution, returned
+series IDs, valid member edits, invalid member rejection, and gateway access.
 
-- Signed-out clients cannot select or mutate private tables or invoke household RPCs.
-- Household A cannot read, insert, update, or delete household B’s records, even through direct API requests.
-- Household A cannot assign an entry to a member of household B or alter its creator/household fields.
-- A verified account without membership sees no records; invalid and expired invite codes fail.
-- Invite rotation invalidates the old code, and ordinary members cannot rotate invites.
-- Two members see saved changes across devices; reload retains records; signing out clears the displayed home.
-- Email sending, OTP expiry, retries, and SMTP delivery work with real roommate addresses.
+For the mocked shared-code browser checks, start the app with its public
+Supabase variables set, then run:
+
+```sh
+PW_SHARED_API=1 npx playwright test tests/browser/optimistic.spec.ts
+```
+
+These tests intercept session and household requests; they never modify the
+live household. The other browser tests use the demo app (start with both
+public Supabase variables empty).
 
 ## Next widgets & integrations
 
@@ -190,4 +212,4 @@ Suggested order:
 9. **Notifications:** opt-in email/push reminders for due chores, rent, and shopping requests.
 10. **Membership management:** owner-controlled removal, leaving a house, ownership transfer, and recovery flows.
 
-Data amounts are USD, events are all-day, recurrence and timed reminders are not implemented yet. No background jobs run in this version. The Supabase Data API’s default row cap also means households should add pagination before growing beyond roughly 1,000 entries.
+Data amounts are USD, events are all-day, and weekly, biweekly, and monthly recurring entries are supported. Timed reminders are not implemented. No background jobs run in this version. The Supabase Data API’s default row cap also means households should add pagination before growing beyond roughly 1,000 entries.

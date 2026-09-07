@@ -35,7 +35,6 @@ type Props = {
   members: Member[];
   display?: boolean;
   demo: boolean;
-  busy: boolean;
   error: string;
   onExit: () => void;
   onOpen: (kind: Kind, entry?: Entry) => void;
@@ -57,7 +56,6 @@ export default function HomeBoard({
   members,
   display = false,
   demo,
-  busy,
   error,
   onExit,
   onOpen,
@@ -74,6 +72,12 @@ export default function HomeBoard({
   const today = dateKey(now);
   const person = (id: string | null) =>
     members.find((m) => m.user_id === id)?.name || "Everyone";
+  const relative = (date: string) => {
+    const days = Math.round(
+      (parseDate(date).getTime() - parseDate(today).getTime()) / 86400000,
+    );
+    return days === 0 ? "Today" : days === 1 ? "Tomorrow" : `in ${days} days`;
+  };
   const friendly = (date: string | null) =>
     !date
       ? "Whenever you can"
@@ -102,7 +106,6 @@ export default function HomeBoard({
     Math.ceil(tasks.length / limit),
     Math.ceil(events.length / limit),
     Math.ceil(shopping.length / limit),
-    notes.length,
   );
   const activePage = page % pages;
   const visible = (items: Entry[]) =>
@@ -110,7 +113,7 @@ export default function HomeBoard({
       (activePage % Math.max(1, Math.ceil(items.length / limit))) * limit,
       ((activePage % Math.max(1, Math.ceil(items.length / limit))) + 1) * limit,
     );
-  const note = notes[activePage % Math.max(1, notes.length)];
+
   const due = tasks.filter((e) => e.date && e.date <= today).length;
 
   useEffect(() => {
@@ -253,28 +256,35 @@ export default function HomeBoard({
               <CalendarDays size={19} />
               Up next
             </h2>
-            <span>{events.length} plans</span>
+            <span>
+              {events.length} {events.length === 1 ? "plan" : "plans"}
+            </span>
           </div>
           <div className="board-rows">
-            {visible(events).map((entry) => (
-              <div className="board-plan" key={entry.id}>
-                <span className="board-date">
-                  <small>
-                    {parseDate(entry.date!).toLocaleDateString("en-US", {
-                      month: "short",
-                    })}
-                  </small>
-                  <b>{parseDate(entry.date!).getDate()}</b>
-                </span>
-                <div className="board-entry-copy">
-                  {title(entry)}
-                  <small>
-                    {friendly(entry.date)} · {entry.category}
-                    {entry.amount != null ? ` · ${dollars(entry.amount)}` : ""}
-                  </small>
+            {(display ? visible(events) : events.slice(0, limit)).map(
+              (entry) => (
+                <div className="board-plan" key={entry.id}>
+                  <span className="board-date">
+                    <small>
+                      {parseDate(entry.date!).toLocaleDateString("en-US", {
+                        month: "short",
+                      })}
+                    </small>
+                    <b>{parseDate(entry.date!).getDate()}</b>
+                  </span>
+                  <div className="board-entry-copy">
+                    {title(entry)}
+                    <small>
+                      {relative(entry.date!)} · {entry.category}
+                      {entry.series_id ? " · ↻" : ""}
+                      {entry.amount != null
+                        ? ` · ${dollars(entry.amount)}`
+                        : ""}
+                    </small>
+                  </div>
                 </div>
-              </div>
-            ))}
+              ),
+            )}
             {!events.length && (
               <div className="board-empty">
                 <Coffee size={24} />
@@ -303,7 +313,6 @@ export default function HomeBoard({
                 ) : (
                   <button
                     className="board-check"
-                    disabled={busy}
                     onClick={() => onToggle(entry)}
                     aria-label={`Complete ${entry.title}`}
                   >
@@ -317,7 +326,9 @@ export default function HomeBoard({
                       entry.date && entry.date < today ? "board-overdue" : ""
                     }
                   >
-                    {person(entry.assignee)} · {friendly(entry.date)}
+                    {entry.assignee ? `${person(entry.assignee)} · ` : ""}
+                    {friendly(entry.date)}
+                    {entry.series_id ? " · ↻" : ""}
                   </small>
                 </div>
               </div>
@@ -341,7 +352,9 @@ export default function HomeBoard({
               <ShoppingBasket size={19} />
               While you’re out
             </h2>
-            <span>{shopping.length} items</span>
+            <span>
+              {shopping.length} {shopping.length === 1 ? "item" : "items"}
+            </span>
           </div>
           <div className="board-rows">
             {visible(shopping).map((entry) => (
@@ -360,7 +373,6 @@ export default function HomeBoard({
                   <button
                     className="board-buy"
                     aria-label={`Mark ${entry.title} as bought`}
-                    disabled={busy}
                     onClick={() => onToggle(entry)}
                   >
                     <Check size={17} />
@@ -390,19 +402,25 @@ export default function HomeBoard({
             </h2>
             <Heart size={18} />
           </div>
-          {note ? (
-            <div className="fridge-message">
-              <h3>
-                {display ? (
-                  note.title
-                ) : (
-                  <button onClick={() => onOpen("note", note)}>
-                    {note.title}
-                  </button>
-                )}
-              </h3>
-              <p title={note.description}>{note.description}</p>
-              <span>With love, {person(note.assignee || note.created_by)}</span>
+          {notes.length ? (
+            <div className="fridge-stack">
+              {notes.map((note) => (
+                <div className="fridge-message" key={note.id}>
+                  <h3>
+                    {display ? (
+                      note.title
+                    ) : (
+                      <button onClick={() => onOpen("note", note)}>
+                        {note.title}
+                      </button>
+                    )}
+                  </h3>
+                  <p title={note.description}>{note.description}</p>
+                  <span>
+                    With love, {person(note.assignee || note.created_by)}
+                  </span>
+                </div>
+              ))}
             </div>
           ) : (
             <div className="fridge-message">

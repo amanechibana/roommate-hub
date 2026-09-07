@@ -3,6 +3,7 @@ import {
   sameOrigin,
   sharedDatabase,
   signedIn,
+  selectedMember,
 } from "@/lib/shared-server";
 
 export const runtime = "nodejs";
@@ -10,7 +11,17 @@ export async function GET() {
   if (!(await signedIn()))
     return json({ error: "Please enter your household code." }, 401);
   try {
-    return json(await sharedDatabase("get"));
+    const data = await sharedDatabase("get");
+    const memberId = await selectedMember();
+    return json({
+      ...data,
+      member_id: data.members.some(
+        (m: { user_id: string; name: string }) =>
+          m.user_id === memberId && m.name !== "Housemates",
+      )
+        ? memberId
+        : null,
+    });
   } catch {
     return json({ error: "Could not load your home. Please try again." }, 503);
   }
@@ -61,7 +72,10 @@ export async function POST(request: Request) {
       delete values.repeat;
       delete values.repeat_until;
     }
-    return json(await sharedDatabase(operation, values));
+    const actor = await selectedMember();
+    if (!actor)
+      return json({ error: "Choose who’s using this device first." }, 400);
+    return json(await sharedDatabase(operation, { ...values, actor }));
   } catch {
     return json(
       { error: "Could not save this change. Check the fields and try again." },

@@ -4,6 +4,10 @@ import { createClient } from "@supabase/supabase-js";
 import { validSession } from "./session-token";
 
 export const COOKIE_NAME = "common_ground_home";
+export const MEMBER_COOKIE = "common_ground_person";
+export async function selectedMember() {
+  return (await cookies()).get(MEMBER_COOKIE)?.value || null;
+}
 export function configured() {
   return Boolean(
     process.env.HOUSEHOLD_ACCESS_CODE &&

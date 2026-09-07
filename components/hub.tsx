@@ -111,7 +111,14 @@ export default function Hub() {
   const agendaRef = useRef<HTMLDivElement>(null);
   const [filter, setFilter] = useState("All");
   const [display, setDisplay] = useState(false);
-  const uid = demo ? "you" : household?.owner_id;
+  const [identity, setIdentity] = useState<string | null>(null);
+  const [choosingPerson, setChoosingPerson] = useState(false);
+  const uid = demo ? identity || "you" : identity;
+  const pending = useRef(0);
+  const writes = useRef(Promise.resolve());
+  const needsRecovery = useRef(false);
+  const sessionGeneration = useRef(0);
+  const savedIds = useRef(new Map<string, string>());
   const today = dateKey(new Date());
   const loadSequence = useRef(0);
   const weeks = Math.ceil(
@@ -154,6 +161,10 @@ export default function Hub() {
 
   const clearSession = useCallback(() => {
     ++loadSequence.current;
+    ++sessionGeneration.current;
+    setIdentity(null);
+    setNotice("");
+    needsRecovery.current = false;
     setSession(false);
     setHousehold(null);
     setEntries([]);
@@ -164,7 +175,8 @@ export default function Hub() {
     setError("");
     setReady(true);
   }, []);
-  const refresh = useCallback(async () => {
+  const refresh = useCallback(async (quiet = false) => {
+    if (pending.current) return;
     const sequence = ++loadSequence.current;
     try {
       const data = await homeRequest("/api/home");
@@ -172,9 +184,11 @@ export default function Hub() {
       setHousehold(data.household);
       setMembers(data.members);
       setEntries(data.entries);
+      setIdentity(data.member_id ?? null);
       setError("");
     } catch (err) {
-      if (sequence === loadSequence.current) setError((err as Error).message);
+      if (!quiet && sequence === loadSequence.current)
+        setError((err as Error).message);
     } finally {
       if (sequence === loadSequence.current) setLoaded(true);
     }
@@ -241,90 +255,118 @@ export default function Hub() {
     }
   }, [notice]);
 
+  // Serialize writes, but never block interaction. Polls cannot overwrite a
+  // pending optimistic change, including a poll started before the click.
+  function persist(
+    operation: string,
+    payload: SaveValues,
+    copies: Entry[] = [],
+  ) {
+    if (demo) return;
+    ++loadSequence.current;
+    ++pending.current;
+    const generation = sessionGeneration.current;
+    writes.current = writes.current
+      .then(async () => {
+        if (generation !== sessionGeneration.current) return;
+        try {
+          const result = await homeRequest("/api/home", "POST", {
+            operation,
+            payload: {
+              ...payload,
+              ...(payload.id
+                ? { id: savedIds.current.get(payload.id) || payload.id }
+                : {}),
+            },
+          });
+          if (generation !== sessionGeneration.current) return;
+          if (copies.length) {
+            const saved: Entry[] = result.entries;
+            if (!Array.isArray(saved) || saved.length !== copies.length)
+              throw new Error("Missing saved entries");
+            copies.forEach((copy, i) =>
+              savedIds.current.set(copy.id, saved[i].id),
+            );
+            setEntries((current) =>
+              current.map((entry) => {
+                const i = copies.findIndex((copy) => copy.id === entry.id);
+                return i < 0
+                  ? entry
+                  : {
+                      ...entry,
+                      id: saved[i].id,
+                      series_id: saved[i].series_id,
+                    };
+              }),
+            );
+          }
+        } catch {
+          if (generation !== sessionGeneration.current) return;
+          needsRecovery.current = true;
+          setNotice("Couldn’t save. Refreshing your home…");
+        }
+      })
+      .finally(() => {
+        --pending.current;
+        if (!pending.current && needsRecovery.current) {
+          needsRecovery.current = false;
+          if (generation === sessionGeneration.current) void refresh(true);
+        }
+      });
+  }
   async function save(values: SaveValues) {
     if (!household) return;
-    setBusy(true);
+    const entry = editing?.entry;
     setError("");
-    try {
-      if (demo) {
-        if (editing?.entry) {
-          const { scope, ...rest } = values;
-          const { date: _date, ...shared } = rest;
-          setEntries((current) =>
-            current.map((e) =>
-              e.id === editing.entry!.id
-                ? { ...e, ...rest }
-                : scope === "series" &&
-                    editing.entry!.series_id &&
-                    e.series_id === editing.entry!.series_id
-                  ? { ...e, ...shared }
-                  : e,
-            ),
-          );
-        } else {
-          const { repeat, repeat_until, ...rest } = values;
-          const stamp = {
+    if (entry) {
+      const { scope, ...rest } = values;
+      const { date: _date, done: _done, ...shared } = rest;
+      setEntries((current) =>
+        current.map((e) =>
+          e.id === entry.id
+            ? { ...e, ...rest }
+            : scope === "series" &&
+                entry.series_id &&
+                e.series_id === entry.series_id
+              ? { ...e, ...shared }
+              : e,
+        ),
+      );
+      persist("update", { ...values, id: entry.id });
+    } else {
+      const { repeat, repeat_until, scope: _scope, ...rest } = values;
+      const sid = crypto.randomUUID();
+      const dates =
+        repeat && repeat_until && rest.date
+          ? seriesDates(rest.date, repeat, repeat_until)
+          : [rest.date || null];
+      const copies = dates.map(
+        (date) =>
+          ({
+            description: "",
+            assignee: null,
+            amount: null,
+            url: "",
+            ...rest,
             household_id: household.id,
             created_by: uid!,
             created_at: new Date().toISOString(),
             done: false,
-          };
-          const sid = crypto.randomUUID();
-          const copies =
-            repeat && repeat_until && rest.date
-              ? seriesDates(rest.date, repeat, repeat_until).map((date) => ({
-                  ...rest,
-                  ...stamp,
-                  date,
-                  id: crypto.randomUUID(),
-                  series_id: sid,
-                }))
-              : [{ ...rest, ...stamp, id: crypto.randomUUID(), series_id: null }];
-          setEntries((current) => [...(copies as Entry[]), ...current]);
-        }
-      } else {
-        await homeRequest("/api/home", "POST", {
-          operation: editing?.entry ? "update" : "create",
-          payload: {
-            ...values,
-            ...(editing?.entry ? { id: editing.entry.id } : {}),
-          },
-        });
-        await refresh();
-      }
-      setEditing(null);
-      setNotice("All set. A little more organized.");
-    } catch (err) {
-      setError(
-        err instanceof Error
-          ? err.message
-          : (err as { message: string }).message,
+            date,
+            id: crypto.randomUUID(),
+            series_id: repeat ? sid : null,
+          }) as Entry,
       );
-    } finally {
-      setBusy(false);
+      setEntries((current) => [...copies, ...current]);
+      persist("create", values, copies);
     }
+    setEditing(null);
   }
   async function toggle(entry: Entry) {
-    if (busy) return;
-    setBusy(true);
-    setError("");
-    try {
-      if (demo)
-        setEntries((current) =>
-          current.map((e) => (e.id === entry.id ? { ...e, done: !e.done } : e)),
-        );
-      else {
-        await homeRequest("/api/home", "POST", {
-          operation: "update",
-          payload: { id: entry.id, done: !entry.done },
-        });
-        await refresh();
-      }
-    } catch (err) {
-      setError((err as Error).message);
-    } finally {
-      setBusy(false);
-    }
+    setEntries((current) =>
+      current.map((e) => (e.id === entry.id ? { ...e, done: !entry.done } : e)),
+    );
+    persist("update", { id: entry.id, done: !entry.done });
   }
   async function remove(entry: Entry, scope?: "series") {
     const wholeSeries = scope === "series" && entry.series_id;
@@ -336,26 +378,30 @@ export default function Hub() {
       )
     )
       return;
+    setEntries((current) =>
+      current.filter((e) =>
+        wholeSeries ? e.series_id !== entry.series_id : e.id !== entry.id,
+      ),
+    );
+    setEditing(null);
+    persist("delete", {
+      id: entry.id,
+      ...(wholeSeries ? { scope: "series" } : {}),
+    });
+  }
+  async function choosePerson(member: Member) {
+    ++loadSequence.current;
     setBusy(true);
     setError("");
     try {
-      if (demo)
-        setEntries((current) =>
-          current.filter((e) =>
-            wholeSeries ? e.series_id !== entry.series_id : e.id !== entry.id,
-          ),
-        );
-      else {
-        await homeRequest("/api/home", "POST", {
-          operation: "delete",
-          payload: {
-            id: entry.id,
-            ...(wholeSeries ? { scope: "series" } : {}),
-          },
+      await writes.current;
+      if (!demo)
+        await homeRequest("/api/session", "PATCH", {
+          member_id: member.user_id,
         });
-        await refresh();
-      }
-      setEditing(null);
+      ++loadSequence.current;
+      setIdentity(member.user_id);
+      setChoosingPerson(false);
     } catch (err) {
       setError((err as Error).message);
     } finally {
@@ -433,6 +479,44 @@ export default function Hub() {
       {member.name.slice(0, 1).toUpperCase()}
     </span>
   );
+  const quickAdd = (kind: "task" | "request") => (
+    <form
+      className="quick-add"
+      onSubmit={(event) => {
+        event.preventDefault();
+        const form = event.currentTarget;
+        const title = String(new FormData(form).get("title") || "").trim();
+        if (!title) return;
+        void save({
+          kind,
+          title,
+          category: categories[kind][0],
+          description: "",
+          date: null,
+          assignee: kind === "task" && filter === "Mine" ? uid : null,
+          amount: null,
+          url: "",
+        });
+        form.reset();
+      }}
+    >
+      <input
+        name="title"
+        aria-label={`Quick add ${labels[kind]}`}
+        placeholder={
+          kind === "task"
+            ? "Add a to-do and press Enter…"
+            : "Add an item and press Enter…"
+        }
+        required
+        maxLength={160}
+      />
+      <button className="button small" aria-label={`Quick add ${labels[kind]}`}>
+        <Plus size={16} />
+        Add
+      </button>
+    </form>
+  );
   const addButton = (kind: Kind, text = `Add ${labels[kind]}`) => (
     <button className="button small" onClick={() => setEditing({ kind })}>
       <Plus size={16} />
@@ -443,7 +527,6 @@ export default function Hub() {
     <div className={`task-row ${entry.done ? "completed" : ""}`} key={entry.id}>
       <button
         className="checkbox"
-        disabled={busy}
         aria-label={`${entry.done ? "Reopen" : "Complete"} ${entry.title}`}
         aria-pressed={entry.done}
         onClick={() => void toggle(entry)}
@@ -454,7 +537,10 @@ export default function Hub() {
         className="entry-label"
         onClick={() => setEditing({ kind: entry.kind, entry })}
       >
-        <span>{entry.title}</span>
+        <span>
+          {entry.title}
+          {entry.series_id ? " ↻" : ""}
+        </span>
         <small
           className={
             entry.date && entry.date < today && !entry.done ? "overdue" : ""
@@ -462,9 +548,28 @@ export default function Hub() {
         >
           {entry.date && entry.date < today && !entry.done ? "Overdue · " : ""}
           {friendlyDate(entry.date)} <span>·</span> {entry.category}
+          {members.some(
+            (m) => m.user_id === entry.created_by && m.name !== "Housemates",
+          )
+            ? ` · Added by ${person(entry.created_by)}`
+            : ""}
         </small>
       </button>
-      <span className="person-tag">{person(entry.assignee)}</span>
+      {members.some(
+        (m) => m.user_id === entry.assignee && m.name !== "Housemates",
+      ) && (
+        <span className="person-tag">
+          <span
+            className={`person-dot tone-${
+              Math.max(
+                0,
+                members.findIndex((m) => m.user_id === entry.assignee),
+              ) % 3
+            }`}
+          />
+          {person(entry.assignee)}
+        </span>
+      )}
     </div>
   );
 
@@ -499,12 +604,47 @@ export default function Hub() {
       </main>
     );
 
+  if ((!demo && !identity) || choosingPerson)
+    return (
+      <main className="auth-wrap">
+        <section className="auth-card">
+          <p className="eyebrow">MAKE YOURSELF AT HOME</p>
+          <h1>Who’s this?</h1>
+          <p className="subtitle">Pick who’s using this device.</p>
+          <div className="person-picker">
+            {members
+              .filter((m) => m.name !== "Housemates")
+              .map((member, i) => (
+                <button
+                  className="button secondary"
+                  key={member.user_id}
+                  disabled={busy}
+                  onClick={() => void choosePerson(member)}
+                >
+                  {avatar(member, i)}
+                  {member.name}
+                </button>
+              ))}
+          </div>
+          {error && (
+            <p className="error" role="alert">
+              {error}
+            </p>
+          )}
+          {!demo && (
+            <button className="text-button" onClick={() => void signOut()}>
+              Sign out
+            </button>
+          )}
+        </section>
+      </main>
+    );
+
   const boardProps = {
     household,
     entries,
     members,
     demo,
-    busy,
     error,
     onExit: () => changeDisplay(false),
     onOpen: (kind: Kind, entry?: Entry) => setEditing({ kind, entry }),
@@ -515,6 +655,11 @@ export default function Hub() {
     return (
       <main>
         <HomeBoard {...boardProps} display />
+        {notice && (
+          <div className="toast" role="status">
+            {notice}
+          </div>
+        )}
       </main>
     );
 
@@ -568,11 +713,24 @@ export default function Hub() {
             <Settings size={18} /> Our household
           </button>
           <div className="sidebar-profile">
-            <span className="avatar tone-0">
+            <span
+              className={`avatar tone-${
+                Math.max(
+                  0,
+                  members.findIndex((m) => m.user_id === uid),
+                ) % 3
+              }`}
+            >
               {person(uid || null).slice(0, 1)}
             </span>
             <div>
-              <strong>{person(uid || null)}</strong>
+              <button
+                className="text-button"
+                onClick={() => setChoosingPerson(true)}
+                aria-label="Switch person"
+              >
+                {person(uid || null)}
+              </button>
               <small>{demo ? "Exploring the demo" : "Right at home"}</small>
             </div>
             {!demo && (
@@ -785,6 +943,7 @@ export default function Hub() {
                       </span>
                       <span>
                         <strong>
+                          {entry.series_id ? "↻ " : ""}
                           {entry.done ? "✓ " : ""}
                           {entry.title}
                         </strong>
@@ -896,11 +1055,21 @@ export default function Hub() {
                           {dayEntries.slice(0, 1).map((entry) => (
                             <button
                               key={entry.id}
-                              className={`calendar-event ${entry.category === "Rent" ? "rent" : ""} ${entry.done ? "completed-event" : ""}`}
+                              className={`calendar-event person-color-${
+                                Math.max(
+                                  0,
+                                  members.findIndex(
+                                    (m) =>
+                                      m.user_id ===
+                                      (entry.assignee || entry.created_by),
+                                  ),
+                                ) % 3
+                              } ${entry.category === "Rent" ? "rent" : ""} ${entry.done ? "completed-event" : ""}`}
                               onClick={() =>
                                 setEditing({ kind: entry.kind, entry })
                               }
                             >
+                              {entry.series_id ? "↻ " : ""}
                               {entry.done ? "✓ " : ""}
                               {entry.title}
                             </button>
@@ -933,6 +1102,7 @@ export default function Hub() {
                   {tasks.filter((e) => e.done).length} of {tasks.length} done
                 </span>
               </div>
+              {quickAdd("task")}
               {tasks
                 .filter(
                   (e) =>
@@ -975,66 +1145,71 @@ export default function Hub() {
                     </button>
                   ))}
                 </div>
-                <span className="subtle">
-                  Estimated total ·{" "}
-                  <strong>
-                    {money(
-                      shopping
-                        .filter((e) => !e.done)
-                        .reduce((sum, e) => sum + Number(e.amount || 0), 0),
-                    )}
-                  </strong>
-                </span>
+                {shopping.some((e) => !e.done && e.amount != null) && (
+                  <span className="subtle">
+                    Estimated total ·{" "}
+                    <strong>
+                      {money(
+                        shopping
+                          .filter((e) => !e.done)
+                          .reduce((sum, e) => sum + Number(e.amount || 0), 0),
+                      )}
+                    </strong>
+                  </span>
+                )}
               </div>
-              <div className="shopping-grid">
+              {quickAdd("request")}
+              <div className="panel shopping-list">
                 {shopping
                   .filter((e) =>
                     filter === "Bought"
                       ? e.done
                       : !e.done && (filter === "All" || e.category === filter),
                   )
-                  .map((entry, i) => (
-                    <article className="shopping-card" key={entry.id}>
-                      <div className={`shopping-art item-art-${i % 3}`}>
-                        <ShoppingBasket size={52} strokeWidth={1} />
-                        <span className="pill">{entry.category}</span>
-                      </div>
-                      <div className="shopping-copy">
-                        <button
-                          className="entry-label"
-                          onClick={() => setEditing({ kind: "request", entry })}
+                  .map((entry) => (
+                    <article
+                      className={`task-row shopping-row ${entry.done ? "completed" : ""}`}
+                      key={entry.id}
+                    >
+                      <button
+                        className="checkbox"
+                        aria-label={`${entry.done ? "Reopen" : "Mark as bought"}: ${entry.title}`}
+                        aria-pressed={entry.done}
+                        onClick={() => void toggle(entry)}
+                      >
+                        {entry.done && <Check size={14} />}
+                      </button>
+                      <button
+                        className="entry-label"
+                        onClick={() => setEditing({ kind: "request", entry })}
+                      >
+                        <h2>{entry.title}</h2>
+                        <small>
+                          {entry.category}
+                          {entry.description ? ` · ${entry.description}` : ""}
+                        </small>
+                        {members.some(
+                          (m) =>
+                            m.user_id === entry.created_by &&
+                            m.name !== "Housemates",
+                        ) && <small>Added by {person(entry.created_by)}</small>}
+                      </button>
+                      {entry.amount != null && (
+                        <strong className="row-price">
+                          {money(entry.amount)}
+                        </strong>
+                      )}
+                      {safeUrl(entry.url) && (
+                        <a
+                          className="icon-button"
+                          aria-label={`View ${entry.title} in store`}
+                          href={safeUrl(entry.url)!}
+                          target="_blank"
+                          rel="noopener noreferrer"
                         >
-                          <h2>{entry.title}</h2>
-                        </button>
-                        <p>
-                          {entry.description ||
-                            "A little something for our shared space."}
-                        </p>
-                        <div className="shopping-price">
-                          <strong>
-                            {entry.amount != null
-                              ? money(entry.amount)
-                              : "Price not set"}
-                          </strong>
-                          {safeUrl(entry.url) && (
-                            <a
-                              href={safeUrl(entry.url)!}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                            >
-                              View item <ExternalLink size={14} />
-                            </a>
-                          )}
-                        </div>
-                        <button
-                          className={`button ${entry.done ? "secondary" : ""}`}
-                          disabled={busy}
-                          onClick={() => void toggle(entry)}
-                        >
-                          <Check size={16} />
-                          {entry.done ? "Bought · Undo" : "Mark as bought"}
-                        </button>
-                      </div>
+                          <ExternalLink size={16} />
+                        </a>
+                      )}
                     </article>
                   ))}
               </div>
@@ -1214,7 +1389,7 @@ export default function Hub() {
       {editing && (
         <EntryDialog
           editing={editing}
-          members={members}
+          members={members.filter((m) => m.name !== "Housemates")}
           busy={busy}
           error={error}
           onClose={() => {
@@ -1541,6 +1716,11 @@ function EntryDialog({
             <CalendarDays size={16} /> Add saved event to Google Calendar{" "}
             <ExternalLink size={13} />
           </a>
+        )}
+        {entry && members.some((m) => m.user_id === entry.created_by) && (
+          <p className="subtle">
+            Added by {members.find((m) => m.user_id === entry.created_by)?.name}
+          </p>
         )}
         <div className="dialog-actions">
           {entry && (

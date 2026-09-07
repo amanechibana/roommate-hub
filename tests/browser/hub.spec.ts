@@ -60,7 +60,9 @@ test("shopping filters, event export, and dialog keyboard support", async ({
   await expect(
     page.getByRole("heading", { name: "Olive oil" }),
   ).not.toBeVisible();
-  await page.getByRole("button", { name: "Mark as bought" }).click();
+  await page
+    .getByRole("button", { name: "Mark as bought: A softer living room" })
+    .click();
   await page.getByRole("button", { name: "Bought", exact: true }).click();
   await expect(
     page.getByRole("heading", { name: "A softer living room" }),
