@@ -12,6 +12,9 @@ export type Entry = {
   url: string;
   done: boolean;
   series_id: string | null;
+  rotation_members?: string[];
+  payment_members?: string[];
+  paid_by?: string[];
   created_by: string;
   created_at: string;
 };
@@ -193,6 +196,8 @@ export function demoData(): {
       category: "Rent",
       date: day(5),
       amount: 2400,
+      payment_members: ["you", "alex"],
+      paid_by: [],
     },
     {
       ...base,

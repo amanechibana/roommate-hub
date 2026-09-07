@@ -1965,3 +1965,119 @@ textarea {
     padding-inline: 12px;
   }
 }
+
+.toast-stack {
+  position: fixed;
+  z-index: 100;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-width: min(540px, calc(100vw - 32px));
+}
+.toast-stack:empty {
+  display: none;
+}
+.toast-stack .toast {
+  position: static;
+  transform: none;
+  max-width: 100%;
+  min-width: 0;
+}
+.toast-stack .toast > span {
+  overflow-wrap: anywhere;
+}
+.undo-button {
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font-weight: 700;
+  text-decoration: underline;
+  padding: 8px;
+  flex-shrink: 0;
+}
+.bill-checks {
+  padding: 16px;
+  margin-bottom: 20px;
+  border: 1px solid #d6dec9;
+  border-radius: 12px;
+  background: #f4f6ee;
+}
+.bill-heading {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.bill-heading small {
+  color: var(--muted);
+  font-size: 11px;
+}
+.bill-people {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+.bill-person {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  text-align: left;
+  padding: 10px;
+  min-width: 0;
+  border: 1px solid #ccd4bd;
+  border-radius: 8px;
+  background: #fff;
+  color: var(--ink);
+}
+.bill-person:disabled {
+  opacity: 1;
+  cursor: default;
+}
+.bill-person strong,
+.bill-person small {
+  display: block;
+}
+.bill-person strong {
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+.bill-person small {
+  font-size: 10px;
+  color: var(--muted);
+  margin-top: 3px;
+}
+.bill-person.paid {
+  background: #e6edda;
+}
+.bill-tick {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  margin-left: auto;
+  flex-shrink: 0;
+  border: 1px solid #bdc7a6;
+  border-radius: 5px;
+}
+.bill-person.paid .bill-tick {
+  background: var(--green);
+  color: white;
+}
+.bill-checks > p {
+  font-size: 11px;
+  margin: 10px 0 0;
+}
+@media (max-width: 650px) {
+  .toast-stack {
+    bottom: 80px;
+  }
+}
+@media (max-width: 400px) {
+  .bill-people {
+    grid-template-columns: 1fr;
+  }
+}

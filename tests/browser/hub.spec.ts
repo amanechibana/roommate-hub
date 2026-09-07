@@ -37,7 +37,6 @@ test("shared task creation, completion, editing, and deletion", async ({
   await page
     .getByRole("button", { name: /Verified household flow Anytime/ })
     .click();
-  page.once("dialog", (dialog) => dialog.accept());
   await page.getByRole("button", { name: "Delete entry" }).click();
   await expect(
     page.getByText("Verified household flow", { exact: true }),

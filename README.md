@@ -127,8 +127,8 @@ creator, including the legacy shared Housemates identity.
 
 For a fresh database, apply migrations in order: `001_household.sql`,
 `002_shared_code.sql` (using psql with `-v gateway_hash=<SHA-256 of your gateway token>`),
-`003_recurring_entries.sql`, then `004_device_identity.sql`.
-For an existing shared-code installation through migration 003, apply only 004.
+`003_recurring_entries.sql`, `004_device_identity.sql`, then `005_chores_bills_undo.sql`.
+For an existing installation, apply only the migrations newer than the last installed migration.
 Migration 004 adds Amane and Barnatt if absent, validates the selected household
 member on writes, and returns saved entry IDs with create responses. **Apply it
 before deploying this frontend.** It preserves existing entries and members.
@@ -145,6 +145,30 @@ waits for them to finish. Successful changes need no follow-up GET. A failed
 write shows a brief notice and quietly reloads after the queue drains. Normal
 cross-device updates still arrive every 15 seconds and on focus. Task and
 shopping pages also support typing a title and pressing Enter to add it.
+
+## Chores, bills, and Undo
+
+- **Alternating chores:** add a to-do, choose the first assignee, set a repeat
+  schedule and end date, check **Alternate each occurrence**, then choose the
+  other person. Each occurrence gets its own assignee. Shared series edits
+  preserve those turns; a single occurrence can be reassigned independently.
+- **Rent and bills:** use an event with category **Rent** or **Bill**. Choose
+  **Monthly** for a recurring bill. Open the saved event to see each person’s
+  paid check; the current device identity can change only its own check. Each
+  occurrence starts unpaid. Existing Rent events gain checks for Amane and
+  Barnatt when migration 005 runs. Overdue unpaid bills stay on the home board.
+  Payment check-offs record status only; the amount remains the bill amount.
+- **Undo:** deleting an entry or series shows an **Undo** notice for eight
+  seconds. Multiple deletions have separate notices. Undo restores original
+  IDs, dates, turns, and payments. The server retains the deleted snapshot for
+  up to 30 seconds to allow for network latency and removes expired snapshots
+  on the next household request. Reloading, signing out, or switching people
+  dismisses the notice.
+
+Apply migration 005 before deploying this batch. It adds payment and rotation
+fields, backfills existing rent participants without marking anyone paid, and
+adds a private table for short-lived deletion snapshots. Verify it with
+`supabase/tests/chores-bills-undo.sql` in the disposable database described below.
 
 ## Deploy to Vercel
 
@@ -201,7 +225,7 @@ public Supabase variables empty).
 
 Suggested order:
 
-1. **Chore rotation:** recurring tasks, fair assignment, reminders, and snoozing.
+1. **Chore reminders:** reminders and snoozing for the existing alternating schedules.
 2. **Shared expenses:** who paid, equal/custom splits, balances, settlement records. Rent is currently a reminder, not a payment processor.
 3. **House handbook:** Wi-Fi, landlord contacts, trash collection, and appliance manuals. Sensitive documents need private object storage and signed download URLs.
 4. **Meal planner + pantry:** dinner plans, staples running low, and one-click shopping requests.

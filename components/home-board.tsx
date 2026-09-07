@@ -27,6 +27,7 @@ import {
   type Kind,
   type Member,
 } from "@/lib/model";
+import { billPaid, isBill } from "@/lib/household-actions";
 import CommuteStrip from "@/components/commute-strip";
 
 type Props = {
@@ -76,7 +77,13 @@ export default function HomeBoard({
     const days = Math.round(
       (parseDate(date).getTime() - parseDate(today).getTime()) / 86400000,
     );
-    return days === 0 ? "Today" : days === 1 ? "Tomorrow" : `in ${days} days`;
+    return days < 0
+      ? `${Math.abs(days)} ${days === -1 ? "day" : "days"} overdue`
+      : days === 0
+        ? "Today"
+        : days === 1
+          ? "Tomorrow"
+          : `in ${days} days`;
   };
   const friendly = (date: string | null) =>
     !date
@@ -93,7 +100,13 @@ export default function HomeBoard({
     .filter((e) => e.kind === "task" && !e.done)
     .sort((a, b) => (a.date || "9999").localeCompare(b.date || "9999"));
   const events = entries
-    .filter((e) => e.kind === "event" && !e.done && e.date && e.date >= today)
+    .filter(
+      (e) =>
+        e.kind === "event" &&
+        !e.done &&
+        e.date &&
+        (e.date >= today || (isBill(e) && !billPaid(e))),
+    )
     .sort((a, b) => a.date!.localeCompare(b.date!));
   const shopping = entries
     .filter((e) => e.kind === "request" && !e.done)
@@ -277,6 +290,9 @@ export default function HomeBoard({
                     <small>
                       {relative(entry.date!)} · {entry.category}
                       {entry.series_id ? " · ↻" : ""}
+                      {isBill(entry)
+                        ? ` · ${billPaid(entry) ? "Paid" : `${entry.paid_by?.length || 0}/${entry.payment_members?.length || 0} paid`}`
+                        : ""}
                       {entry.amount != null
                         ? ` · ${dollars(entry.amount)}`
                         : ""}

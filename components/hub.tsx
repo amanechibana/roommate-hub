@@ -32,6 +32,15 @@ import {
   X,
 } from "lucide-react";
 import { hasDatabase, homeRequest } from "@/lib/home-client";
+import BillChecks from "@/components/bill-checks";
+import {
+  UNDO_DURATION,
+  billPaid,
+  isBill,
+  markPaid,
+  occurrenceAssignee,
+  editEntries,
+} from "@/lib/household-actions";
 import HomeBoard from "@/components/home-board";
 import {
   calendarFile,
@@ -51,6 +60,9 @@ import {
 type SaveValues = Partial<Entry> & {
   repeat?: Repeat;
   repeat_until?: string;
+  rotation_partner?: string;
+  paid?: boolean;
+  undo_token?: string;
   scope?: "series";
 };
 
@@ -82,7 +94,7 @@ const labels: Record<Kind, string> = {
 };
 const categories: Record<Kind, string[]> = {
   task: ["Chore", "To-do"],
-  event: ["Together", "Rent", "Other"],
+  event: ["Together", "Rent", "Bill", "Other"],
   request: ["Need", "Want"],
   note: ["Note"],
 };
@@ -104,6 +116,9 @@ export default function Hub() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
+  const [undoDeletes, setUndoDeletes] = useState<
+    { token: string; entries: Entry[]; expires: number }[]
+  >([]);
   const [month, setMonth] = useState(new Date());
   const [agendaPage, setAgendaPage] = useState(0);
   const [agendaLimit, setAgendaLimit] = useState(3);
@@ -119,6 +134,7 @@ export default function Hub() {
   const needsRecovery = useRef(false);
   const sessionGeneration = useRef(0);
   const savedIds = useRef(new Map<string, string>());
+  const savedSeriesIds = useRef(new Map<string, string>());
   const today = dateKey(new Date());
   const loadSequence = useRef(0);
   const weeks = Math.ceil(
@@ -164,6 +180,7 @@ export default function Hub() {
     ++sessionGeneration.current;
     setIdentity(null);
     setNotice("");
+    setUndoDeletes([]);
     needsRecovery.current = false;
     setSession(false);
     setHousehold(null);
@@ -255,6 +272,19 @@ export default function Hub() {
     }
   }, [notice]);
 
+  useEffect(() => {
+    if (!undoDeletes.length) return;
+    const next = Math.min(...undoDeletes.map((item) => item.expires));
+    const timer = setTimeout(
+      () =>
+        setUndoDeletes((current) =>
+          current.filter((item) => item.expires > Date.now()),
+        ),
+      Math.max(0, next - Date.now()),
+    );
+    return () => clearTimeout(timer);
+  }, [undoDeletes]);
+
   // Serialize writes, but never block interaction. Polls cannot overwrite a
   // pending optimistic change, including a poll started before the click.
   function persist(
@@ -284,9 +314,11 @@ export default function Hub() {
             const saved: Entry[] = result.entries;
             if (!Array.isArray(saved) || saved.length !== copies.length)
               throw new Error("Missing saved entries");
-            copies.forEach((copy, i) =>
-              savedIds.current.set(copy.id, saved[i].id),
-            );
+            copies.forEach((copy, i) => {
+              savedIds.current.set(copy.id, saved[i].id);
+              if (copy.series_id && saved[i].series_id)
+                savedSeriesIds.current.set(copy.series_id, saved[i].series_id!);
+            });
             setEntries((current) =>
               current.map((entry) => {
                 const i = copies.findIndex((copy) => copy.id === entry.id);
@@ -300,7 +332,23 @@ export default function Hub() {
               }),
             );
           }
+          if (operation === "restore" && Array.isArray(result.entries)) {
+            setEntries((current) =>
+              current.map((entry) => {
+                const saved = (result.entries as Entry[]).find(
+                  (e) => e.id === (savedIds.current.get(entry.id) || entry.id),
+                );
+                return saved
+                  ? { ...entry, id: saved.id, series_id: saved.series_id }
+                  : entry;
+              }),
+            );
+          }
         } catch {
+          if (operation === "delete")
+            setUndoDeletes((current) =>
+              current.filter((item) => item.token !== payload.undo_token),
+            );
           if (generation !== sessionGeneration.current) return;
           needsRecovery.current = true;
           setNotice("Couldn’t save. Refreshing your home…");
@@ -316,35 +364,51 @@ export default function Hub() {
   }
   async function save(values: SaveValues) {
     if (!household) return;
-    const entry = editing?.entry;
+    const entry = editing?.entry
+      ? entries.find(
+          (e) =>
+            e.id ===
+            (savedIds.current.get(editing.entry!.id) || editing.entry!.id),
+        ) || editing.entry
+      : undefined;
     setError("");
     if (entry) {
       const { scope, ...rest } = values;
-      const { date: _date, done: _done, ...shared } = rest;
-      setEntries((current) =>
-        current.map((e) =>
-          e.id === entry.id
-            ? { ...e, ...rest }
-            : scope === "series" &&
-                entry.series_id &&
-                e.series_id === entry.series_id
-              ? { ...e, ...shared }
-              : e,
-        ),
-      );
+      setEntries((current) => {
+        const updated = editEntries(current, entry, rest, scope === "series");
+        return updated.map((e) => {
+          const before = current.find((old) => old.id === e.id)!;
+          if (!isBill(before) && isBill(e))
+            return {
+              ...e,
+              payment_members: members
+                .filter((m) => m.name !== "Housemates")
+                .map((m) => m.user_id),
+              paid_by: [],
+            };
+          if (isBill(before) && !isBill(e))
+            return { ...e, payment_members: [], paid_by: [] };
+          return e;
+        });
+      });
       persist("update", { ...values, id: entry.id });
     } else {
-      const { repeat, repeat_until, scope: _scope, ...rest } = values;
+      const {
+        repeat,
+        repeat_until,
+        rotation_partner,
+        scope: _scope,
+        ...rest
+      } = values;
       const sid = crypto.randomUUID();
       const dates =
         repeat && repeat_until && rest.date
           ? seriesDates(rest.date, repeat, repeat_until)
           : [rest.date || null];
       const copies = dates.map(
-        (date) =>
+        (date, index) =>
           ({
             description: "",
-            assignee: null,
             amount: null,
             url: "",
             ...rest,
@@ -355,6 +419,23 @@ export default function Hub() {
             date,
             id: crypto.randomUUID(),
             series_id: repeat ? sid : null,
+            rotation_members:
+              rotation_partner && rest.assignee
+                ? [rest.assignee, rotation_partner]
+                : [],
+            assignee: occurrenceAssignee(
+              rest.assignee || null,
+              rotation_partner,
+              index,
+            ),
+            payment_members:
+              rest.kind === "event" &&
+              ["Rent", "Bill"].includes(rest.category || "")
+                ? members
+                    .filter((m) => m.name !== "Housemates")
+                    .map((m) => m.user_id)
+                : [],
+            paid_by: [],
           }) as Entry,
       );
       setEntries((current) => [...copies, ...current]);
@@ -368,26 +449,52 @@ export default function Hub() {
     );
     persist("update", { id: entry.id, done: !entry.done });
   }
+  function togglePayment(entry: Entry) {
+    if (!uid) return;
+    const paid = !entry.paid_by?.includes(uid);
+    setEntries((current) =>
+      current.map((e) => (e.id === entry.id ? markPaid(e, uid, paid) : e)),
+    );
+    persist("payment", { id: entry.id, paid });
+  }
   async function remove(entry: Entry, scope?: "series") {
     const wholeSeries = scope === "series" && entry.series_id;
-    if (
-      !window.confirm(
-        wholeSeries
-          ? `Delete every occurrence of “${entry.title}”?`
-          : `Delete “${entry.title}” for everyone?`,
-      )
-    )
-      return;
+    const removed = entries.filter((e) =>
+      wholeSeries ? e.series_id === entry.series_id : e.id === entry.id,
+    );
+    const token = crypto.randomUUID();
     setEntries((current) =>
-      current.filter((e) =>
-        wholeSeries ? e.series_id !== entry.series_id : e.id !== entry.id,
-      ),
+      current.filter((e) => !removed.some((item) => item.id === e.id)),
     );
     setEditing(null);
+    setUndoDeletes((current) => [
+      ...current,
+      { token, entries: removed, expires: Date.now() + UNDO_DURATION },
+    ]);
     persist("delete", {
       id: entry.id,
+      undo_token: token,
       ...(wholeSeries ? { scope: "series" } : {}),
     });
+  }
+  function undoDelete(token: string) {
+    const deleted = undoDeletes.find(
+      (item) => item.token === token && item.expires > Date.now(),
+    );
+    if (!deleted) return;
+    setUndoDeletes((current) => current.filter((item) => item.token !== token));
+    const restored = deleted.entries.map((entry) => ({
+      ...entry,
+      id: savedIds.current.get(entry.id) || entry.id,
+      series_id: entry.series_id
+        ? savedSeriesIds.current.get(entry.series_id) || entry.series_id
+        : null,
+    }));
+    setEntries((current) => [
+      ...restored.filter((e) => !current.some((item) => item.id === e.id)),
+      ...current,
+    ]);
+    persist("restore", { undo_token: token });
   }
   async function choosePerson(member: Member) {
     ++loadSequence.current;
@@ -401,6 +508,7 @@ export default function Hub() {
         });
       ++loadSequence.current;
       setIdentity(member.user_id);
+      setUndoDeletes([]);
       setChoosingPerson(false);
     } catch (err) {
       setError((err as Error).message);
@@ -540,6 +648,7 @@ export default function Hub() {
         <span>
           {entry.title}
           {entry.series_id ? " ↻" : ""}
+          {entry.rotation_members?.length ? " · Taking turns" : ""}
         </span>
         <small
           className={
@@ -618,6 +727,7 @@ export default function Hub() {
                 <button
                   className="button secondary"
                   key={member.user_id}
+                  aria-label={member.name}
                   disabled={busy}
                   onClick={() => void choosePerson(member)}
                 >
@@ -640,6 +750,31 @@ export default function Hub() {
       </main>
     );
 
+  const toasts = (
+    <div className="toast-stack">
+      {notice && (
+        <div className="toast" role="status">
+          {notice}
+        </div>
+      )}
+      {undoDeletes.map((item) => (
+        <div className="toast" role="status" key={item.token}>
+          <span>
+            {item.entries.length > 1
+              ? `${item.entries.length} occurrences deleted`
+              : `Deleted “${item.entries[0]?.title}”`}
+          </span>
+          <button
+            className="undo-button"
+            onClick={() => undoDelete(item.token)}
+          >
+            Undo
+          </button>
+        </div>
+      ))}
+    </div>
+  );
+
   const boardProps = {
     household,
     entries,
@@ -655,11 +790,7 @@ export default function Hub() {
     return (
       <main>
         <HomeBoard {...boardProps} display />
-        {notice && (
-          <div className="toast" role="status">
-            {notice}
-          </div>
-        )}
+        {toasts}
       </main>
     );
 
@@ -1072,6 +1203,11 @@ export default function Hub() {
                               {entry.series_id ? "↻ " : ""}
                               {entry.done ? "✓ " : ""}
                               {entry.title}
+                              {isBill(entry)
+                                ? billPaid(entry)
+                                  ? " · Paid"
+                                  : " · Payment due"
+                                : ""}
                             </button>
                           ))}
                         </div>
@@ -1363,12 +1499,7 @@ export default function Hub() {
           </footer>
         </main>
       </div>
-      {notice && (
-        <div className="toast" role="status">
-          <Check size={17} />
-          {notice}
-        </div>
-      )}
+      {toasts}
       {selectedDay && (
         <DayDialog
           date={selectedDay}
@@ -1388,7 +1519,19 @@ export default function Hub() {
       )}
       {editing && (
         <EntryDialog
-          editing={editing}
+          editing={{
+            ...editing,
+            entry: editing.entry
+              ? entries.find(
+                  (e) =>
+                    e.id ===
+                    (savedIds.current.get(editing.entry!.id) ||
+                      editing.entry!.id),
+                ) || editing.entry
+              : undefined,
+          }}
+          uid={uid}
+          onPayment={togglePayment}
           members={members.filter((m) => m.name !== "Housemates")}
           busy={busy}
           error={error}
@@ -1480,7 +1623,11 @@ function EntryDialog({
   onClose,
   onSave,
   onDelete,
+  uid,
+  onPayment,
 }: {
+  uid: string | null;
+  onPayment: (entry: Entry) => void;
   editing: { kind: Kind; entry?: Entry; date?: string };
   members: Member[];
   busy: boolean;
@@ -1494,6 +1641,11 @@ function EntryDialog({
   const [validation, setValidation] = useState("");
   const [repeat, setRepeat] = useState<Repeat | "">("");
   const [wholeSeries, setWholeSeries] = useState(false);
+  const [alternating, setAlternating] = useState(false);
+  const [assignee, setAssignee] = useState(editing.entry?.assignee || "");
+  const [category, setCategory] = useState(
+    editing.entry?.category || categories[editing.kind][0],
+  );
   const entry = editing.entry;
   useEffect(() => {
     dialog.current?.showModal();
@@ -1523,6 +1675,12 @@ function EntryDialog({
       setValidation("The repeat end date should be after the start.");
       return;
     }
+    const partner = String(data.get("rotation_partner") || "");
+    const rotating = kind === "task" && repeating && alternating;
+    if (rotating && (!assignee || !partner || assignee === partner)) {
+      setValidation("Choose two different people to take turns.");
+      return;
+    }
     setValidation("");
     await onSave({
       ...(entry ? {} : { kind }),
@@ -1530,10 +1688,11 @@ function EntryDialog({
       description: String(data.get("description") || "").trim(),
       category: String(data.get("category") || categories[kind][0]),
       date,
-      assignee: String(data.get("assignee") || "") || null,
+      assignee: assignee || null,
       amount: data.get("amount") ? Number(data.get("amount")) : null,
       url,
       ...(repeating ? { repeat: repeating, repeat_until: until } : {}),
+      ...(rotating ? { rotation_partner: partner } : {}),
       ...(entry?.series_id && wholeSeries ? { scope: "series" as const } : {}),
     });
   }
@@ -1566,6 +1725,14 @@ function EntryDialog({
           <X size={21} />
         </button>
       </div>
+      {entry && (
+        <BillChecks
+          entry={entry}
+          members={members}
+          uid={uid}
+          onPayment={onPayment}
+        />
+      )}
       <form onSubmit={submit}>
         {!entry && (
           <div className="filters kind-picker">
@@ -1574,7 +1741,10 @@ function EntryDialog({
                 type="button"
                 key={value}
                 className={kind === value ? "active" : ""}
-                onClick={() => setKind(value)}
+                onClick={() => {
+                  setKind(value);
+                  setCategory(categories[value][0]);
+                }}
               >
                 {labels[value]}
               </button>
@@ -1612,7 +1782,8 @@ function EntryDialog({
             <select
               name="category"
               key={kind}
-              defaultValue={entry?.category || categories[kind][0]}
+              value={category}
+              onChange={(event) => setCategory(event.target.value)}
             >
               {categories[kind].map((value) => (
                 <option key={value}>{value}</option>
@@ -1621,7 +1792,12 @@ function EntryDialog({
           </label>
           <label>
             {kind === "note" ? "From" : "Who’s on it?"}
-            <select name="assignee" defaultValue={entry?.assignee || ""}>
+            <select
+              name="assignee"
+              value={assignee}
+              onChange={(event) => setAssignee(event.target.value)}
+              disabled={wholeSeries && !!entry?.rotation_members?.length}
+            >
               <option value="">Everyone</option>
               {members.map((member) => (
                 <option value={member.user_id} key={member.user_id}>
@@ -1658,6 +1834,33 @@ function EntryDialog({
               </select>
             </label>
           )}
+          {!entry && kind === "task" && repeat && (
+            <>
+              <label className="checkbox-row">
+                <input
+                  type="checkbox"
+                  checked={alternating}
+                  onChange={(event) => setAlternating(event.target.checked)}
+                />
+                Alternate each occurrence
+              </label>
+              {alternating && (
+                <label>
+                  Take turns with
+                  <select name="rotation_partner" required defaultValue="">
+                    <option value="">Choose a housemate</option>
+                    {members
+                      .filter((m) => m.user_id !== assignee)
+                      .map((m) => (
+                        <option key={m.user_id} value={m.user_id}>
+                          {m.name}
+                        </option>
+                      ))}
+                  </select>
+                </label>
+              )}
+            </>
+          )}
           {!entry && ["task", "event"].includes(kind) && repeat && (
             <label>
               Repeat until
@@ -1691,6 +1894,18 @@ function EntryDialog({
             />
           </label>
         )}
+        {!entry && kind === "event" && ["Rent", "Bill"].includes(category) && (
+          <p className="subtle">
+            Each housemate gets their own paid check. Choose Monthly to repeat
+            this bill.
+          </p>
+        )}
+        {entry?.rotation_members?.length ? (
+          <p className="subtle">
+            This chore takes turns. Editing the whole series keeps each person’s
+            turn; edit one occurrence to reassign it.
+          </p>
+        ) : null}
         {entry?.series_id && (
           <label className="checkbox-row">
             <input

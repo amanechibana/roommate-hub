@@ -1,5 +1,5 @@
 import { test, expect, type Page } from "@playwright/test";
-import { demoData, type Entry } from "../../lib/model";
+import { demoData, seriesDates, type Entry } from "../../lib/model";
 
 test.skip(
   !process.env.PW_SHARED_API,
@@ -13,7 +13,16 @@ async function home(page: Page, picked: string | null = "you") {
   data.members[1].name = "Barnatt";
   let memberId = picked;
   let gets = 0;
-  const posts: { operation: string; payload: Partial<Entry> }[] = [];
+  const posts: {
+    operation: string;
+    payload: Partial<Entry> & {
+      rotation_partner?: string;
+      undo_token?: string;
+      paid?: boolean;
+      scope?: string;
+    };
+  }[] = [];
+  const deleted = new Map<string, Entry[]>();
   let hold: Promise<void> = Promise.resolve();
   let fail = false;
   await page.route("**/api/session", async (route) => {
@@ -36,22 +45,83 @@ async function home(page: Page, picked: string | null = "you") {
     }
     let saved: Entry[] = [];
     if (body.operation === "create") {
-      saved = [
-        {
-          ...data.entries[0],
-          ...body.payload,
-          id: `saved-${posts.length}`,
-          created_by: memberId,
-          series_id: null,
-        },
-      ];
+      const dates = body.payload.repeat
+        ? seriesDates(
+            body.payload.date,
+            body.payload.repeat,
+            body.payload.repeat_until,
+          )
+        : [body.payload.date || null];
+      saved = dates.map((date, index) => ({
+        ...data.entries[0],
+        ...body.payload,
+        date,
+        id: index ? `saved-${posts.length}-${index}` : `saved-${posts.length}`,
+        assignee:
+          body.payload.rotation_partner && index % 2
+            ? body.payload.rotation_partner
+            : body.payload.assignee,
+        rotation_members: body.payload.rotation_partner
+          ? [body.payload.assignee, body.payload.rotation_partner]
+          : [],
+        payment_members:
+          body.payload.kind === "event" &&
+          ["Rent", "Bill"].includes(body.payload.category)
+            ? ["you", "alex"]
+            : [],
+        paid_by: [],
+        created_by: memberId,
+        series_id: body.payload.repeat ? `series-${posts.length}` : null,
+      }));
       data.entries.push(...saved);
     } else if (body.operation === "delete") {
-      data.entries = data.entries.filter((e) => e.id !== body.payload.id);
-    } else
-      data.entries = data.entries.map((e) =>
-        e.id === body.payload.id ? { ...e, ...body.payload } : e,
+      const selected = data.entries.find((e) => e.id === body.payload.id);
+      const removed = data.entries.filter((e) =>
+        body.payload.scope === "series"
+          ? e.series_id === selected?.series_id
+          : e.id === body.payload.id,
       );
+      deleted.set(body.payload.undo_token, removed);
+      data.entries = data.entries.filter((e) => !removed.includes(e));
+    } else if (body.operation === "restore") {
+      saved = deleted.get(body.payload.undo_token) || [];
+      data.entries.push(...saved);
+      deleted.delete(body.payload.undo_token);
+    } else if (body.operation === "payment") {
+      data.entries = data.entries.map((e) =>
+        e.id === body.payload.id
+          ? {
+              ...e,
+              paid_by: [
+                ...(e.paid_by || []).filter((id) => id !== memberId),
+                ...(body.payload.paid ? [memberId!] : []),
+              ],
+            }
+          : e,
+      );
+    } else {
+      const selected = data.entries.find((e) => e.id === body.payload.id);
+      data.entries = data.entries.map((e) =>
+        e.id === body.payload.id ||
+        (body.payload.scope === "series" && e.series_id === selected?.series_id)
+          ? {
+              ...e,
+              ...body.payload,
+              id: e.id,
+              ...(body.payload.scope === "series"
+                ? {
+                    assignee: e.rotation_members?.length
+                      ? e.assignee
+                      : body.payload.assignee,
+                  }
+                : {}),
+              ...(e.id !== body.payload.id
+                ? { date: e.date, done: e.done }
+                : {}),
+            }
+          : e,
+      );
+    }
     await route.fulfill({ json: { ok: true, entries: saved } });
   });
   await page.goto("/");
@@ -195,7 +265,7 @@ test("delete disappears before save, unpriced shopping hides total", async ({
     })
     .click();
   const release = mock.pause();
-  page.once("dialog", (d) => d.accept());
+
   await page.getByRole("button", { name: "Delete entry" }).click();
   await expect(page.getByRole("dialog")).toHaveCount(0);
   await expect(
@@ -268,4 +338,185 @@ test("compact shopping and person picker fit desktop and phone", async ({
       fullPage: true,
     });
   }
+});
+
+async function addAlternatingChore(page: Page) {
+  await page.getByRole("button", { name: "To-do", exact: true }).click();
+  await page.getByLabel("What’s on your mind?").fill("Dishes rotation");
+  await page.getByLabel("Who’s on it?").selectOption("you");
+  await page.getByLabel("Due date (optional)").fill("2026-10-01");
+  await page
+    .getByRole("combobox", { name: "Repeats", exact: true })
+    .selectOption("weekly");
+  await page.getByLabel("Repeat until").fill("2026-10-15");
+  await page.getByLabel("Alternate each occurrence").check();
+  await page.getByLabel("Take turns with").selectOption("alex");
+  await page.getByRole("button", { name: "Save to our home" }).click();
+}
+
+test("alternating series keeps turns through edits and whole-series undo", async ({
+  page,
+}) => {
+  const mock = await home(page);
+  await addAlternatingChore(page);
+  await tasks(page);
+  const rows = page.locator(".task-row").filter({ hasText: "Dishes rotation" });
+  await expect(rows).toHaveCount(3);
+  await expect(rows.locator(".person-tag")).toHaveText([
+    "Amane",
+    "Barnatt",
+    "Amane",
+  ]);
+  await expect.poll(() => mock.posts.length).toBe(1);
+  expect(mock.posts[0].payload.rotation_partner).toBe("alex");
+  await rows.first().locator(".entry-label").click();
+  await page.getByLabel("Apply to every occurrence of this plan").check();
+  await expect(page.getByLabel("Who’s on it?")).toBeDisabled();
+  await page.getByLabel("What’s on your mind?").fill("Clean dishes");
+  await page.getByRole("button", { name: "Save to our home" }).click();
+  const changed = page.locator(".task-row").filter({ hasText: "Clean dishes" });
+  await expect(changed.locator(".person-tag")).toHaveText([
+    "Amane",
+    "Barnatt",
+    "Amane",
+  ]);
+  await changed
+    .first()
+    .getByRole("button", { name: /Clean dishes/ })
+    .last()
+    .click();
+  await page.getByLabel("Apply to every occurrence of this plan").check();
+  await page.getByRole("button", { name: "Delete entry" }).click();
+  await expect(changed).toHaveCount(0);
+  await expect(page.getByRole("status")).toContainText("3 occurrences deleted");
+  await page.getByRole("button", { name: "Undo", exact: true }).click();
+  await expect(changed.locator(".person-tag")).toHaveText([
+    "Amane",
+    "Barnatt",
+    "Amane",
+  ]);
+  await expect.poll(() => mock.posts.length).toBe(4);
+  await page.reload();
+  await tasks(page);
+  await expect(
+    page
+      .locator(".task-row")
+      .filter({ hasText: "Clean dishes" })
+      .locator(".person-tag"),
+  ).toHaveText(["Amane", "Barnatt", "Amane"]);
+});
+
+test("bill check-offs are instant and each person changes only their own check", async ({
+  page,
+}) => {
+  const mock = await home(page);
+  await page.getByRole("button", { name: "Rent is due", exact: true }).click();
+  const release = mock.pause();
+  await expect(
+    page.getByRole("button", { name: "Mark paid: Barnatt", exact: true }),
+  ).toBeDisabled();
+  await page
+    .getByRole("button", { name: "Mark paid: Amane", exact: true })
+    .click();
+  await expect(
+    page.getByRole("button", { name: "Mark unpaid: Amane", exact: true }),
+  ).toHaveAttribute("aria-pressed", "true");
+  release();
+  await expect.poll(() => mock.posts.length).toBe(1);
+  expect(mock.posts[0]).toEqual({
+    operation: "payment",
+    payload: { id: "5", paid: true },
+  });
+  await page.getByRole("button", { name: "Close dialog" }).click();
+  await page.getByRole("button", { name: "Switch person" }).click();
+  await page.getByRole("button", { name: "Barnatt", exact: true }).click();
+  await page.getByRole("button", { name: "Rent is due", exact: true }).click();
+  await page
+    .getByRole("button", { name: "Mark paid: Barnatt", exact: true })
+    .click();
+  await expect(
+    page.getByText("Everyone’s paid", { exact: true }),
+  ).toBeVisible();
+  await page
+    .getByRole("button", { name: "Mark unpaid: Barnatt", exact: true })
+    .click();
+  await expect(
+    page.getByRole("button", { name: "Mark unpaid: Amane", exact: true }),
+  ).toHaveAttribute("aria-pressed", "true");
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.screenshot({ path: "test-results/bill-checks-mobile.png" });
+});
+
+test("delete undo works before the delete finishes and expires without a confirmation dialog", async ({
+  page,
+}) => {
+  await page.clock.install();
+  const mock = await home(page);
+  const dialogs: string[] = [];
+  page.on("dialog", (dialog) => {
+    dialogs.push(dialog.type());
+    void dialog.dismiss();
+  });
+  await tasks(page);
+  await page
+    .locator(".entry-label")
+    .filter({ hasText: "Take out recycling" })
+    .click();
+  const release = mock.pause();
+  await page.getByRole("button", { name: "Delete entry" }).click();
+  await expect(
+    page.getByRole("button", {
+      name: "Complete Take out recycling",
+      exact: true,
+    }),
+  ).toHaveCount(0);
+  await page.getByRole("button", { name: "Undo", exact: true }).click();
+  await expect(
+    page.getByRole("button", {
+      name: "Complete Take out recycling",
+      exact: true,
+    }),
+  ).toBeVisible();
+  release();
+  await expect.poll(() => mock.posts.length).toBe(2);
+  expect(mock.posts.map((p) => p.operation)).toEqual(["delete", "restore"]);
+  expect(dialogs).toEqual([]);
+  await page
+    .locator(".entry-label")
+    .filter({ hasText: "Take out recycling" })
+    .click();
+  await page.getByRole("button", { name: "Delete entry" }).click();
+  await page.clock.fastForward(8001);
+  await expect(
+    page.getByRole("button", { name: "Undo", exact: true }),
+  ).toHaveCount(0);
+});
+
+test("two deletions have independent undo notices", async ({ page }) => {
+  await home(page);
+  await tasks(page);
+  for (const title of ["Take out recycling", "Water our green friends"]) {
+    await page.locator(".entry-label").filter({ hasText: title }).click();
+    await page.getByRole("button", { name: "Delete entry" }).click();
+  }
+  await expect(
+    page.getByRole("button", { name: "Undo", exact: true }),
+  ).toHaveCount(2);
+  await page
+    .getByRole("status")
+    .filter({ hasText: "Take out recycling" })
+    .getByRole("button", { name: "Undo" })
+    .click();
+  await expect(
+    page.getByRole("button", {
+      name: "Complete Take out recycling",
+      exact: true,
+    }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("button", {
+      name: "Complete Water our green friends",
+      exact: true,
+    }),
+  ).toHaveCount(0);
 });
