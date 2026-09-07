@@ -1,6 +1,7 @@
 "use client";
 
 import styles from "./hub.module.css";
+import { HouseCompanion } from "@/components/ui/house-companion";
 
 import { m } from "motion/react";
 import { Button } from "@/components/ui/button";
@@ -107,7 +108,7 @@ const categories: Record<Kind, string[]> = {
 };
 
 export default function Hub() {
-  const { reduced } = useHouseMotion();
+  const { reduced, celebrate } = useHouseMotion();
   const [ready, setReady] = useState(false);
   const [loaded, setLoaded] = useState(false);
   const [session, setSession] = useState(false);
@@ -452,6 +453,7 @@ export default function Hub() {
     setEditing(null);
   }
   async function toggle(entry: Entry) {
+    if (!entry.done) celebrate();
     setEntries((current) =>
       current.map((e) => (e.id === entry.id ? { ...e, done: !entry.done } : e)),
     );
@@ -848,6 +850,14 @@ export default function Hub() {
               aria-current={tab === name ? "page" : undefined}
               onClick={() => setTab(name)}
             >
+              {tab === name && (
+                <m.span
+                  className="nav-highlight"
+                  layoutId={reduced ? undefined : "navigation"}
+                  transition={{ type: "spring", stiffness: 360, damping: 32 }}
+                  aria-hidden="true"
+                />
+              )}
               <Icon size={19} />
               <span>{name}</span>
               {name === "Shopping list" && (
@@ -859,6 +869,7 @@ export default function Hub() {
           ))}
         </nav>
         <div className="sidebar-bottom">
+          <HouseCompanion />
           <Button
             className={`settings-link ${tab === "Our household" ? "selected" : ""}`}
             onClick={() => setTab("Our household")}
@@ -900,6 +911,7 @@ export default function Hub() {
       </aside>
       <div className="main-shell">
         <header className="topbar">
+          <HouseCompanion variant="compact" />
           <span>
             <Home size={15} /> Our home <span className="slash">/</span>{" "}
             <strong>{tab}</strong>
@@ -929,6 +941,7 @@ export default function Hub() {
           </div>
         </header>
         <main
+          key={tab}
           className={`content ${tab === "Overview" ? "home-content" : tab === "Calendar" ? "calendar-content" : ""}`}
         >
           {demo && (

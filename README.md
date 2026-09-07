@@ -10,7 +10,7 @@ Choose **Display mode** in the top bar for a monitor/TV, or bookmark `/?display=
 
 Display mode uses the same signed-in household session and refreshes shared records every 15 seconds. It does not create a public sharing link or grant extra access. The URL keeps the display preference across reloads. Set the TV/computer's sleep settings separately if you want an always-on display.
 
-Controls use Radix UI primitives and Motion, styled to match the house: sliding filter highlights, tactile buttons, drawn checkmarks, and gentle entrances. The TV button has a soft idle shimmer, and display mode has slowly drifting background color. Use **Motion on/off** in display mode or household settings to pause ambient effects; the choice stays on this device. Idle effects stop in hidden tabs, and system reduced-motion preferences are respected.
+Controls use Radix UI primitives and Motion, styled to match the house: sliding filter highlights, tactile buttons, drawn checkmarks, and gentle entrances. A living windowsill illustration appears across the app: tap the cat to make it stretch, or complete a to-do to get a small reaction. The cat breathes and flicks its tail, the plant sways, and clouds drift past. On phones the cat sits in the top bar; on a TV the scene sits beside the clock. The TV button has a soft idle shimmer, and display mode has slowly drifting background color. Use **Motion on/off** in display mode or household settings to pause ambient effects; the choice stays on this device. Idle effects stop in hidden tabs, and system reduced-motion preferences are respected.
 
 ## Weather and train times
 

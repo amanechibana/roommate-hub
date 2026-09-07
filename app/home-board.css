@@ -166,7 +166,7 @@ body {
   min-width: 0;
   padding: 19px 22px 12px;
   border: 1px solid #e0d5c4;
-  border-radius: 5px 7px 6px 8px;
+  border-radius: 12px;
   background: #fffcf5;
   box-shadow:
     1px 3px 0 #8f73550b,
@@ -837,7 +837,7 @@ body {
   margin: 0 0 18px;
   padding: 11px 16px;
   border: 1px solid #e0d5c4;
-  border-radius: 6px 8px 5px 7px;
+  border-radius: 12px;
   background: linear-gradient(#fffcf5, #fdf8ee);
   box-shadow:
     1px 3px 0 #8f73550b,

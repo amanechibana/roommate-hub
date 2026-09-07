@@ -1,6 +1,7 @@
 "use client";
 
 import { m } from "motion/react";
+import { HouseCompanion } from "@/components/ui/house-companion";
 import { Button } from "@/components/ui/button";
 import { useHouseMotion } from "@/components/ui/motion-provider";
 
@@ -238,6 +239,7 @@ export default function HomeBoard({
         </div>
         {display ? (
           <div className="wall-clock">
+            <HouseCompanion variant="wall" />
             <span className="clock-breath" aria-hidden="true" />
             <time>
               {now.toLocaleTimeString("en-US", {

@@ -89,3 +89,80 @@ test("Radix filters support arrow keys and retain the selected value", async ({
   await expect(page.locator(".task-row")).toHaveCSS("transform", "none");
   await page.screenshot({ path: "test-results/motion-todos.png" });
 });
+
+test("house cat has real idle motion, reacts to keyboard and completed tasks", async ({
+  page,
+}) => {
+  await page.goto("/");
+  const cat = page.getByRole("button", { name: "Pet the house cat" });
+  await expect(cat).toBeVisible();
+  const running = () =>
+    cat.evaluate(
+      (el) =>
+        el
+          .getAnimations({ subtree: true })
+          .filter((animation) => animation.playState === "running").length,
+    );
+  await expect.poll(running).toBeGreaterThan(3);
+  await cat.focus();
+  await page.keyboard.press("Enter");
+  await expect(cat).toHaveAttribute("data-reaction", "1");
+  await page
+    .getByRole("navigation")
+    .getByRole("button", { name: "To-dos" })
+    .click();
+  await page
+    .getByRole("button", {
+      name: "Complete Give the kitchen a little love",
+      exact: true,
+    })
+    .click();
+  await expect(cat).toHaveAttribute("data-reaction", "2");
+  await expect(
+    page.getByRole("button", {
+      name: "Reopen Give the kitchen a little love",
+      exact: true,
+    }),
+  ).toHaveAttribute("aria-pressed", "true");
+  await page.getByRole("button", { name: "Open household settings" }).click();
+  await page.getByRole("button", { name: "Pause ambient motion" }).click();
+  await expect.poll(running).toBe(0);
+  await page.getByRole("button", { name: "Resume ambient motion" }).click();
+  await expect.poll(running).toBeGreaterThan(3);
+});
+
+test("cat fits the phone header across tabs and TV scene stays beside the clock", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/");
+  for (const name of ["Calendar", "To-dos", "Shopping list", "House notes"]) {
+    await page.getByRole("navigation").getByRole("button", { name }).click();
+    await expect(
+      page.getByRole("button", { name: "Pet the house cat" }),
+    ).toBeInViewport();
+  }
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await page.getByRole("button", { name: "Display mode", exact: true }).click();
+  await expect(
+    page.getByRole("button", { name: "Pet the house cat" }),
+  ).toBeInViewport();
+  const [cat, title] = await Promise.all([
+    page.getByRole("button", { name: "Pet the house cat" }).boundingBox(),
+    page.getByRole("heading", { name: "Our home, today." }).boundingBox(),
+  ]);
+  expect(cat!.x).toBeGreaterThan(title!.x + title!.width);
+  await expect(page.locator(".board-plan").first()).toHaveCSS("opacity", "1");
+  await page.screenshot({ path: "test-results/companion-tv.png" });
+});
+
+test("reduced motion leaves the cat illustration still", async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.goto("/");
+  const cat = page.getByRole("button", { name: "Pet the house cat" });
+  await expect(cat).toBeVisible();
+  await cat.click();
+  expect(
+    await cat.evaluate((el) => el.getAnimations({ subtree: true }).length),
+  ).toBe(0);
+});

@@ -306,7 +306,7 @@
 .shell :global(.notes-grid .notice-board) {
   background: #fbf2d7;
   border: 1px solid #e7d9ad;
-  border-radius: 3px 16px 16px 16px;
+  border-radius: 12px;
   padding: 14px 0 0;
   min-height: 200px;
   box-shadow:
@@ -601,5 +601,142 @@
   }
   .shell :global(.commute-when) {
     font-size: 11px;
+  }
+}
+
+/* Consistent geometry; the illustration supplies the organic shapes. */
+.shell :global(.brand-icon),
+.shell :global(.brand-icon svg) {
+  transform: none;
+}
+.shell :global(.brand-icon) {
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+}
+.shell :global(.panel),
+.shell :global(.page-symbol) {
+  border-radius: 12px;
+}
+.shell :global(.board-check) {
+  border-radius: 9px;
+}
+.shell :global(.notes-grid .tape) {
+  display: none;
+}
+.shell :global(.sidebar nav button) {
+  position: relative;
+  isolation: isolate;
+}
+.shell :global(.sidebar nav button.active) {
+  background: transparent;
+  box-shadow: none;
+}
+.shell :global(.sidebar nav .nav-highlight) {
+  display: block;
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: 10px;
+  background: #e5ecd7;
+  pointer-events: none;
+}
+.shell :global(.content) {
+  animation: page-arrive 260ms ease-out;
+}
+.shell :global(.entry-panel),
+.shell :global(.notes-grid),
+.shell :global(.settings-grid) {
+  animation: surface-arrive 360ms ease-out;
+}
+.shell :global(.page-symbol svg) {
+  transform-origin: 50% 65%;
+}
+:global(html[data-ambient="on"]) .shell :global(.page-symbol svg) {
+  animation: icon-idle 7s ease-in-out infinite;
+}
+:global(html[data-ambient="on"])
+  .shell
+  :global(.fridge-card .board-card-heading > svg) {
+  animation: heart-idle 5s ease-in-out infinite;
+  transform-origin: center;
+}
+.shell :global(.notes-grid .notice-board) {
+  transition:
+    box-shadow 200ms ease,
+    translate 200ms ease;
+}
+@media (hover: hover) {
+  .shell :global(.notes-grid .notice-board:hover) {
+    translate: 0 -3px;
+    box-shadow: 0 10px 22px #57492312;
+  }
+  .shell :global(.board-quick-actions button:hover) {
+    translate: 0 -2px;
+  }
+}
+@keyframes page-arrive {
+  from {
+    opacity: 0.65;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes surface-arrive {
+  from {
+    opacity: 0.35;
+    translate: 0 8px;
+  }
+  to {
+    opacity: 1;
+    translate: 0 0;
+  }
+}
+@keyframes icon-idle {
+  0%,
+  50%,
+  100% {
+    transform: rotate(0);
+  }
+  65% {
+    transform: rotate(-9deg);
+  }
+  78% {
+    transform: rotate(7deg);
+  }
+  90% {
+    transform: rotate(-3deg);
+  }
+}
+@keyframes heart-idle {
+  0%,
+  55%,
+  100% {
+    transform: scale(1);
+  }
+  65%,
+  82% {
+    transform: scale(1.16);
+  }
+  73% {
+    transform: scale(1);
+  }
+}
+@media (max-width: 850px) {
+  .shell :global(.topbar > span) {
+    display: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .shell :global(.content),
+  .shell :global(.entry-panel),
+  .shell :global(.notes-grid),
+  .shell :global(.settings-grid) {
+    animation: none;
+  }
+  .shell :global(.notes-grid .notice-board:hover),
+  .shell :global(.board-quick-actions button:hover) {
+    translate: none;
   }
 }

@@ -18,6 +18,8 @@ import * as Tooltip from "@radix-ui/react-tooltip";
 const HouseMotion = createContext({
   reduced: false,
   ambient: true,
+  celebration: 0,
+  celebrate: () => {},
   toggleAmbient: () => {},
 });
 export const useHouseMotion = () => useContext(HouseMotion);
@@ -25,6 +27,7 @@ export const useHouseMotion = () => useContext(HouseMotion);
 export default function MotionProvider({ children }: { children: ReactNode }) {
   const reduced = useReducedMotion() ?? false;
   const [ambient, setAmbient] = useState(true);
+  const [celebration, setCelebration] = useState(0);
   const [visible, setVisible] = useState(true);
   const [ready, setReady] = useState(false);
   useEffect(() => {
@@ -56,7 +59,15 @@ export default function MotionProvider({ children }: { children: ReactNode }) {
     }
   }
   return (
-    <HouseMotion.Provider value={{ reduced, ambient, toggleAmbient }}>
+    <HouseMotion.Provider
+      value={{
+        reduced,
+        ambient,
+        toggleAmbient,
+        celebration,
+        celebrate: () => setCelebration((value) => value + 1),
+      }}
+    >
       <MotionConfig
         reducedMotion="user"
         transition={{ duration: 0.2, ease: "easeOut" }}
