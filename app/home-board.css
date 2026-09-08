@@ -619,6 +619,17 @@ body {
   padding: clamp(12px, 2vh, 28px) clamp(16px, 2vw, 36px);
   overflow: hidden;
 }
+/* The tape decoration hangs above the fridge card, so this card must not
+   clip itself; its note stack clips instead. */
+.wall-display .fridge-card {
+  overflow: visible;
+}
+.wall-display .fridge-card .fridge-stack,
+.wall-display .fridge-card > .fridge-message {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
 .wall-display .board-card-heading {
   flex-shrink: 0;
   margin-bottom: clamp(7px, 1.5vh, 20px);
