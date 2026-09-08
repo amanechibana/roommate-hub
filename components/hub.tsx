@@ -202,9 +202,10 @@ export default function Hub() {
         setNotice("List copied");
       }
     } catch (err) {
-      // Closing the share sheet is not a failure.
+      // Closing the share sheet is not a failure. The error banner is for
+      // the household failing to load, so this stays a passing notice.
       if ((err as Error).name !== "AbortError")
-        setError("Couldn’t share the list.");
+        setNotice("Couldn’t share the list");
     }
   };
   const taskRow = (entry: Entry, index: number) => (

@@ -165,6 +165,9 @@ test("a calendar day gives its one visible slot to what still needs doing", () =
   assert.deepEqual(
     dayOrder([chore, rent]).map((e) => e.id),
     [chore.id, rent.id],
+  );
+});
+
 test("the shareable shopping list reads needs first with prices and claims", () => {
   const { entries, members } = demoData();
   const text = shoppingListText(
