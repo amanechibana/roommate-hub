@@ -89,6 +89,7 @@ export default function Hub() {
     toggle,
     pushToTomorrow,
     handOff,
+    nudge,
     claim,
     toggleBought,
     togglePayment,
@@ -173,6 +174,15 @@ export default function Hub() {
       {text}
     </Button>
   );
+  // Only another housemate's to-do, and only where a push can actually land.
+  const canNudge = (entry: Entry) =>
+    !demo &&
+    Boolean(process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY) &&
+    !!entry.assignee &&
+    entry.assignee !== uid &&
+    members.some(
+      (m) => m.user_id === entry.assignee && m.name !== "Housemates",
+    );
   const taskRow = (entry: Entry, index: number) => (
     <DraggableRow
       title={entry.title}
@@ -243,6 +253,14 @@ export default function Hub() {
                       : "Push to tomorrow",
                   onSelect: () => pushToTomorrow(entry),
                 },
+                ...(canNudge(entry)
+                  ? [
+                      {
+                        label: `Nudge ${person(entry.assignee)}`,
+                        onSelect: () => void nudge(entry),
+                      },
+                    ]
+                  : []),
                 ...members
                   .filter(
                     (m) =>

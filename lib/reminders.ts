@@ -88,6 +88,37 @@ export function memberDigest(
   return { title: `Good morning, ${member.name} ☀️`, lines };
 }
 
+// How the house says when something was or is due, for a nudge: near days
+// get a weekday, farther ones a date, matching the board's own voice.
+function dueWhen(date: string, today: string) {
+  const days = daysBetween(today, date);
+  if (days === 0) return "is due today";
+  if (days === -1) return "was due yesterday";
+  if (days === 1) return "is due tomorrow";
+  const when =
+    Math.abs(days) < 7
+      ? parseDate(date).toLocaleDateString("en-US", { weekday: "long" })
+      : parseDate(date).toLocaleDateString("en-US", {
+          month: "short",
+          day: "numeric",
+        });
+  return days < 0 ? `was due ${when}` : `is due ${when}`;
+}
+
+// One housemate poking another about an open to-do of theirs. Null when the
+// to-do isn't something a nudge makes sense for (done, or nobody's).
+export function nudgeMessage(
+  entry: Entry,
+  from: Member,
+  today: string,
+): Digest | null {
+  if (entry.kind !== "task" || entry.done || !entry.assignee) return null;
+  const line = entry.date
+    ? `“${entry.title}” ${dueWhen(entry.date, today)}`
+    : `“${entry.title}” is waiting on you`;
+  return { title: `${from.name} gave you a nudge`, lines: [line] };
+}
+
 export function quietDigest(name: string): Digest {
   return {
     title: `Good morning, ${name} ☀️`,

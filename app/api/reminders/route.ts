@@ -1,4 +1,3 @@
-import webpush from "web-push";
 import {
   json,
   sameOrigin,
@@ -6,6 +5,12 @@ import {
   signedIn,
   selectedMember,
 } from "@/lib/shared-server";
+import {
+  pushConfigured,
+  preparePush,
+  sendPush,
+  type Subscription,
+} from "@/lib/push-server";
 import { equalSecret } from "@/lib/session-token";
 import { localDateKey, memberDigest, quietDigest } from "@/lib/reminders";
 import type { Entry, Member } from "@/lib/model";
@@ -13,27 +18,11 @@ import type { Entry, Member } from "@/lib/model";
 export const runtime = "nodejs";
 export const maxDuration = 60;
 
-function pushConfigured() {
-  return Boolean(
-    process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY,
-  );
-}
-
-type Subscription = {
-  endpoint: string;
-  member: string;
-  keys: { p256dh: string; auth: string };
-};
-
 // One digest per subscribed device. `onlyMember` limits sending to the test
 // button's requester, which also gets a "nothing due" note instead of silence
 // so the pipeline stays verifiable.
 async function sendDigests(onlyMember: string | null) {
-  webpush.setVapidDetails(
-    process.env.VAPID_SUBJECT || "mailto:household@example.com",
-    process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!,
-    process.env.VAPID_PRIVATE_KEY!,
-  );
+  preparePush();
   const [home, push] = await Promise.all([
     sharedDatabase("get"),
     sharedDatabase("get", {}, "shared_push"),
@@ -53,33 +42,14 @@ async function sendDigests(onlyMember: string | null) {
       memberDigest(entries, member, today) ??
       (onlyMember ? quietDigest(member.name) : null);
     if (!digest) continue;
-    try {
-      await webpush.sendNotification(
-        { endpoint: sub.endpoint, keys: sub.keys },
-        JSON.stringify({
-          title: digest.title,
-          body: digest.lines.join("\n"),
-          tag: `digest-${today}`,
-          url: "/",
-        }),
-      );
-      sent++;
-    } catch (error) {
-      const status = (error as { statusCode?: number }).statusCode;
-      // Statuses that mean the subscription itself is dead or malformed;
-      // transient ones (402/413/429/5xx/no status) retry next morning.
-      if (status !== undefined && [400, 401, 403, 404, 410].includes(status)) {
-        await sharedDatabase(
-          "unsubscribe",
-          { endpoint: sub.endpoint },
-          "shared_push",
-        ).catch(() => {});
-        pruned++;
-      } else {
-        // The endpoint is a capability URL, so log the failure without it.
-        console.error("push send failed", status ?? (error as Error).name);
-      }
-    }
+    const result = await sendPush(sub, {
+      title: digest.title,
+      body: digest.lines.join("\n"),
+      tag: `digest-${today}`,
+      url: "/",
+    });
+    if (result === "sent") sent++;
+    else if (result === "pruned") pruned++;
   }
   return { sent, pruned };
 }
@@ -89,10 +59,7 @@ export async function GET(request: Request) {
   const secret = process.env.CRON_SECRET;
   if (
     !secret ||
-    !equalSecret(
-      request.headers.get("authorization") ?? "",
-      `Bearer ${secret}`,
-    )
+    !equalSecret(request.headers.get("authorization") ?? "", `Bearer ${secret}`)
   )
     return json({ error: "Not allowed." }, 401);
   if (!pushConfigured()) return json({ sent: 0, pruned: 0 });

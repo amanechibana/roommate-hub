@@ -643,6 +643,29 @@ export function useHousehold() {
     );
     persist("update", { id: entry.id, assignee: member.user_id });
   }
+  // A nudge is a push to the assignee's phones, not a change to the entry,
+  // so nothing here is optimistic: the toast waits for the server's word.
+  async function nudge(entry: Entry) {
+    const name = person(entry.assignee);
+    setError("");
+    try {
+      // A hand-off or a fresh to-do may still be in the queue; the server
+      // reads the database, so let it catch up before asking who to poke.
+      await writes.current;
+      const result = await homeRequest("/api/nudge", "POST", {
+        id: savedIds.current.get(entry.id) || entry.id,
+      });
+      setNotice(
+        result.sent
+          ? `Nudged ${name}`
+          : result.devices
+            ? `Couldn’t reach ${name}’s phone right now`
+            : `${name} hasn’t turned on reminders on any device`,
+      );
+    } catch (err) {
+      setError((err as Error).message);
+    }
+  }
   // "I'll grab it" is the shopping list's assignee: a claim says who is
   // picking it up so two people don't both come home with olive oil.
   function claim(entry: Entry) {
@@ -942,6 +965,7 @@ export function useHousehold() {
     toggle,
     pushToTomorrow,
     handOff,
+    nudge,
     claim,
     toggleBought,
     togglePayment,
