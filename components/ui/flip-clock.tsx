@@ -22,18 +22,19 @@ function FlipDigit({ value }: { value: string }) {
 export default function FlipClock() {
   const [now, setNow] = useState(() => new Date());
   useEffect(() => {
-    // Chained timeouts land each tick just past the minute boundary, so the
+    // Chained timeouts land each tick just past the second boundary, so the
     // flip happens the moment the wall time actually changes.
     let timer: ReturnType<typeof setTimeout>;
     const tick = () => {
       setNow(new Date());
-      timer = setTimeout(tick, 60050 - (Date.now() % 60000));
+      timer = setTimeout(tick, 1030 - (Date.now() % 1000));
     };
-    timer = setTimeout(tick, 60050 - (Date.now() % 60000));
+    timer = setTimeout(tick, 1030 - (Date.now() % 1000));
     return () => clearTimeout(timer);
   }, []);
   const hours = String(now.getHours() % 12 || 12);
   const minutes = String(now.getMinutes()).padStart(2, "0");
+  const seconds = String(now.getSeconds()).padStart(2, "0");
   const meridiem = now.getHours() < 12 ? "AM" : "PM";
   return (
     <time
@@ -51,6 +52,11 @@ export default function FlipClock() {
         {[...minutes].map((digit, i) => (
           <FlipDigit key={`m${i}`} value={digit} />
         ))}
+        <span className="flip-seconds">
+          {[...seconds].map((digit, i) => (
+            <FlipDigit key={`s${i}`} value={digit} />
+          ))}
+        </span>
         <span className="flip-meridiem">{meridiem}</span>
       </span>
     </time>
