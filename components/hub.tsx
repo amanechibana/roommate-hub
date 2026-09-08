@@ -21,6 +21,7 @@ import { safeUrl, type Entry, type Kind, type Member } from "@/lib/model";
 import {
   ArrowRight,
   ExternalLink,
+  Hand,
   Home,
   Leaf,
   LogOut,
@@ -87,6 +88,7 @@ export default function Hub() {
     toggle,
     pushToTomorrow,
     handOff,
+    claim,
     toggleBought,
     togglePayment,
     coverBill,
@@ -121,6 +123,11 @@ export default function Hub() {
       </span>
     </MemberCard>
   );
+  // The legacy shared identity is nobody in particular, so it can't be on it.
+  const claimedBy = (entry: Entry) =>
+    members.some((m) => m.user_id === entry.assignee && m.name !== "Housemates")
+      ? entry.assignee
+      : null;
   const quickAdd = (kind: "task" | "request") => (
     <form
       className="quick-add"
@@ -705,6 +712,9 @@ export default function Hub() {
                         <h2>{entry.title}</h2>
                         <small>
                           {entry.category}
+                          {claimedBy(entry)
+                            ? ` · ${claimedBy(entry) === uid ? "You’re" : `${person(entry.assignee)}’s`} getting it`
+                            : ""}
                           {entry.description ? ` · ${entry.description}` : ""}
                         </small>
                         {members.some(
@@ -717,6 +727,22 @@ export default function Hub() {
                         <strong className="row-price">
                           {money(entry.amount)}
                         </strong>
+                      )}
+                      {!entry.done && uid && (
+                        <Button
+                          className="icon-button claim-button"
+                          aria-pressed={claimedBy(entry) === uid}
+                          aria-label={`${
+                            claimedBy(entry) === uid
+                              ? "Never mind, I’m not getting"
+                              : claimedBy(entry)
+                                ? "I’ll grab it instead"
+                                : "I’ll grab it"
+                          }: ${entry.title}`}
+                          onClick={() => claim(entry)}
+                        >
+                          <Hand size={16} />
+                        </Button>
                       )}
                       {safeUrl(entry.url) && (
                         <a
