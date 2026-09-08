@@ -19,7 +19,9 @@ export async function homeRequest(
     result = JSON.parse(await response.text()) ?? {};
   } catch {}
   if (!response.ok) {
-    if (response.status === 401 && path === "/api/home")
+    // Sign-in attempts also 401 on a wrong code; those must not bounce the
+    // person back to the code screen they are already on.
+    if (response.status === 401 && path !== "/api/session")
       window.dispatchEvent(new Event("household-signed-out"));
     const error = new Error(result.error || "Could not reach your home.");
     if (result.rejected === true) Object.assign(error, { rejected: true });

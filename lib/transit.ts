@@ -40,8 +40,6 @@ export type Departures = {
   station: string;
   system: "PATH" | "Subway";
   departures: Departure[];
-  /** Unix seconds the upstream feed was generated, when it says. */
-  updated: number | null;
   /** True when the upstream failed and these are the last known times. */
   stale?: boolean;
   /** Milliseconds when the server actually fetched the upstream payload. */
@@ -449,7 +447,6 @@ export function parsePath(
     station: pathStations[code] ?? code,
     system: "PATH",
     departures,
-    updated: null,
   };
 }
 
@@ -501,9 +498,6 @@ export function buildSubwayDepartures(
     station: station.name,
     system: "Subway",
     departures: unique,
-    // The feed header's generation stamp is not parsed, and claiming the
-    // caller's clock as "updated" would fabricate freshness.
-    updated: null,
   };
 }
 

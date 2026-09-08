@@ -20,6 +20,55 @@ export function markAllPaid(entry: Entry): Entry {
   if (!isBill(entry) || !entry.payment_members?.length) return entry;
   return { ...entry, paid_by: [...entry.payment_members] };
 }
+export type ActivityEvent = { line: string; member: string | null };
+/**
+ * Fridge-ticker lines for changes another device made, read off a refresh's
+ * entries versus the ones already on screen. Local writes are optimistic, so
+ * they sit in `before` by the time a refresh runs — anything that flips here
+ * happened elsewhere in the house. `member` names who did it when the entry
+ * says (assignee, payment check); null means the line suits everyone.
+ */
+export function remoteActivity(
+  before: Entry[],
+  after: Entry[],
+  members: { user_id: string; name: string }[],
+): ActivityEvent[] {
+  const name = (id: string | null) =>
+    members.find((m) => m.user_id === id && m.name !== "Housemates")?.name ??
+    null;
+  const prev = new Map(before.map((entry) => [entry.id, entry]));
+  const events: ActivityEvent[] = [];
+  for (const entry of after) {
+    const seen = prev.get(entry.id);
+    if (!seen) continue;
+    if (entry.kind === "task" && !seen.done && entry.done) {
+      const who = name(entry.assignee);
+      events.push({
+        line: who
+          ? `${who} took care of “${entry.title}”`
+          : `“${entry.title}” got done`,
+        member: who,
+      });
+    }
+    if (entry.kind === "request" && !seen.done && entry.done)
+      events.push({ line: `“${entry.title}” was picked up`, member: null });
+    if (isBill(entry)) {
+      if (billPaid(entry) && !billPaid(seen))
+        events.push({ line: `“${entry.title}” is all paid`, member: null });
+      else if (!billPaid(entry))
+        for (const id of entry.paid_by ?? []) {
+          if (seen.paid_by?.includes(id)) continue;
+          const who = name(id);
+          if (who)
+            events.push({
+              line: `${who} paid their share of “${entry.title}”`,
+              member: who,
+            });
+        }
+    }
+  }
+  return events;
+}
 export function occurrenceAssignee(
   first: string | null,
   partner: string | undefined,

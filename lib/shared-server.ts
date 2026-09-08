@@ -52,6 +52,7 @@ export async function sharedDatabase(
     // those messages are written for the person, so pass them through.
     if (error.code === "P0001")
       throw Object.assign(new Error(error.message), { rejected: true });
+    console.error(`gateway ${gateway} ${operation}`, error);
     throw new Error(
       "The household could not be loaded or updated. Please try again.",
     );

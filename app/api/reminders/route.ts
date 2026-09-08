@@ -6,6 +6,7 @@ import {
   signedIn,
   selectedMember,
 } from "@/lib/shared-server";
+import { equalSecret } from "@/lib/session-token";
 import { localDateKey, memberDigest, quietDigest } from "@/lib/reminders";
 import type { Entry, Member } from "@/lib/model";
 
@@ -74,6 +75,9 @@ async function sendDigests(onlyMember: string | null) {
           "shared_push",
         ).catch(() => {});
         pruned++;
+      } else {
+        // The endpoint is a capability URL, so log the failure without it.
+        console.error("push send failed", status ?? (error as Error).name);
       }
     }
   }
@@ -83,12 +87,19 @@ async function sendDigests(onlyMember: string | null) {
 // Vercel Cron calls this every morning.
 export async function GET(request: Request) {
   const secret = process.env.CRON_SECRET;
-  if (!secret || request.headers.get("authorization") !== `Bearer ${secret}`)
+  if (
+    !secret ||
+    !equalSecret(
+      request.headers.get("authorization") ?? "",
+      `Bearer ${secret}`,
+    )
+  )
     return json({ error: "Not allowed." }, 401);
   if (!pushConfigured()) return json({ sent: 0, pruned: 0 });
   try {
     return json(await sendDigests(null));
-  } catch {
+  } catch (err) {
+    console.error("GET /api/reminders", err);
     return json({ error: "Could not send reminders." }, 503);
   }
 }
@@ -105,7 +116,8 @@ export async function POST(request: Request) {
     return json({ error: "Choose who’s using this device first." }, 400);
   try {
     return json(await sendDigests(member));
-  } catch {
+  } catch (err) {
+    console.error("POST /api/reminders", err);
     return json({ error: "Could not send your digest." }, 503);
   }
 }

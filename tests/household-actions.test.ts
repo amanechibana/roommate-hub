@@ -7,6 +7,7 @@ import {
   markAllPaid,
   billPaid,
   editEntries,
+  remoteActivity,
 } from "../lib/household-actions";
 
 test("chores alternate from the selected first person", () => {
@@ -69,4 +70,47 @@ test("series edits preserve turns, per-occurrence dates, completion, and payment
     editEntries([first, next], next, { assignee: "you" }, false)[1].assignee,
     "you",
   );
+});
+test("remote activity reports completions and payments seen in a refresh", () => {
+  const { members, entries } = demoData();
+  const chore = entries.find((e) => e.category === "Chore" && e.assignee)!;
+  const item = entries.find((e) => e.kind === "request")!;
+  const bill = entries.find((e) => e.category === "Rent")!;
+  const before = [chore, item, bill];
+  const after = [
+    { ...chore, done: true },
+    { ...item, done: true },
+    markPaid(bill, "alex", true),
+  ];
+  assert.deepEqual(remoteActivity(before, after, members), [
+    {
+      line: `Alex took care of “${chore.title}”`,
+      member: "Alex",
+    },
+    { line: `“${item.title}” was picked up`, member: null },
+    {
+      line: `Alex paid their share of “${bill.title}”`,
+      member: "Alex",
+    },
+  ]);
+});
+test("remote activity skips unchanged, new, and locally-known entries", () => {
+  const { members, entries } = demoData();
+  const chore = entries.find((e) => e.category === "Chore")!;
+  // Unchanged entries, entries this refresh introduced, and un-completions
+  // all stay quiet.
+  assert.deepEqual(remoteActivity([chore], [chore], members), []);
+  assert.deepEqual(remoteActivity([], [{ ...chore, done: true }], members), []);
+  assert.deepEqual(
+    remoteActivity([{ ...chore, done: true }], [chore], members),
+    [],
+  );
+});
+test("a bill reaching fully paid reports one settled line", () => {
+  const { members, entries } = demoData();
+  const bill = entries.find((e) => e.category === "Rent")!;
+  const one = markPaid(bill, "you", true);
+  assert.deepEqual(remoteActivity([one], [markAllPaid(bill)], members), [
+    { line: `“${bill.title}” is all paid`, member: null },
+  ]);
 });

@@ -12,7 +12,8 @@ export async function GET() {
     return json({ error: "Please enter your household code." }, 401);
   try {
     return json(await sharedDatabase("get", {}, "shared_expenses"));
-  } catch {
+  } catch (err) {
+    console.error("GET /api/expenses", err);
     return json({ error: "Could not load expenses. Please try again." }, 503);
   }
 }
@@ -61,6 +62,7 @@ export async function POST(request: Request) {
   } catch (err) {
     if ((err as { rejected?: boolean }).rejected)
       return json({ error: (err as Error).message, rejected: true }, 400);
+    console.error("POST /api/expenses", err);
     return json(
       {
         error:

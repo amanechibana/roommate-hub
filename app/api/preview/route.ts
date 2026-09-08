@@ -59,14 +59,19 @@ export async function POST(request: Request) {
       const reader = response.body?.getReader();
       if (!reader) return json(empty);
       const decoder = new TextDecoder();
+      const limit = 262144;
       let html = "";
       let bytes = 0;
-      while (bytes < 262144) {
+      while (bytes < limit) {
         const { done, value } = await reader.read();
         if (done) break;
-        bytes += value.length;
-        html += decoder.decode(value, { stream: true });
+        const chunk =
+          value.length > limit - bytes ? value.subarray(0, limit - bytes) : value;
+        bytes += chunk.length;
+        html += decoder.decode(chunk, { stream: true });
       }
+      // Flush so a multibyte character split at the last chunk isn't dropped.
+      html += decoder.decode();
       void reader.cancel().catch(() => {});
       return json(parseProductPage(html));
     } finally {

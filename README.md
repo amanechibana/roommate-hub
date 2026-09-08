@@ -18,6 +18,12 @@ Lists and undo notices animate out while writes continue in the background. Surv
 
 To-dos and shopping rows have drag handles: use a pointer or focus the handle and press Up/Down (Home/End also work). Order is remembered **on this device, per household**, including across reloads. It does not change the household's due dates or synchronize a new order to other devices. Row menus offer edit and delete; the usual undo still works. House notes have a quick composer, member-colored paper, individual tilts, and crumpling exits. In household settings, hover or focus a member magnet for their open chore count and balance.
 
+The home greeting keeps a quiet “lately” line — a chore, purchase, or bill
+payment the other person checked off, noticed when this device refreshes.
+It names whoever the entry names, stays for two days, and is remembered on
+this device only; your own check-offs don’t appear, since you watched them
+happen.
+
 Completing items releases paper scraps; finishing the last chore gets an all-done message. Paid bills receive a stamp, repayments get a short transfer illustration, and expense totals count to their new values. Activity is grouped by month, with older months collapsed. Repayment feedback indicates a ledger entry, not a money transfer.
 
 The cat window follows local device time and the commute strip's weather reading. Wall display changes its palette in the morning/evening and dims from 22:00–06:00. Weather particles, seasonal leaves/snow, a subtle card spotlight, and a one-pixel drift all follow the existing ambient gate. Ambient pause also stops automatic board paging and flip animation; actual time and household data stay current. Decorative loops pause in hidden tabs. Seasonal decoration follows the device's calendar month; it is not a forecast.
@@ -203,7 +209,8 @@ Open the localhost address printed by Next.js. Without Supabase environment vari
 
 The household code is the only authentication. After entering it, choose Amane
 or Barnatt. The choice is stored in an HTTP-only cookie for 30 days and can be
-changed from the sidebar footer. It controls attribution and the Mine filter;
+changed from the sidebar footer or, on a phone, from **Our household →
+Switch person**. It controls attribution and the Mine filter;
 it does not grant different access rights. Existing entries keep their original
 creator, including the legacy shared Housemates identity.
 

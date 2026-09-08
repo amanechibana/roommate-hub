@@ -2038,7 +2038,9 @@ textarea {
 
 .toast-stack {
   position: fixed;
-  z-index: 100;
+  /* Above the entry dialog (121): covering a bill toasts while it stays
+     open. Below the row menus (140), which are transient. */
+  z-index: 130;
   bottom: 24px;
   left: 50%;
   transform: translateX(-50%);

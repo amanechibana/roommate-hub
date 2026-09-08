@@ -40,6 +40,11 @@ async function household(page: Page, member = "you") {
       member = route.request().postDataJSON().member_id;
     return route.fulfill({ json: { authenticated: true, member_id: member } });
   });
+  // An unmocked 401 here would sign the whole mocked household out; tests
+  // with expense fixtures register their own route over this one.
+  await page.route("**/api/expenses", (route) =>
+    route.fulfill({ json: { expenses: [] } }),
+  );
   await page.route("**/api/home", (route) =>
     route.fulfill({ json: { ...data, member_id: member } }),
   );

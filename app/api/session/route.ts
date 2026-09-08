@@ -64,7 +64,8 @@ export async function POST(request: Request) {
       },
     );
     return json({ authenticated: true });
-  } catch {
+  } catch (err) {
+    console.error("POST /api/session", err);
     return json(
       { error: "Sign-in is unavailable right now. Please try again." },
       503,
@@ -95,7 +96,8 @@ export async function PATCH(request: Request) {
       maxAge: SESSION_DURATION,
     });
     return json({ member_id });
-  } catch {
+  } catch (err) {
+    console.error("PATCH /api/session", err);
     return json(
       { error: "Couldn’t remember this person. Please try again." },
       503,

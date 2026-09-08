@@ -144,6 +144,18 @@ body {
   padding: 0;
   min-height: 0;
 }
+.board-lately {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 7px 0 0;
+  font-size: 12px;
+  color: #6d6152;
+}
+.board-lately svg {
+  flex-shrink: 0;
+  color: #b08a4f;
+}
 .board-quick-actions {
   display: flex;
   align-items: center;
@@ -450,6 +462,9 @@ body {
 }
 .wall-display .board-summary {
   font-size: clamp(12px, 1.1vw, 24px);
+}
+.wall-display .board-lately {
+  font-size: clamp(12px, 1vw, 22px);
 }
 .wall-clock {
   display: flex;
