@@ -16,6 +16,10 @@ export function markPaid(entry: Entry, memberId: string, paid: boolean): Entry {
   const others = (entry.paid_by || []).filter((id) => id !== memberId);
   return { ...entry, paid_by: paid ? [...others, memberId] : others };
 }
+export function markAllPaid(entry: Entry): Entry {
+  if (!isBill(entry) || !entry.payment_members?.length) return entry;
+  return { ...entry, paid_by: [...entry.payment_members] };
+}
 export function occurrenceAssignee(
   first: string | null,
   partner: string | undefined,

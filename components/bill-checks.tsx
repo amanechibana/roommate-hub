@@ -11,13 +11,20 @@ export default function BillChecks({
   members,
   uid,
   onPayment,
+  onCover,
 }: {
   entry: Entry;
   members: Member[];
   uid: string | null;
   onPayment: (entry: Entry) => void;
+  onCover: (entry: Entry) => void;
 }) {
   if (!isBill(entry) || !entry.payment_members?.length) return null;
+  const canCover =
+    !!entry.amount &&
+    !entry.paid_by?.length &&
+    !!uid &&
+    entry.payment_members.includes(uid);
   return (
     <section className="bill-checks" aria-label={`Payments for ${entry.title}`}>
       <div className="bill-heading">
@@ -60,7 +67,20 @@ export default function BillChecks({
           );
         })}
       </div>
-      <p className="subtle">Each person checks off their own payment.</p>
+      {canCover && (
+        <Button
+          type="button"
+          className="button secondary small"
+          onClick={() => onCover(entry)}
+        >
+          I covered the whole bill — split it
+        </Button>
+      )}
+      <p className="subtle">
+        {canCover
+          ? "Each person checks off their own payment, or one of you covers it and the split lands in Expenses."
+          : "Each person checks off their own payment."}
+      </p>
     </section>
   );
 }

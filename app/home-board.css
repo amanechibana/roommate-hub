@@ -131,6 +131,19 @@ body {
   color: #807363;
   margin: 0;
 }
+.board-balance {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-top: 7px;
+  font-size: 12px;
+  color: #8c694e;
+}
+.board-balance .board-more {
+  margin: 0;
+  padding: 0;
+  min-height: 0;
+}
 .board-quick-actions {
   display: flex;
   align-items: center;

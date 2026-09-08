@@ -16,7 +16,9 @@ Controls use Radix UI primitives and Motion, styled to match the house: sliding 
 
 The Expenses tab records shared purchases, who paid, and even splits among selected housemates. Amounts are calculated in whole cents; any remainder is assigned consistently so shares always add up to the total. Balances show who owes whom, and repayments reduce the balance without increasing monthly spending. Purchases and repayments can be edited or deleted from Activity. Entries save optimistically and refresh across devices.
 
-Expenses use migration `006_expenses.sql` and a separate household-scoped gateway. Calendar rent/bill checks remain reminders and are not automatically posted as expenses. Recording a repayment does not send money.
+Expenses use migration `006_expenses.sql` and a separate household-scoped gateway. Calendar rent/bill checks remain reminders when each person pays their own share; those payments are not posted as expenses. When nobody has paid yet, a bill with an amount offers **I covered the whole bill** — one tap checks off every payer and logs the full amount to Expenses as an even split paid by you, so housemates owe you their shares. The home board greeting shows who owes whom from the ledger, with a shortcut to settle up. Recording a repayment does not send money.
+
+House notes can be turned into a to-do, plan, or shopping item: open the note and pick a new type in the edit dialog. The entry keeps its title, details, and author; turning one into a rent or bill event adds payment checks for everyone.
 
 ## Weather and train times
 
@@ -136,7 +138,7 @@ creator, including the legacy shared Housemates identity.
 For a fresh database, apply migrations in order: `001_household.sql`,
 `002_shared_code.sql` (using psql with `-v gateway_hash=<SHA-256 of your gateway token>`),
 `003_recurring_entries.sql`, `004_device_identity.sql`, `005_chores_bills_undo.sql`,
-and `006_expenses.sql`.
+`006_expenses.sql`, and `007_covered_bills_note_conversion.sql`.
 For an existing installation, apply only the migrations newer than the last installed migration.
 Migration 004 adds Amane and Barnatt if absent, validates the selected household
 member on writes, and returns saved entry IDs with create responses. **Apply it
@@ -178,6 +180,12 @@ Apply migration 005 before deploying this batch. It adds payment and rotation
 fields, backfills existing rent participants without marking anyone paid, and
 adds a private table for short-lived deletion snapshots. Verify it with
 `supabase/tests/chores-bills-undo.sql` in the disposable database described below.
+
+Apply migration 007 before deploying covered bills and note conversion. It
+lets the payment operation check off every payer at once and lets updates
+change an entry's kind, managing payment checks when an entry enters or leaves
+bill status. Verify it with `supabase/tests/covered-bills-note-conversion.sql`
+in the disposable database described below.
 
 ## Deploy to Vercel
 
