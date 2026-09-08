@@ -12,6 +12,12 @@ Display mode uses the same signed-in household session and refreshes shared reco
 
 Controls use Radix UI primitives and Motion, styled to match the house: sliding filter highlights, tactile buttons, drawn checkmarks, and gentle entrances. A living windowsill illustration appears across the app: tap the cat to make it stretch, or complete a to-do to get a small reaction. The cat breathes and flicks its tail, the plant sways, and clouds drift past. On phones the cat sits in the top bar; on a TV the scene sits beside the clock. The TV button has a soft idle shimmer, and display mode has slowly drifting background color. Use **Motion on/off** in display mode or household settings to pause ambient effects; the choice stays on this device. Idle effects stop in hidden tabs, and system reduced-motion preferences are respected.
 
+## Expenses
+
+The Expenses tab records shared purchases, who paid, and even splits among selected housemates. Amounts are calculated in whole cents; any remainder is assigned consistently so shares always add up to the total. Balances show who owes whom, and repayments reduce the balance without increasing monthly spending. Purchases and repayments can be edited or deleted from Activity. Entries save optimistically and refresh across devices.
+
+Expenses use migration `006_expenses.sql` and a separate household-scoped gateway. Calendar rent/bill checks remain reminders and are not automatically posted as expenses. Recording a repayment does not send money.
+
 ## Weather and train times
 
 A band above the noticeboard shows the current weather beside the next few
@@ -129,7 +135,8 @@ creator, including the legacy shared Housemates identity.
 
 For a fresh database, apply migrations in order: `001_household.sql`,
 `002_shared_code.sql` (using psql with `-v gateway_hash=<SHA-256 of your gateway token>`),
-`003_recurring_entries.sql`, `004_device_identity.sql`, then `005_chores_bills_undo.sql`.
+`003_recurring_entries.sql`, `004_device_identity.sql`, `005_chores_bills_undo.sql`,
+and `006_expenses.sql`.
 For an existing installation, apply only the migrations newer than the last installed migration.
 Migration 004 adds Amane and Barnatt if absent, validates the selected household
 member on writes, and returns saved entry IDs with create responses. **Apply it

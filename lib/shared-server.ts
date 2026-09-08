@@ -33,13 +33,14 @@ export function sameOrigin(request: Request) {
 export async function sharedDatabase(
   operation: string,
   payload: Record<string, unknown> = {},
+  gateway: "shared_home" | "shared_expenses" = "shared_home",
 ) {
   const db = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
     { auth: { persistSession: false, autoRefreshToken: false } },
   );
-  const { data, error } = await db.rpc("shared_home", {
+  const { data, error } = await db.rpc(gateway, {
     access_token: process.env.HOUSEHOLD_DATA_TOKEN,
     operation,
     payload,

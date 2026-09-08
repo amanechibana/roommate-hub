@@ -1,6 +1,8 @@
 "use client";
 
 import styles from "./hub.module.css";
+import ExpensesTab from "./expenses-tab";
+import { useExpenses } from "@/lib/use-expenses";
 import { HouseCompanion } from "@/components/ui/house-companion";
 
 import { m } from "motion/react";
@@ -31,6 +33,7 @@ import {
   Settings,
   ShieldCheck,
   ShoppingBasket,
+  Wallet,
   Sparkles,
   StickyNote,
   Trash2,
@@ -80,6 +83,7 @@ type Tab =
   | "To-dos"
   | "Shopping list"
   | "House notes"
+  | "Expenses"
   | "Our household";
 const tabs = [
   { name: "Overview", icon: Home },
@@ -87,6 +91,7 @@ const tabs = [
   { name: "To-dos", icon: ClipboardList },
   { name: "Shopping list", icon: ShoppingBasket },
   { name: "House notes", icon: StickyNote },
+  { name: "Expenses", icon: Wallet },
 ] as const;
 const money = (value: number) =>
   new Intl.NumberFormat("en-US", {
@@ -138,6 +143,12 @@ export default function Hub() {
   const [identity, setIdentity] = useState<string | null>(null);
   const [choosingPerson, setChoosingPerson] = useState(false);
   const uid = demo ? identity || "you" : identity;
+  const expenseController = useExpenses(
+    household?.id,
+    uid,
+    demo,
+    tab === "Expenses",
+  );
   const pending = useRef(0);
   const writes = useRef(Promise.resolve());
   const needsRecovery = useRef(false);
@@ -249,6 +260,8 @@ export default function Hub() {
   }, [clearSession]);
   async function signOut() {
     try {
+      await writes.current;
+      await expenseController.flush();
       await homeRequest("/api/session", "DELETE");
       clearSession();
     } catch (err) {
@@ -512,6 +525,7 @@ export default function Hub() {
     setError("");
     try {
       await writes.current;
+      await expenseController.flush();
       if (!demo)
         await homeRequest("/api/session", "PATCH", {
           member_id: member.user_id,
@@ -967,7 +981,7 @@ export default function Hub() {
               </Button>
             </div>
           )}
-          {tab !== "Overview" && (
+          {tab !== "Overview" && tab !== "Expenses" && (
             <m.div
               key={tab}
               initial={reduced ? false : { opacity: 0.5 }}
@@ -991,6 +1005,7 @@ export default function Hub() {
                         "House notes": `${notes.length} ${notes.length === 1 ? "note" : "notes"} shared with your home`,
                         "Our household": `${household.name} · ${members.length} ${members.length === 1 ? "housemate" : "housemates"}`,
                         Overview: "",
+                        Expenses: "",
                       }[tab]
                     }
                   </p>
@@ -1010,6 +1025,13 @@ export default function Hub() {
           )}
 
           {tab === "Overview" && <HomeBoard {...boardProps} />}
+          {tab === "Expenses" && (
+            <ExpensesTab
+              controller={expenseController}
+              members={members.filter((member) => member.name !== "Housemates")}
+              memberId={uid!}
+            />
+          )}
 
           {tab === "Calendar" && (
             <section className="panel calendar-panel">
