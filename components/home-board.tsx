@@ -22,6 +22,7 @@ import {
   Play,
   Plus,
   ShoppingBasket,
+  Sparkles,
   StickyNote,
   Wallet,
   X,
@@ -54,6 +55,7 @@ type Props = {
   display?: boolean;
   demo: boolean;
   live?: boolean;
+  lately?: { line: string; member: string | null; at: number }[];
   error: string;
   onExit: () => void;
   onOpen: (kind: Kind, entry?: Entry) => void;
@@ -78,6 +80,7 @@ export default function HomeBoard({
   display = false,
   demo,
   live = false,
+  lately = [],
   error,
   onExit,
   onOpen,
@@ -183,6 +186,26 @@ export default function HomeBoard({
       (a, b) => Number(b.category === "Need") - Number(a.category === "Need"),
     );
   const notes = entries.filter((e) => e.kind === "note");
+  // The other member's doings; your own check-offs already burst on screen.
+  // The wall has no "you", so it shows everything.
+  const lastActivity = lately.find(
+    (event) =>
+      Date.now() - event.at < 48 * 3600000 &&
+      (display || !viewer || event.member !== viewer.name),
+  );
+  const activityWhen = (at: number) => {
+    const then = new Date(at);
+    if (Date.now() - at < 5 * 60000) return "just now";
+    if (dateKey(then) === today) {
+      const h = then.getHours();
+      return h < 12 ? "this morning" : h < 17 ? "this afternoon" : "tonight";
+    }
+    const yesterday = new Date(now);
+    yesterday.setDate(now.getDate() - 1);
+    return dateKey(then) === dateKey(yesterday)
+      ? "yesterday"
+      : then.toLocaleDateString("en-US", { weekday: "long" });
+  };
   const pages = Math.max(
     1,
     Math.ceil(tasks.length / limit),
@@ -424,6 +447,14 @@ export default function HomeBoard({
                 )}
               </div>
             )
+          )}
+          {lastActivity && (
+            <p className="board-lately">
+              <Sparkles size={13} aria-hidden="true" />
+              <span>
+                {lastActivity.line} · {activityWhen(lastActivity.at)}
+              </span>
+            </p>
           )}
         </div>
         {display ? (

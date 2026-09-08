@@ -111,6 +111,9 @@ export default function CommuteStrip({
   const [boards, setBoards] = useState<Departures[]>([]);
   const [open, setOpen] = useState(false);
   const [failed, setFailed] = useState(false);
+  // Only read before the first successful load; after that the last reading
+  // stays up, which the strip's staleness marker already covers.
+  const [weatherMissed, setWeatherMissed] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [updatedAt, setUpdatedAt] = useState<Date | null>(null);
   // When the server fetched the oldest board's data, as opposed to when this
@@ -279,9 +282,13 @@ export default function CommuteStrip({
       const response = await fetch(`/api/weather${query}`, {
         cache: "no-store",
       });
-      if (response.ok) setWeather((await response.json()) as Weather);
+      if (response.ok) {
+        setWeather((await response.json()) as Weather);
+        setWeatherMissed(false);
+      } else setWeatherMissed(true);
     } catch {
-      // Leave the last reading in place.
+      // Leave the last reading in place; the flag only matters before one.
+      setWeatherMissed(true);
     }
   }, [homeAt]);
 
@@ -393,7 +400,7 @@ export default function CommuteStrip({
         ) : (
           <div className="commute-weather-copy">
             <strong>—</strong>
-            <small>Weather loading</small>
+            <small>{weatherMissed ? "Weather unavailable" : "Weather loading"}</small>
           </div>
         )}
       </div>

@@ -64,6 +64,8 @@ import {
   markPaid,
   occurrenceAssignee,
   editEntries,
+  remoteActivity,
+  type ActivityEvent,
 } from "@/lib/household-actions";
 import HomeBoard from "@/components/home-board";
 import {
@@ -170,6 +172,10 @@ export default function Hub() {
   const [identity, setIdentity] = useState<string | null>(null);
   const [channel, setChannel] = useState<string | null>(null);
   const [choosingPerson, setChoosingPerson] = useState(false);
+  // What the other member did lately, noticed by diffing refreshes; per
+  // device, like list order. See remoteActivity for why the diff is safe.
+  const [lately, setLately] = useState<(ActivityEvent & { at: number })[]>([]);
+  const entriesRef = useRef<Entry[]>([]);
   const uid = demo ? identity || "you" : identity;
   const pending = useRef(0);
   const writes = useRef(Promise.resolve());
@@ -216,6 +222,20 @@ export default function Hub() {
   }, [tab]);
 
   useEffect(() => {
+    entriesRef.current = entries;
+  }, [entries]);
+  const householdId = household?.id;
+  useEffect(() => {
+    if (!householdId || demo) return;
+    try {
+      const raw = localStorage.getItem(`common-ground-lately:${householdId}`);
+      if (raw) setLately(JSON.parse(raw));
+    } catch {
+      /* Fine to start without history on this device. */
+    }
+  }, [householdId, demo]);
+
+  useEffect(() => {
     const sync = () =>
       setDisplay(
         new URLSearchParams(window.location.search).get("display") === "1",
@@ -247,6 +267,7 @@ export default function Hub() {
     setHousehold(null);
     setEntries([]);
     setMembers([]);
+    setLately([]);
     setLoaded(false);
     setEditing(null);
     setShowShortcuts(false);
@@ -260,6 +281,28 @@ export default function Hub() {
     try {
       const data = await homeRequest("/api/home");
       if (sequence !== loadSequence.current) return;
+      const before = entriesRef.current;
+      if (before.length && data.household) {
+        const activity = remoteActivity(before, data.entries, data.members);
+        if (activity.length) {
+          const at = Date.now();
+          setLately((current) => {
+            const next = [
+              ...activity.map((event) => ({ ...event, at })),
+              ...current,
+            ].slice(0, 5);
+            try {
+              localStorage.setItem(
+                `common-ground-lately:${data.household.id}`,
+                JSON.stringify(next),
+              );
+            } catch {
+              /* The in-memory ticker still works. */
+            }
+            return next;
+          });
+        }
+      }
       setHousehold(data.household);
       setMembers(data.members);
       setEntries(data.entries);
@@ -1175,6 +1218,7 @@ export default function Hub() {
     expenses: expenseController,
     demo,
     live,
+    lately,
     error,
     onExit: () => changeDisplay(false),
     onOpen: (kind: Kind, entry?: Entry) => setEditing({ kind, entry }),
@@ -1833,6 +1877,18 @@ export default function Hub() {
                     </span>
                   </div>
                 ))}
+                <h3>Who’s using this device</h3>
+                <p className="subtle">
+                  Chores, check-offs, and the Mine filter follow{" "}
+                  {person(uid || null)} on this device.
+                </p>
+                <Button
+                  className="button secondary"
+                  onClick={() => setChoosingPerson(true)}
+                >
+                  <Users size={16} />
+                  Switch person
+                </Button>
                 <h3>Add your housemates</h3>
                 <p className="subtle">
                   Everyone uses the same household code. Add names here to

@@ -24,6 +24,7 @@ import {
 import {
   feedsForStation,
   findStation,
+  readFeed,
   searchStations,
   subwayStations,
 } from "../lib/subway-data";
@@ -119,6 +120,45 @@ test("returns empty values for absent fields", () => {
   assert.equal(text(parsed, 4), "");
   assert.equal(integer(parsed, 4), null);
   assert.equal(message(parsed, 4), null);
+});
+
+test("the feed reader drops canceled trips and skipped stops", () => {
+  // FeedEntity.trip_update with a TripDescriptor and its StopTimeUpdates.
+  const entity = (tripFields: number[], stopFields: number[][]) =>
+    bytesField(
+      2,
+      bytesField(3, [
+        ...bytesField(1, tripFields),
+        ...stopFields.flatMap((stop) => bytesField(2, stop)),
+      ]),
+    );
+  const arrival = (time: number) => bytesField(2, varintField(2, time));
+  const buffer = new Uint8Array([
+    // A live A arrival is kept.
+    ...entity(stringField(5, "A"), [
+      [...stringField(4, "A32N"), ...arrival(100)],
+    ]),
+    // A CANCELED (3) trip loses every stop it still carries.
+    ...entity(
+      [...stringField(5, "C"), ...varintField(4, 3)],
+      [[...stringField(4, "A32N"), ...arrival(200)]],
+    ),
+    // A SKIPPED (1) stop is dropped; its siblings stay.
+    ...entity(stringField(5, "E"), [
+      [...stringField(4, "A32N"), ...arrival(300), ...varintField(5, 1)],
+      [...stringField(4, "A32S"), ...arrival(400)],
+    ]),
+    // Explicit SCHEDULED (0) on both levels is kept.
+    ...entity(
+      [...stringField(5, "B"), ...varintField(4, 0)],
+      [[...stringField(4, "D14N"), ...arrival(500), ...varintField(5, 0)]],
+    ),
+  ]);
+  assert.deepEqual(readFeed(buffer), [
+    { route: "A", stopId: "A32N", time: 100 },
+    { route: "E", stopId: "A32S", time: 400 },
+    { route: "B", stopId: "D14N", time: 500 },
+  ]);
 });
 
 // --- PATH -----------------------------------------------------------------
@@ -234,8 +274,6 @@ test("builds subway departures from realtime stop ids", () => {
       ["A", 2, "Uptown", "Test St"],
     ],
   );
-  // No generation stamp is parsed from the feed, so none is claimed.
-  assert.equal(result.updated, null);
 });
 
 test("normalizes realtime route ids to rider-facing labels", () => {

@@ -6,9 +6,43 @@
 // the browser. Search happens on the server via app/api/subway/stations.
 
 import stations from "./subway-stations.json";
+import { fields, integer, message, messages, text } from "./protobuf";
 import { stationKey, type SubwayStation } from "./transit";
 
 export const subwayStations: SubwayStation[] = stations as SubwayStation[];
+
+export type Arrival = { route: string; stopId: string; time: number };
+
+// Field numbers from the GTFS-realtime spec:
+//   FeedMessage.entity = 2, FeedEntity.trip_update = 3,
+//   TripUpdate.trip = 1 / .stop_time_update = 2,
+//   TripDescriptor.route_id = 5 / .schedule_relationship = 4 (CANCELED = 3),
+//   StopTimeUpdate.arrival = 2 / .departure = 3 / .stop_id = 4
+//     / .schedule_relationship = 5 (SKIPPED = 1),
+//   StopTimeEvent.time = 2
+export function readFeed(buffer: Uint8Array): Arrival[] {
+  const arrivals: Arrival[] = [];
+  for (const entity of messages(fields(buffer), 2)) {
+    const update = message(entity, 3);
+    if (!update) continue;
+    const trip = message(update, 1);
+    const route = trip ? text(trip, 5) : "";
+    if (!route) continue;
+    // A canceled trip can still carry stop times; listing them would show
+    // trains that will never come, exactly during service changes.
+    if (trip && integer(trip, 4) === 3) continue;
+    for (const stop of messages(update, 2)) {
+      const stopId = text(stop, 4);
+      if (!stopId) continue;
+      if (integer(stop, 5) === 1) continue;
+      // Terminals often carry only a departure time, so fall back to it.
+      const event = message(stop, 2) ?? message(stop, 3);
+      const time = event ? integer(event, 2) : null;
+      if (time) arrivals.push({ route, stopId, time });
+    }
+  }
+  return arrivals;
+}
 
 export function findStation(id: string): SubwayStation | null {
   return subwayStations.find((station) => station.id === id) ?? null;

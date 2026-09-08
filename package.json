@@ -21,7 +21,6 @@
     "@radix-ui/react-toggle-group": "1.1.19",
     "@radix-ui/react-tooltip": "1.2.16",
     "@supabase/supabase-js": "2.115.0",
-    "@types/web-push": "^3.6.4",
     "lucide-react": "1.41.0",
     "motion": "13.2.0",
     "next": "16.3.4",
@@ -32,6 +31,7 @@
   "devDependencies": {
     "@playwright/test": "1.63.0",
     "@types/node": "26.4.1",
+    "@types/web-push": "^3.6.4",
     "@types/react": "19.2.18",
     "@types/react-dom": "19.2.7",
     "prettier": "3.9.6",

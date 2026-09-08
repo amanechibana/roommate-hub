@@ -25,7 +25,8 @@ export async function GET() {
         ? memberId
         : null,
     });
-  } catch {
+  } catch (err) {
+    console.error("GET /api/home", err);
     return json({ error: "Could not load your home. Please try again." }, 503);
   }
 }
@@ -96,6 +97,7 @@ export async function POST(request: Request) {
   } catch (err) {
     if ((err as { rejected?: boolean }).rejected)
       return json({ error: (err as Error).message, rejected: true }, 400);
+    console.error("POST /api/home", err);
     return json(
       { error: "Could not save this change. Check the fields and try again." },
       400,

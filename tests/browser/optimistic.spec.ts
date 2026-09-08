@@ -30,6 +30,10 @@ async function home(page: Page, picked: string | null = "you") {
       memberId = route.request().postDataJSON().member_id;
     await route.fulfill({ json: { authenticated: true, member_id: memberId } });
   });
+  // An unmocked 401 here would sign the whole mocked household out.
+  await page.route("**/api/expenses", (route) =>
+    route.fulfill({ json: { expenses: [] } }),
+  );
   await page.route("**/api/home", async (route) => {
     if (route.request().method() === "GET") {
       gets++;
