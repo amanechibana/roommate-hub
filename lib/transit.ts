@@ -29,6 +29,11 @@ export type Departure = {
   at: number | null;
   /** Feed-supplied status such as "Delayed"; empty when running normally. */
   status: string;
+  /**
+   * Walk minutes to this departure's station, attached on the client from the
+   * saved station settings. The server never sets it.
+   */
+  walk?: number;
 };
 
 export type Departures = {
@@ -150,6 +155,8 @@ export type CommuteStation = {
    */
   lines: string[];
   headsigns: string[];
+  /** Minutes to walk to this station; 0 means no leave-by hints. */
+  walkMinutes: number;
 };
 
 /** Enough stops to cover a household without flooding the band. */
@@ -180,6 +187,7 @@ export function pathStation(code: string): CommuteStation | null {
     lon: at.lon,
     lines: [],
     headsigns: [],
+    walkMinutes: 0,
   };
 }
 
@@ -213,6 +221,11 @@ function readFilter(value: unknown): string[] {
   ];
 }
 
+function readWalk(value: unknown): number {
+  const minutes = Math.floor(Number(value));
+  return Number.isFinite(minutes) && minutes > 0 ? Math.min(minutes, 60) : 0;
+}
+
 function readStation(value: unknown): CommuteStation | null {
   if (!value || typeof value !== "object") return null;
   const raw = value as Partial<CommuteStation>;
@@ -220,10 +233,11 @@ function readStation(value: unknown): CommuteStation | null {
   if (typeof raw.id !== "string" || !raw.id) return null;
   const lines = readFilter(raw.lines);
   const headsigns = readFilter(raw.headsigns);
+  const walkMinutes = readWalk(raw.walkMinutes);
   // PATH names and locations are always rebuilt from the built-in table.
   if (raw.system === "path") {
     const station = pathStation(raw.id);
-    return station ? { ...station, lines, headsigns } : null;
+    return station ? { ...station, lines, headsigns, walkMinutes } : null;
   }
   return {
     system: "subway",
@@ -235,6 +249,7 @@ function readStation(value: unknown): CommuteStation | null {
     lon: Number.isFinite(raw.lon) ? (raw.lon as number) : 0,
     lines,
     headsigns,
+    walkMinutes,
   };
 }
 
@@ -279,6 +294,7 @@ export function parseStoredStations(raw: string | null): CommuteStation[] {
       lon: 0,
       lines: [],
       headsigns: [],
+      walkMinutes: 0,
     });
   return upgraded;
 }
@@ -331,6 +347,20 @@ export function toggleFilter(
 export function minutesUntil(departure: Departure, now: number): number | null {
   if (departure.at === null) return departure.minutes;
   return Math.max(0, Math.round((departure.at - now) / 60));
+}
+
+/**
+ * Minutes until you must leave to catch this train, given the walk to its
+ * station. Null when no walk time is set or the feed gave no time; negative
+ * when the train can no longer be caught.
+ */
+export function leaveInMinutes(
+  departure: Departure,
+  now: number,
+): number | null {
+  if (!departure.walk) return null;
+  const minutes = minutesUntil(departure, now);
+  return minutes === null ? null : minutes - departure.walk;
 }
 
 /**

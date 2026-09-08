@@ -1,5 +1,7 @@
 import {
+  broadcastChange,
   json,
+  realtimeChannel,
   sameOrigin,
   sharedDatabase,
   signedIn,
@@ -15,6 +17,7 @@ export async function GET() {
     const memberId = await selectedMember();
     return json({
       ...data,
+      channel: realtimeChannel(),
       member_id: data.members.some(
         (m: { user_id: string; name: string }) =>
           m.user_id === memberId && m.name !== "Housemates",
@@ -34,7 +37,7 @@ export async function POST(request: Request) {
     const raw = await request.text();
     if (raw.length > 12000)
       return json({ error: "This entry is too long." }, 400);
-    const { operation, payload } = JSON.parse(raw);
+    const { operation, payload, sender } = JSON.parse(raw);
     if (
       !["create", "update", "delete", "restore", "payment", "member"].includes(
         operation,
@@ -83,7 +86,9 @@ export async function POST(request: Request) {
     const actor = await selectedMember();
     if (!actor)
       return json({ error: "Choose who’s using this device first." }, 400);
-    return json(await sharedDatabase(operation, { ...values, actor }));
+    const result = await sharedDatabase(operation, { ...values, actor });
+    broadcastChange("home", sender);
+    return json(result);
   } catch {
     return json(
       { error: "Could not save this change. Check the fields and try again." },

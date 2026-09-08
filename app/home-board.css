@@ -1060,6 +1060,8 @@ body {
    grids on the home screen and the wall display keep their proportions. */
 .commute-strip {
   display: flex;
+  /* Alerts, when present, take a full-width second line. */
+  flex-wrap: wrap;
   align-items: center;
   gap: 18px;
   flex-shrink: 0;
@@ -1196,6 +1198,39 @@ body {
   gap: 6px;
   flex-shrink: 0;
 }
+/* Service alerts: a quiet second line under the departures. */
+.commute-alerts {
+  flex-basis: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  margin-top: -6px;
+}
+.commute-alert {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  margin: 0;
+  font-size: 11px;
+  color: #8a6a4b;
+}
+.commute-alert > svg {
+  color: #bc8a50;
+  flex-shrink: 0;
+}
+.commute-alert .commute-badge {
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  font-size: 9.5px;
+}
+.commute-alert-text {
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 .commute-icon {
   display: grid;
   place-items: center;
@@ -1271,6 +1306,14 @@ body {
 .commute-wall .commute-icon svg {
   width: clamp(15px, 1.05vw, 22px);
   height: auto;
+}
+.commute-wall .commute-alert {
+  font-size: clamp(11px, 0.85vw, 19px);
+}
+.commute-wall .commute-alert .commute-badge {
+  min-width: clamp(18px, 1.3vw, 27px);
+  height: clamp(18px, 1.3vw, 27px);
+  font-size: clamp(9.5px, 0.65vw, 14px);
 }
 
 /* Station picker -------------------------------------------------------- */
@@ -1565,6 +1608,22 @@ body {
   margin: 0;
   font-size: 12px;
   color: #8b7d6a;
+}
+.commute-walkrow {
+  align-items: center;
+}
+.commute-walkrow input {
+  width: 58px;
+  padding: 5px 8px;
+  border: 1px solid #e2d7c5;
+  border-radius: 8px;
+  background: #fffdf7;
+  color: #4d4034;
+  font-size: 12.5px;
+}
+.commute-walkrow small {
+  font-size: 10.5px;
+  color: #97846c;
 }
 @media (max-width: 650px) {
   .commute-chiprow {

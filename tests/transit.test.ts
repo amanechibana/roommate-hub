@@ -11,6 +11,7 @@ import {
   pathStation,
   filterDepartures,
   hasDeparted,
+  leaveInMinutes,
   minutesUntil,
   searchPathStations,
   stationKey,
@@ -383,6 +384,46 @@ test("caps the saved list and survives a corrupt store", () => {
   assert.deepEqual(parseStoredStations("{not json"), defaultStations());
   assert.deepEqual(parseStoredStations("[]"), []);
   assert.deepEqual(parseStoredStations("null"), defaultStations());
+});
+
+test("reads walk times, clamping junk and oversized values", () => {
+  const stations = parseStoredStations(
+    JSON.stringify({
+      stations: [
+        { system: "path", id: "JSQ", walkMinutes: 12 },
+        { system: "subway", id: "A32", name: "W 4 St", walkMinutes: 900 },
+        { system: "path", id: "HOB", walkMinutes: "soon" },
+      ],
+    }),
+  );
+  assert.deepEqual(
+    stations.map((station) => station.walkMinutes),
+    [12, 60, 0],
+  );
+});
+
+test("leave-by hints subtract the walk from the countdown", () => {
+  const now = 1_700_000_000;
+  const departure = {
+    id: "d",
+    line: "PATH",
+    colors: [],
+    headsign: "World Trade Center",
+    origin: "Journal Square",
+    note: "",
+    minutes: 10,
+    at: now + 600,
+    status: "",
+  };
+  assert.equal(leaveInMinutes(departure, now), null);
+  assert.equal(leaveInMinutes({ ...departure, walk: 4 }, now), 6);
+  // A minute later the hint counts down with the train.
+  assert.equal(leaveInMinutes({ ...departure, walk: 4 }, now + 60), 5);
+  assert.equal(leaveInMinutes({ ...departure, walk: 12 }, now), -2);
+  assert.equal(
+    leaveInMinutes({ ...departure, walk: 4, minutes: null, at: null }, now),
+    null,
+  );
 });
 
 test("builds and searches PATH stations", () => {

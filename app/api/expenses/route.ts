@@ -1,4 +1,5 @@
 import {
+  broadcastChange,
   json,
   sameOrigin,
   sharedDatabase,
@@ -23,7 +24,7 @@ export async function POST(request: Request) {
     const raw = await request.text();
     if (raw.length > 12000)
       return json({ error: "This expense is too long." }, 400);
-    const { operation, payload } = JSON.parse(raw);
+    const { operation, payload, sender } = JSON.parse(raw);
     if (
       !["create", "update", "delete"].includes(operation) ||
       !payload ||
@@ -50,9 +51,13 @@ export async function POST(request: Request) {
     const values = Object.fromEntries(
       Object.entries(payload).filter(([key]) => allowed.includes(key)),
     );
-    return json(
-      await sharedDatabase(operation, { ...values, actor }, "shared_expenses"),
+    const result = await sharedDatabase(
+      operation,
+      { ...values, actor },
+      "shared_expenses",
     );
+    broadcastChange("expenses", sender);
+    return json(result);
   } catch {
     return json(
       {

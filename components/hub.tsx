@@ -46,9 +46,11 @@ import {
   X,
 } from "lucide-react";
 import { hasDatabase, homeRequest } from "@/lib/home-client";
+import { TAB_ID, useRealtime } from "@/lib/realtime";
 import { DisplayButton, AmbientToggle } from "@/components/ui/display-button";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import BillChecks from "@/components/bill-checks";
+import PushSettings from "@/components/push-settings";
 import {
   UNDO_DURATION,
   billPaid,
@@ -155,6 +157,7 @@ export default function Hub() {
   const [filter, setFilter] = useState("All");
   const [display, setDisplay] = useState(false);
   const [identity, setIdentity] = useState<string | null>(null);
+  const [channel, setChannel] = useState<string | null>(null);
   const [choosingPerson, setChoosingPerson] = useState(false);
   const uid = demo ? identity || "you" : identity;
   const expenseController = useExpenses(
@@ -217,6 +220,7 @@ export default function Hub() {
     ++loadSequence.current;
     ++sessionGeneration.current;
     setIdentity(null);
+    setChannel(null);
     setNotice("");
     setUndoDeletes([]);
     needsRecovery.current = false;
@@ -241,6 +245,7 @@ export default function Hub() {
       setMembers(data.members);
       setEntries(data.entries);
       setIdentity(data.member_id ?? null);
+      setChannel(typeof data.channel === "string" ? data.channel : null);
       setError("");
     } catch (err) {
       if (!quiet && sequence === loadSequence.current)
@@ -249,6 +254,17 @@ export default function Hub() {
       if (sequence === loadSequence.current) setLoaded(true);
     }
   }, []);
+  // Change pings from other devices; a ping during a local write defers to
+  // after the queue drains, like failure recovery. The 15-second poll stays
+  // as the safety net, so a missed or broken ping path costs nothing.
+  const live = useRealtime(session && !demo ? channel : null, (scope) => {
+    if (document.visibilityState !== "visible") return;
+    if (scope !== "expenses") {
+      if (pending.current) needsRecovery.current = true;
+      else void refresh(true);
+    }
+    if (scope !== "home") expenseController.ping();
+  });
   useEffect(() => {
     if (!hasDatabase) {
       const data = demoData();
@@ -391,6 +407,7 @@ export default function Hub() {
                 ? { id: savedIds.current.get(payload.id) || payload.id }
                 : {}),
             },
+            sender: TAB_ID,
           });
           if (generation !== sessionGeneration.current) return;
           if (copies.length) {
@@ -982,6 +999,7 @@ export default function Hub() {
     memberId: uid,
     expenses: expenseController,
     demo,
+    live,
     error,
     onExit: () => changeDisplay(false),
     onOpen: (kind: Kind, entry?: Entry) => setEditing({ kind, entry }),
@@ -1671,7 +1689,9 @@ export default function Hub() {
                 <p>
                   {demo
                     ? "You’re exploring a sample home. Connect Supabase and configure your household code to save across devices."
-                    : "Anyone with your household code can use this home. Keep it between housemates. Changes refresh every 15 seconds while this page is visible."}
+                    : live
+                      ? "Anyone with your household code can use this home. Keep it between housemates. Changes from other devices appear live while this page is open."
+                      : "Anyone with your household code can use this home. Keep it between housemates. Changes refresh every 15 seconds while this page is visible."}
                 </p>
                 {demo && (
                   <p className="subtle">
@@ -1680,6 +1700,7 @@ export default function Hub() {
                     add your project URL and publishable key.
                   </p>
                 )}
+                {!demo && <PushSettings />}
                 <h3>Display motion</h3>
                 <p className="subtle">
                   Gentle details for this device. Your system’s reduced-motion

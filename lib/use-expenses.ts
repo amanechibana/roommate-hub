@@ -1,6 +1,7 @@
 "use client";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { homeRequest } from "./home-client";
+import { TAB_ID } from "./realtime";
 import type { Expense, ExpenseValues } from "./expenses";
 
 export function useExpenses(
@@ -83,7 +84,11 @@ export function useExpenses(
     const current = generation.current;
     writes.current = writes.current.then(async () => {
       try {
-        await homeRequest("/api/expenses", "POST", { operation, payload });
+        await homeRequest("/api/expenses", "POST", {
+          operation,
+          payload,
+          sender: TAB_ID,
+        });
       } catch {
         if (generation.current === current) {
           recovery.current = true;
@@ -129,11 +134,19 @@ export function useExpenses(
     setExpenses((current) => current.filter((item) => item.id !== id));
     persist("delete", { id });
   }
+  // Realtime change ping from another device. During a local write the ping
+  // is deferred to after the queue drains, like failure recovery.
+  function ping() {
+    if (!interested.current || document.visibilityState !== "visible") return;
+    if (pending.current) recovery.current = true;
+    else void refresh();
+  }
   return {
     expenses,
     loaded,
     error,
     refresh,
+    ping,
     save,
     remove,
     flush: () => writes.current,

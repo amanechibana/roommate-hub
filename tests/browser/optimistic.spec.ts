@@ -37,6 +37,9 @@ async function home(page: Page, picked: string | null = "you") {
       return;
     }
     const body = route.request().postDataJSON();
+    // The tab id that suppresses a writer's own realtime ping is transport
+    // metadata, not part of the operation the assertions care about.
+    delete body.sender;
     posts.push(body);
     await hold;
     if (fail) {

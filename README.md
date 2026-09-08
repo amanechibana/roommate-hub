@@ -30,6 +30,50 @@ Expenses use migration `006_expenses.sql` and a separate household-scoped gatewa
 
 House notes can be turned into a to-do, plan, or shopping item: open the note and pick a new type in the edit dialog. The entry keeps its title, details, and author; turning one into a rent or bill event adds payment checks for everyone.
 
+## Live updates
+
+Signed-in devices join a Supabase Realtime broadcast channel and ping each
+other after every successful save, so a change made on one phone appears on
+the other phone and the wall display within a moment. The pings carry no
+household data — just "something changed" and which board — and the channel
+name is a secret derived server-side, handed only to signed-in sessions. The
+15-second poll stays on as the safety net, so nothing is lost if the channel
+drops; the wall footer says "updates live" while the channel is connected. A
+device ignores its own pings, since a successful write already updated its
+screen.
+
+## Reminders and the installable app
+
+The site is an installable web app: `manifest.webmanifest` plus home-screen
+icons rendered from the house cat. On iPhone or iPad use Share → Add to Home
+Screen; Android and desktop Chrome offer their own install prompts.
+
+**Morning reminders** send one push notification per subscribed device around
+7–8am New York time: the day's chores for whoever the device belongs to
+(unassigned chores go to both people), any bill whose check that person hasn't
+ticked within three days of its date, and a count of needed shopping items.
+Nothing due means no notification. Each device opts in from **Our household →
+Morning reminders**, which also has a "send today's digest now" button for
+checking the pipeline end to end. On iOS the app must be installed to the Home
+Screen first; the settings section says so when it detects that state.
+
+Setup needs four server-side pieces:
+
+1. Apply migration `008_push_subscriptions.sql` (verify with
+   `supabase/tests/push-subscriptions.sql` in a disposable database).
+2. Generate VAPID keys with `npx web-push generate-vapid-keys` and set
+   `NEXT_PUBLIC_VAPID_PUBLIC_KEY` and `VAPID_PRIVATE_KEY` (plus an optional
+   `VAPID_SUBJECT`, a `mailto:` address) in Vercel and `.env.local`.
+3. Set `CRON_SECRET` to a random value; Vercel sends it as a bearer token when
+   invoking the cron route.
+4. Deploy with `vercel.json`'s cron entry (daily at 12:00 UTC — Vercel's Hobby
+   plan runs crons at most once a day, which suits a morning digest).
+
+Subscriptions live in the `push_subscriptions` table behind the same
+token-gated gateway pattern as everything else, tied to the person the device
+had selected when it opted in. Dead endpoints are pruned automatically when a
+push bounces.
+
 ## Weather and train times
 
 A band above the noticeboard shows the current weather beside the next few
@@ -50,6 +94,20 @@ marker appears when one station of several fails. The refresh button reloads
 the weather and departures immediately; hover it to see when the board last
 updated. It appears in display mode too, which otherwise refreshes departures
 every 30 seconds on its own.
+
+Subway service alerts that are in effect right now — delays, reroutes, active
+planned work — appear as a quiet line under the departures, limited to the
+routes serving your saved stations (and to your chosen route filters). Live
+disruptions sort before planned work. The alerts come from the MTA's public
+alerts feed, cached for five minutes; if it can't be reached the line simply
+disappears rather than flagging the board. PATH has no comparable feed, so
+its free-text delay notes on individual trains remain the only PATH signal.
+
+Each station can also carry a walk time, set in the gear panel. Departures
+from that station then show "leave in 4 min" next to the destination, counting
+down locally like the arrival times do, and the highlighted train becomes the
+one you must leave for now rather than the one arriving next — an arriving
+train you can no longer reach is not worth running for.
 
 The gear button opens a managed list of stations. One search box covers both
 systems, so "14 st" finds PATH's 14th Street and the MTA's 14 St platforms
@@ -130,11 +188,15 @@ Open the localhost address printed by Next.js. Without Supabase environment vari
 - Assigned to-dos with completion, overdue indicators, and All / Mine / Open / Done filters.
 - Shopping requests separated into needs and wants, estimated USD prices, store links, and bought status.
 - Weather and live train departures for PATH and the NYC subway, shown above the
-  noticeboard on both the home screen and the wall display.
+  noticeboard on both the home screen and the wall display, with subway service
+  alerts and per-station "leave in …" hints.
+- Live cross-device updates over a data-free broadcast channel, with the
+  15-second poll as fallback.
+- An installable app with an opt-in morning reminder push per device.
 - Shared house notes. Create, edit, and delete entries through accessible dialogs.
 - `.ics` calendar export and per-event Google Calendar links. These create snapshots/copies, not subscriptions or two-way synchronization.
 - Shared household-code authentication and a remembered person picker.
-- Persistent shared records with database-enforced household isolation. Other housemates’ changes refresh every 15 seconds while the page is visible, and on window focus.
+- Persistent shared records with database-enforced household isolation. Other housemates’ changes arrive live over the broadcast channel, with a 15-second poll and window-focus refresh as fallback.
 - Responsive desktop/mobile layouts and keyboard support.
 
 ## Connect a real household
@@ -148,7 +210,8 @@ creator, including the legacy shared Housemates identity.
 For a fresh database, apply migrations in order: `001_household.sql`,
 `002_shared_code.sql` (using psql with `-v gateway_hash=<SHA-256 of your gateway token>`),
 `003_recurring_entries.sql`, `004_device_identity.sql`, `005_chores_bills_undo.sql`,
-`006_expenses.sql`, and `007_covered_bills_note_conversion.sql`.
+`006_expenses.sql`, `007_covered_bills_note_conversion.sql`, and
+`008_push_subscriptions.sql`.
 For an existing installation, apply only the migrations newer than the last installed migration.
 Migration 004 adds Amane and Barnatt if absent, validates the selected household
 member on writes, and returns saved entry IDs with create responses. **Apply it
@@ -164,7 +227,7 @@ Entry creation, edits, check-offs, and deletion appear immediately. Background
 writes run in order so rapid clicks cannot arrive out of order, and polling
 waits for them to finish. Successful changes need no follow-up GET. A failed
 write shows a brief notice and quietly reloads after the queue drains. Normal
-cross-device updates still arrive every 15 seconds and on focus. Task and
+cross-device updates arrive live, every 15 seconds, and on focus. Task and
 shopping pages also support typing a title and pressing Enter to add it.
 
 ## Chores, bills, and Undo
@@ -232,6 +295,9 @@ With the development server running and Google Chrome installed, run `npm run te
 
 Calendar tests cover all-day date boundaries, escaping of user text, UTF-8 line folding, filtering of exported records, and safe external links. `supabase/tests/isolation.sql` verifies RLS and write restrictions inside a transaction that rolls back its fixtures; run it against a disposable database with the schema installed. The local test harness requires a local PostgreSQL server and Supabase-compatible `auth.users`, `auth.uid()`, `anon`, and `authenticated` definitions.
 
+Push subscription storage has its own check, `supabase/tests/push-subscriptions.sql`,
+run the same way with migrations 001–008 installed.
+
 The new database regression check is `supabase/tests/device-identity.sql`.
 Run it only in a disposable database with migrations 001–004 and the gateway
 hash set to SHA-256 of `test-gateway`. It checks creator attribution, returned
@@ -252,15 +318,17 @@ public Supabase variables empty).
 
 Suggested order:
 
-1. **Chore reminders:** reminders and snoozing for the existing alternating schedules.
-2. **Shared expenses:** who paid, equal/custom splits, balances, settlement records. Rent is currently a reminder, not a payment processor.
-3. **House handbook:** Wi-Fi, landlord contacts, trash collection, and appliance manuals. Sensitive documents need private object storage and signed download URLs.
-4. **Meal planner + pantry:** dinner plans, staples running low, and one-click shopping requests.
-5. **Quick polls:** vote on purchases, movie nights, or house rules.
-6. **Guests / quiet hours:** overnight visitors, work-from-home blocks, and a heads-up board.
-7. **Calendar connections:** Google/Microsoft OAuth, server-side encrypted tokens, webhook handling, and conflict resolution for two-way sync. Private calendar subscription URLs should be revocable secrets.
-8. **Shopping enrichment:** optional product metadata from approved retailer APIs. Current store links are manual; no Amazon login, price scraping, checkout, or purchase automation.
-9. **Notifications:** opt-in email/push reminders for due chores, rent, and shopping requests.
-10. **Membership management:** owner-controlled removal, leaving a house, ownership transfer, and recovery flows.
+1. **House handbook:** Wi-Fi, landlord contacts, trash collection, and appliance manuals. Sensitive documents need private object storage and signed download URLs.
+2. **Meal planner + pantry:** dinner plans, staples running low, and one-click shopping requests.
+3. **Quick polls:** vote on purchases, movie nights, or house rules.
+4. **Guests / quiet hours:** overnight visitors, work-from-home blocks, and a heads-up board.
+5. **Calendar connections:** Google/Microsoft OAuth, server-side encrypted tokens, webhook handling, and conflict resolution for two-way sync. Private calendar subscription URLs should be revocable secrets.
+6. **Shopping enrichment:** optional product metadata from approved retailer APIs. Current store links are manual; no Amazon login, price scraping, checkout, or purchase automation.
+7. **Membership management:** owner-controlled removal, leaving a house, ownership transfer, and recovery flows.
 
-Data amounts are USD, events are all-day, and weekly, biweekly, and monthly recurring entries are supported. Timed reminders are not implemented. No background jobs run in this version. The Supabase Data API’s default row cap also means households should add pagination before growing beyond roughly 1,000 entries.
+Chore reminders and push notifications shipped as the daily morning digest;
+shared expenses shipped as the Expenses tab. Data amounts are USD, events are
+all-day, and weekly, biweekly, and monthly recurring entries are supported.
+Reminders at arbitrary times are not implemented — the only scheduled job is
+the daily digest cron. The Supabase Data API’s default row cap also means
+households should add pagination before growing beyond roughly 1,000 entries.
