@@ -1,7 +1,8 @@
 "use client";
 
 import styles from "./hub.module.css";
-import ExpensesTab, { ExpenseDialog, estimateCents } from "./expenses-tab";
+import ExpensesTab, { estimateCents } from "./expenses-tab";
+import { expenseMoney, splitEvenly } from "@/lib/expenses";
 import { useExpenses } from "@/lib/use-expenses";
 import { HouseCompanion } from "@/components/ui/house-companion";
 
@@ -127,7 +128,6 @@ export default function Hub() {
     entry?: Entry;
     date?: string;
   } | null>(null);
-  const [logPurchase, setLogPurchase] = useState<Entry | null>(null);
   const [showShortcuts, setShowShortcuts] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -210,7 +210,6 @@ export default function Hub() {
     setMembers([]);
     setLoaded(false);
     setEditing(null);
-    setLogPurchase(null);
     setShowShortcuts(false);
     setSelectedDay(null);
     setError("");
@@ -513,6 +512,26 @@ export default function Hub() {
       current.map((e) => (e.id === entry.id ? { ...e, done: !entry.done } : e)),
     );
     persist("update", { id: entry.id, done: !entry.done });
+  }
+  // Priced items are pre-set expenses: buying one logs it without a dialog.
+  function logPurchase(entry: Entry) {
+    const cents = estimateCents(entry);
+    const payers = members
+      .filter((m) => m.name !== "Housemates")
+      .map((m) => m.user_id);
+    if (!uid || !cents || !payers.length) return;
+    expenseController.save({
+      kind: "expense",
+      title: entry.title,
+      date: dateKey(new Date()),
+      amount_cents: cents,
+      paid_by: uid,
+      shares: splitEvenly(cents, payers),
+      recipient: null,
+    });
+    setNotice(
+      `Logged ${expenseMoney(cents)} to expenses for “${entry.title}”. Adjust it in the Expenses tab if the price differed.`,
+    );
   }
   function togglePayment(entry: Entry) {
     if (!uid) return;
@@ -1396,7 +1415,7 @@ export default function Hub() {
                         onClick={() => {
                           void toggle(entry);
                           if (!entry.done && entry.amount != null)
-                            setLogPurchase(entry);
+                            logPurchase(entry);
                         }}
                       >
                         {entry.done && <AnimatedCheck size={14} />}
@@ -1595,22 +1614,6 @@ export default function Hub() {
       )}
       {showShortcuts && (
         <ShortcutsDialog onClose={() => setShowShortcuts(false)} />
-      )}
-      {logPurchase && uid && (
-        <ExpenseDialog
-          draft={{
-            kind: "expense",
-            title: logPurchase.title,
-            amount: estimateCents(logPurchase),
-          }}
-          members={members.filter((m) => m.name !== "Housemates")}
-          memberId={uid}
-          onClose={() => setLogPurchase(null)}
-          onSave={(values) => {
-            expenseController.save(values);
-            setLogPurchase(null);
-          }}
-        />
       )}
     </div>
   );

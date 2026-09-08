@@ -26,7 +26,6 @@ import styles from "./expenses-tab.module.css";
 type Draft = {
   kind: "expense" | "settlement";
   entry?: Expense;
-  title?: string;
   from?: string;
   to?: string;
   amount?: number;
@@ -267,7 +266,7 @@ export default function ExpensesTab({
     </div>
   );
 }
-export function ExpenseDialog({
+function ExpenseDialog({
   draft,
   members,
   memberId,
@@ -363,7 +362,7 @@ export function ExpenseDialog({
               name="title"
               required
               maxLength={160}
-              defaultValue={draft.entry?.title ?? draft.title}
+              defaultValue={draft.entry?.title}
               placeholder="Groceries, electricity, dinner…"
               autoFocus
             />

@@ -79,18 +79,14 @@ test("a bought shopping item turns its estimate into a real expense", async ({
     .getByRole("button", { name: "Shopping list" })
     .click();
   await page.getByRole("button", { name: "Mark as bought: Olive oil" }).click();
-  await expect(page.getByLabel("What was it for?")).toHaveValue("Olive oil");
-  await expect(page.getByLabel("Amount ($)", { exact: true })).toHaveValue(
-    "12.00",
-  );
-  await page.getByLabel("Amount ($)", { exact: true }).fill("11.50");
-  await page.getByRole("button", { name: "Save expense", exact: true }).click();
+  await expect(page.getByText(/Logged \$12\.00 to expenses/)).toBeVisible();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
   await page
     .getByRole("navigation")
     .getByRole("button", { name: "Expenses", exact: true })
     .click();
   await expect(page.getByRole("button", { name: /Olive oil/ })).toBeVisible();
-  await expect(page.getByText("$11.50", { exact: true })).toHaveCount(2);
+  await expect(page.getByText("$12.00", { exact: true })).toHaveCount(2);
   await expect(
     page.getByText("$48.00 estimated", { exact: true }),
   ).toBeVisible();
