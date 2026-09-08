@@ -22,6 +22,7 @@ import {
   Plus,
   ShoppingBasket,
   StickyNote,
+  Wallet,
   X,
 } from "lucide-react";
 import {
@@ -36,11 +37,19 @@ import { billPaid, isBill } from "@/lib/household-actions";
 import { AmbientToggle } from "@/components/ui/display-button";
 import CommuteStrip from "@/components/commute-strip";
 import FlipClock from "@/components/ui/flip-clock";
+import {
+  expenseBalances,
+  expenseMoney,
+  suggestedRepayments,
+} from "@/lib/expenses";
+import type { ExpensesController } from "@/lib/use-expenses";
 
 type Props = {
   household: Household;
   entries: Entry[];
   members: Member[];
+  memberId: string | null;
+  expenses: ExpensesController;
   display?: boolean;
   demo: boolean;
   error: string;
@@ -62,6 +71,8 @@ export default function HomeBoard({
   household,
   entries,
   members,
+  memberId,
+  expenses,
   display = false,
   demo,
   error,
@@ -79,6 +90,9 @@ export default function HomeBoard({
   const [full, setFull] = useState(false);
   const [fullscreenError, setFullscreenError] = useState("");
   const today = dateKey(now);
+  const viewer = members.find(
+    (member) => member.user_id === memberId && member.name !== "Housemates",
+  );
   const person = (id: string | null) =>
     members.find((m) => m.user_id === id)?.name || "Everyone";
   const relative = (date: string) => {
@@ -106,7 +120,24 @@ export default function HomeBoard({
             });
   const tasks = entries
     .filter((e) => e.kind === "task" && !e.done)
-    .sort((a, b) => (a.date || "9999").localeCompare(b.date || "9999"));
+    .sort(
+      (a, b) =>
+        (viewer
+          ? Number(b.assignee === viewer.user_id) -
+            Number(a.assignee === viewer.user_id)
+          : 0) || (a.date || "9999").localeCompare(b.date || "9999"),
+    );
+  const repayments = suggestedRepayments(expenseBalances(expenses.expenses));
+  const balanceSummary = repayments.length
+    ? repayments
+        .map(
+          ({ from, to, amount }) =>
+            `${from === viewer?.user_id ? "You owe" : `${person(from)} owes`} ${to === viewer?.user_id ? "you" : person(to)} ${expenseMoney(amount)}`,
+        )
+        .join(" · ")
+    : expenses.expenses.length
+      ? "You’re all settled up"
+      : "No shared expenses yet";
   const events = entries
     .filter(
       (e) =>
@@ -149,28 +180,97 @@ export default function HomeBoard({
     return () => observer.disconnect();
   }, [display]);
   useEffect(() => {
-    const clock = setInterval(() => setNow(new Date()), 1000 * 30);
-    return () => clearInterval(clock);
+    // Refresh due dates and plan labels at local midnight, including DST days.
+    let timer: ReturnType<typeof setTimeout>;
+    const tick = () => {
+      const current = new Date();
+      setNow(current);
+      const midnight = new Date(
+        current.getFullYear(),
+        current.getMonth(),
+        current.getDate() + 1,
+      );
+      timer = setTimeout(tick, midnight.getTime() - current.getTime() + 30);
+    };
+    const resume = () => {
+      if (document.visibilityState === "visible") {
+        clearTimeout(timer);
+        tick();
+      }
+    };
+    tick();
+    document.addEventListener("visibilitychange", resume);
+    return () => {
+      clearTimeout(timer);
+      document.removeEventListener("visibilitychange", resume);
+    };
   }, []);
   useEffect(() => {
     if (!display) return;
+    const measure = document.createElement("canvas").getContext("2d");
     const resize = () => {
-      // The commute band sits above the grid and is hidden on small screens,
-      // so measure it rather than assuming the cards own the whole viewport.
-      const strip = board.current?.querySelector(".commute-strip");
-      const usable =
-        window.innerHeight - (strip?.getBoundingClientRect().height ?? 0);
-      setLimit(usable >= 950 ? 4 : usable >= 700 ? 3 : 2);
+      const rows = board.current?.querySelectorAll<HTMLElement>(".board-rows");
+      if (!rows) return;
+      // Reserve enough room for titles on later pages as well as this one.
+      // Observe the cards so weather, balances, and font loading can resize them.
+      let capacity = 4;
+      rows.forEach((list) => {
+        const row = list.querySelector<HTMLElement>(
+          ".board-plan, .board-task, .board-shopping",
+        );
+        const title = row?.querySelector("strong");
+        const detail = row?.querySelector("small");
+        if (!row || !title || !detail) return;
+        const style = getComputedStyle(row);
+        const titleStyle = getComputedStyle(title);
+        if (measure) measure.font = titleStyle.font;
+        const kind = row.classList.contains("board-plan")
+          ? "event"
+          : row.classList.contains("board-task")
+            ? "task"
+            : "request";
+        const wraps =
+          !measure ||
+          entries.some(
+            (entry) =>
+              entry.kind === kind &&
+              !entry.done &&
+              measure.measureText(entry.title).width > title.clientWidth,
+          );
+        const titleHeight = parseFloat(titleStyle.lineHeight) * (wraps ? 2 : 1);
+        const detailStyle = getComputedStyle(detail);
+        const contentHeight =
+          titleHeight +
+          parseFloat(detailStyle.lineHeight) +
+          parseFloat(detailStyle.marginTop);
+        const dateHeight =
+          row.querySelector(".board-date")?.getBoundingClientRect().height || 0;
+        const rowHeight =
+          Math.max(contentHeight, dateHeight) +
+          parseFloat(style.paddingTop) +
+          parseFloat(style.paddingBottom) +
+          1;
+        capacity = Math.min(
+          capacity,
+          Math.max(1, Math.floor(list.clientHeight / rowHeight)),
+        );
+      });
+      setLimit(capacity);
     };
+    const observer = new ResizeObserver(resize);
+    board.current
+      ?.querySelectorAll(".board-rows")
+      .forEach((rows) => observer.observe(rows));
     resize();
     window.addEventListener("resize", resize);
     const syncFull = () => setFull(Boolean(document.fullscreenElement));
     document.addEventListener("fullscreenchange", syncFull);
     return () => {
+      observer.disconnect();
       window.removeEventListener("resize", resize);
       document.removeEventListener("fullscreenchange", syncFull);
     };
-  }, [display]);
+  }, [display, entries]);
   useEffect(() => {
     if (!display || paused || pages < 2) return;
     const timer = setInterval(() => setPage((p) => (p + 1) % pages), 20000);
@@ -231,25 +331,36 @@ export default function HomeBoard({
             <Coffee size={16} />
             {household.name}
           </p>
-          <h1>{display ? "Our home, today." : "Home sweet home."}</h1>
+          <h1>
+            {display
+              ? "Our home, today."
+              : viewer && viewer.name !== "You"
+                ? `Welcome home, ${viewer.name}.`
+                : "Welcome home."}
+          </h1>
           <p className="board-summary">
             {due
               ? `${due} ${due === 1 ? "thing needs" : "things need"} a little love today.`
               : "Nothing urgent. Make yourself a cup of something."}
           </p>
+          {display && (
+            <p className="wall-expenses" aria-label="Expense balance">
+              <Wallet size={16} aria-hidden="true" />
+              <span>
+                {expenses.error
+                  ? "Expense updates unavailable"
+                  : !expenses.loaded
+                    ? "Loading expenses…"
+                    : balanceSummary}
+              </span>
+            </p>
+          )}
         </div>
         {display ? (
           <div className="wall-clock">
             <HouseCompanion variant="wall" />
             <span className="clock-breath" aria-hidden="true" />
             <FlipClock />
-            <span>
-              {now.toLocaleDateString("en-US", {
-                weekday: "long",
-                month: "long",
-                day: "numeric",
-              })}
-            </span>
           </div>
         ) : (
           <div className="board-quick-actions">
@@ -347,7 +458,9 @@ export default function HomeBoard({
             <h2>
               <CheckCheck size={19} />A little housework
             </h2>
-            <span>{tasks.length} open</span>
+            <span>
+              {tasks.length} open{viewer && !display ? " · Yours first" : ""}
+            </span>
           </div>
           <div className="board-rows">
             {visible(tasks).map((entry) => (
