@@ -252,6 +252,11 @@ shopping pages also support typing a title and pressing Enter to add it.
   back a day** for something already scheduled ahead) and **Hand to …** for
   each housemate. Both change that one occurrence only, save in the
   background like a check-off, and show up on the other phone live.
+- **Nudge:** the same menu offers **Nudge <name>** on a to-do assigned to
+  someone else. It sends one push notification to that person's subscribed
+  devices ("Alex gave you a nudge — “Dishes” was due yesterday"), and says
+  so if they haven't turned reminders on anywhere. A to-do can be nudged once
+  every fifteen minutes. Needs the push setup below.
 - **Rent and bills:** use an event with category **Rent** or **Bill**. Choose
   **Monthly** for a recurring bill. Open the saved event to see each person’s
   paid check; the current device identity can change only its own check. Each

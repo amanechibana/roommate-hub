@@ -1,6 +1,11 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { localDateKey, memberDigest, quietDigest } from "../lib/reminders";
+import {
+  localDateKey,
+  memberDigest,
+  nudgeMessage,
+  quietDigest,
+} from "../lib/reminders";
 import type { Entry, Member } from "../lib/model";
 
 const amane: Member = { user_id: "a", household_id: "h", name: "Amane" };
@@ -108,4 +113,54 @@ test("long digests fold into a count", () => {
 
 test("the quiet digest still greets by name", () => {
   assert.match(quietDigest("Barnatt").title, /Barnatt/);
+});
+
+test("a nudge names the sender and says when the chore was due", () => {
+  const today = "2026-09-08";
+  const dishes = entry({ title: "Dishes", date: "2026-09-07", assignee: "b" });
+  const nudge = nudgeMessage(dishes, amane, today)!;
+  assert.equal(nudge.title, "Amane gave you a nudge");
+  assert.deepEqual(nudge.lines, ["“Dishes” was due yesterday"]);
+  assert.deepEqual(
+    nudgeMessage(entry({ ...dishes, date: today }), amane, today)!.lines,
+    ["“Dishes” is due today"],
+  );
+  assert.deepEqual(
+    nudgeMessage(entry({ ...dishes, date: "2026-09-09" }), amane, today)!.lines,
+    ["“Dishes” is due tomorrow"],
+  );
+  // Within the week a weekday reads naturally; past that it needs a date.
+  assert.deepEqual(
+    nudgeMessage(entry({ ...dishes, date: "2026-09-04" }), amane, today)!.lines,
+    ["“Dishes” was due Friday"],
+  );
+  assert.deepEqual(
+    nudgeMessage(entry({ ...dishes, date: "2026-08-20" }), amane, today)!.lines,
+    ["“Dishes” was due Aug 20"],
+  );
+  assert.deepEqual(
+    nudgeMessage(entry({ ...dishes, date: null }), amane, today)!.lines,
+    ["“Dishes” is waiting on you"],
+  );
+});
+
+test("only an open, assigned to-do can be nudged", () => {
+  const today = "2026-09-08";
+  assert.equal(
+    nudgeMessage(
+      entry({ title: "Dishes", assignee: "b", done: true }),
+      amane,
+      today,
+    ),
+    null,
+  );
+  assert.equal(nudgeMessage(entry({ title: "Dishes" }), amane, today), null);
+  assert.equal(
+    nudgeMessage(
+      entry({ kind: "request", title: "Olive oil", assignee: "b" }),
+      amane,
+      today,
+    ),
+    null,
+  );
 });
