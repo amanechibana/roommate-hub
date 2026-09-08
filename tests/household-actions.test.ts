@@ -4,6 +4,7 @@ import { demoData } from "../lib/model";
 import {
   occurrenceAssignee,
   markPaid,
+  markAllPaid,
   billPaid,
   editEntries,
 } from "../lib/household-actions";
@@ -24,6 +25,14 @@ test("paying and unpaying preserve the other person's check without duplicates",
   assert.deepEqual(markPaid(both, "you", true).paid_by, ["alex", "you"]);
   assert.deepEqual(markPaid(both, "you", false).paid_by, ["alex"]);
   assert.equal(markPaid(bill, "outsider", true), bill);
+});
+test("covering a bill marks every payer paid and leaves other entries alone", () => {
+  const bill = demoData().entries.find((e) => e.category === "Rent")!;
+  const covered = markAllPaid(bill);
+  assert.equal(billPaid(covered), true);
+  assert.deepEqual(covered.paid_by, bill.payment_members);
+  const chore = demoData().entries.find((e) => e.category === "Chore")!;
+  assert.equal(markAllPaid(chore), chore);
 });
 test("series edits preserve turns, per-occurrence dates, completion, and payments", () => {
   const base = demoData().entries[0];

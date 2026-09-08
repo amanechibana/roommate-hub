@@ -49,6 +49,7 @@ import {
   UNDO_DURATION,
   billPaid,
   isBill,
+  markAllPaid,
   markPaid,
   occurrenceAssignee,
   editEntries,
@@ -74,6 +75,7 @@ type SaveValues = Partial<Entry> & {
   repeat_until?: string;
   rotation_partner?: string;
   paid?: boolean;
+  cover?: boolean;
   undo_token?: string;
   scope?: "series";
 };
@@ -112,6 +114,12 @@ const categories: Record<Kind, string[]> = {
   request: ["Need", "Want"],
   note: ["Note"],
 };
+const kindTabs: Record<Kind, Tab> = {
+  task: "To-dos",
+  event: "Calendar",
+  request: "Shopping list",
+  note: "House notes",
+};
 
 export default function Hub() {
   const { reduced, celebrate } = useHouseMotion();
@@ -149,7 +157,7 @@ export default function Hub() {
     household?.id,
     uid,
     demo,
-    tab === "Expenses" || display,
+    tab === "Expenses" || tab === "Overview" || display,
   );
   const pending = useRef(0);
   const writes = useRef(Promise.resolve());
@@ -455,6 +463,10 @@ export default function Hub() {
         });
       });
       persist("update", { ...values, id: entry.id });
+      if (values.kind && values.kind !== entry.kind)
+        setNotice(
+          `Turned “${values.title || entry.title}” into a ${labels[values.kind]}. It now lives under ${kindTabs[values.kind]}.`,
+        );
     } else {
       const {
         repeat,
@@ -540,6 +552,29 @@ export default function Hub() {
       current.map((e) => (e.id === entry.id ? markPaid(e, uid, paid) : e)),
     );
     persist("payment", { id: entry.id, paid });
+  }
+  // One person paid the biller for everyone: check every payer and put the
+  // split on the ledger so the others owe them their shares.
+  function coverBill(entry: Entry) {
+    const cents = estimateCents(entry);
+    if (!uid || !cents || !entry.payment_members?.length) return;
+    celebrate();
+    setEntries((current) =>
+      current.map((e) => (e.id === entry.id ? markAllPaid(e) : e)),
+    );
+    persist("payment", { id: entry.id, paid: true, cover: true });
+    expenseController.save({
+      kind: "expense",
+      title: entry.title,
+      date: dateKey(new Date()),
+      amount_cents: cents,
+      paid_by: uid,
+      shares: splitEvenly(cents, entry.payment_members),
+      recipient: null,
+    });
+    setNotice(
+      `Marked everyone paid and logged ${expenseMoney(cents)} to expenses for “${entry.title}”.`,
+    );
   }
   async function remove(entry: Entry, scope?: "series") {
     const wholeSeries = scope === "series" && entry.series_id;
@@ -1602,6 +1637,7 @@ export default function Hub() {
           }}
           uid={uid}
           onPayment={togglePayment}
+          onCover={coverBill}
           members={members.filter((m) => m.name !== "Housemates")}
           busy={busy}
           error={error}
@@ -1739,9 +1775,11 @@ function EntryDialog({
   onDelete,
   uid,
   onPayment,
+  onCover,
 }: {
   uid: string | null;
   onPayment: (entry: Entry) => void;
+  onCover: (entry: Entry) => void;
   editing: { kind: Kind; entry?: Entry; date?: string };
   members: Member[];
   busy: boolean;
@@ -1818,7 +1856,7 @@ function EntryDialog({
     }
     setValidation("");
     await onSave({
-      ...(entry ? {} : { kind }),
+      ...(!entry || kind !== entry.kind ? { kind } : {}),
       title,
       description: String(data.get("description") || "").trim(),
       category: String(data.get("category") || categories[kind][0]),
@@ -1868,10 +1906,11 @@ function EntryDialog({
           members={members}
           uid={uid}
           onPayment={onPayment}
+          onCover={onCover}
         />
       )}
       <form onSubmit={submit}>
-        {!entry && (
+        {(!entry || entry.kind === "note") && (
           <div className="filters kind-picker">
             {(["task", "event", "request", "note"] as Kind[]).map((value) => (
               <Button
@@ -1887,6 +1926,12 @@ function EntryDialog({
               </Button>
             ))}
           </div>
+        )}
+        {entry?.kind === "note" && kind !== "note" && (
+          <p className="subtle">
+            Saving turns this note into a {labels[kind]} and moves it to{" "}
+            {kindTabs[kind]}.
+          </p>
         )}
         <label>
           What’s on your mind?

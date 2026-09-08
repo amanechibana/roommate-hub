@@ -56,7 +56,7 @@ type Props = {
   onExit: () => void;
   onOpen: (kind: Kind, entry?: Entry) => void;
   onNavigate: (
-    tab: "Calendar" | "To-dos" | "Shopping list" | "House notes",
+    tab: "Calendar" | "To-dos" | "Shopping list" | "House notes" | "Expenses",
   ) => void;
   onToggle: (entry: Entry) => void;
 };
@@ -343,7 +343,7 @@ export default function HomeBoard({
               ? `${due} ${due === 1 ? "thing needs" : "things need"} a little love today.`
               : "Nothing urgent. Make yourself a cup of something."}
           </p>
-          {display && (
+          {display ? (
             <p className="wall-expenses" aria-label="Expense balance">
               <Wallet size={16} aria-hidden="true" />
               <span>
@@ -354,6 +354,22 @@ export default function HomeBoard({
                     : balanceSummary}
               </span>
             </p>
+          ) : (
+            expenses.loaded &&
+            !expenses.error && (
+              <div className="board-balance">
+                <Wallet size={14} aria-hidden="true" />
+                <span>{balanceSummary}</span>
+                {!!repayments.length && (
+                  <Button
+                    className="board-more"
+                    onClick={() => onNavigate("Expenses")}
+                  >
+                    Settle up <ArrowRight size={13} />
+                  </Button>
+                )}
+              </div>
+            )
           )}
         </div>
         {display ? (

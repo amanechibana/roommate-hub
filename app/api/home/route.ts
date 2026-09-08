@@ -50,7 +50,7 @@ export async function POST(request: Request) {
         : operation === "restore"
           ? ["undo_token"]
           : operation === "payment"
-            ? ["id", "paid"]
+            ? ["id", "paid", "cover"]
             : [
                 "undo_token",
                 "rotation_partner",
@@ -76,7 +76,6 @@ export async function POST(request: Request) {
       delete values.scope;
     }
     if (operation === "update") {
-      delete values.kind;
       delete values.repeat;
       delete values.repeat_until;
       delete values.rotation_partner;

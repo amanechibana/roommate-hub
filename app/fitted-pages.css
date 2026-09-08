@@ -276,6 +276,9 @@ body:has(.fitted-app) {
   .fitted-app .board-summary {
     display: none;
   }
+  .fitted-app .board-balance {
+    display: none;
+  }
   .fitted-app .board-card {
     padding: 10px 14px 5px;
   }
