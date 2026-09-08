@@ -427,12 +427,17 @@ export default function HomeBoard({
               </span>
             </p>
           ) : (
-            expenses.loaded &&
             !expenses.error && (
               <div className="board-balance">
                 <Wallet size={14} aria-hidden="true" />
-                <span>{balanceSummary}</span>
-                {!!repayments.length && (
+                {expenses.loaded ? (
+                  <span>{balanceSummary}</span>
+                ) : (
+                  <span aria-label="Loading expense balance">
+                    <span className="skeleton skeleton-line" />
+                  </span>
+                )}
+                {expenses.loaded && !!repayments.length && (
                   <Button
                     className="board-more"
                     onClick={() => onNavigate("Expenses")}
