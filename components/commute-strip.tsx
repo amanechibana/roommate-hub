@@ -1,4 +1,7 @@
 "use client";
+import { useHouseMotion } from "./ui/motion-provider";
+import { PaperDialog } from "./ui/dialog";
+import { AnimatePresence } from "motion/react";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -104,7 +107,7 @@ export default function CommuteStrip({
   display?: boolean;
 }) {
   const [stations, setStations] = useState<CommuteStation[]>(defaultStations);
-  const [weather, setWeather] = useState<Weather | null>(null);
+  const { weather, setWeather } = useHouseMotion();
   const [boards, setBoards] = useState<Departures[]>([]);
   const [open, setOpen] = useState(false);
   const [failed, setFailed] = useState(false);
@@ -482,16 +485,18 @@ export default function CommuteStrip({
         </div>
       )}
 
-      {open && (
-        <StationDialog
-          stations={stations}
-          onSave={(next) => {
-            persist(next);
-            setOpen(false);
-          }}
-          onClose={() => setOpen(false)}
-        />
-      )}
+      <AnimatePresence>
+        {open && (
+          <StationDialog
+            stations={stations}
+            onSave={(next) => {
+              persist(next);
+              setOpen(false);
+            }}
+            onClose={() => setOpen(false)}
+          />
+        )}
+      </AnimatePresence>
     </section>
   );
 }
@@ -505,7 +510,6 @@ function StationDialog({
   onSave: (next: CommuteStation[]) => void;
   onClose: () => void;
 }) {
-  const dialog = useRef<HTMLDialogElement>(null);
   const [draft, setDraft] = useState<CommuteStation[]>(stations);
   const [query, setQuery] = useState("");
   const [matches, setMatches] = useState<CommuteStation[]>([]);
@@ -514,10 +518,6 @@ function StationDialog({
   // Which lines and headsigns each station can actually offer, keyed by
   // "system:id". Loaded on demand when a row is opened.
   const [options, setOptions] = useState<Record<string, StationOptions>>({});
-
-  useEffect(() => {
-    dialog.current?.showModal();
-  }, []);
 
   // An entry saved under the older settings shape has an id but no name yet.
   // Fill it in so the list never shows a bare GTFS id like "A32".
@@ -708,17 +708,10 @@ function StationDialog({
   const full = draft.length >= MAX_STATIONS;
 
   return (
-    <dialog
-      ref={dialog}
+    <PaperDialog
+      onClose={onClose}
       className="entry-dialog commute-dialog"
       aria-labelledby="commute-title"
-      onCancel={(event) => {
-        event.preventDefault();
-        onClose();
-      }}
-      onClick={(event) => {
-        if (event.target === event.currentTarget) onClose();
-      }}
     >
       <div className="dialog-heading">
         <div>
@@ -910,7 +903,7 @@ function StationDialog({
           Save
         </button>
       </div>
-    </dialog>
+    </PaperDialog>
   );
 }
 

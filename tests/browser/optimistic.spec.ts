@@ -383,11 +383,7 @@ test("alternating series keeps turns through edits and whole-series undo", async
     "Barnatt",
     "Amane",
   ]);
-  await changed
-    .first()
-    .getByRole("button", { name: /Clean dishes/ })
-    .last()
-    .click();
+  await changed.first().locator(".entry-label").click();
   await page.getByLabel("Apply to every occurrence of this plan").check();
   await page.getByRole("button", { name: "Delete entry" }).click();
   await expect(changed).toHaveCount(0);

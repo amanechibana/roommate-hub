@@ -33,7 +33,10 @@ test("a house note becomes a to-do from the edit dialog", async ({ page }) => {
     .getByRole("navigation")
     .getByRole("button", { name: "House notes" })
     .click();
-  await page.getByRole("button", { name: /A little house note/ }).click();
+  await page
+    .locator(".note-preview")
+    .filter({ hasText: "A little house note" })
+    .click();
   await page
     .getByRole("dialog")
     .getByRole("button", { name: "to-do", exact: true })

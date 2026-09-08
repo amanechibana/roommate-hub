@@ -1,5 +1,11 @@
 "use client";
-import { useEffect, useRef, useState } from "react";
+import * as Collapsible from "@radix-ui/react-collapsible";
+import { PresenceRow } from "./ui/presence";
+import { AnimatedMoney } from "./ui/animated-money";
+import { useHouseMotion } from "./ui/motion-provider";
+import { PaperDialog } from "./ui/dialog";
+import { AnimatePresence } from "motion/react";
+import { useState } from "react";
 import {
   ArrowDownLeft,
   ArrowUpRight,
@@ -44,6 +50,7 @@ export default function ExpensesTab({
   memberId: string;
   pending: Entry[];
 }) {
+  const { reduced, celebrate } = useHouseMotion();
   const [draft, setDraft] = useState<Draft | null>(null);
   const { expenses, loaded, error } = controller;
   const name = (id: string) =>
@@ -101,7 +108,9 @@ export default function ExpensesTab({
           <div className={styles.summary}>
             <section className={`${styles.balance} panel`}>
               <span>Your balance</span>
-              <strong>{expenseMoney(Math.abs(mine))}</strong>
+              <strong>
+                <AnimatedMoney cents={Math.abs(mine)} />
+              </strong>
               <p>
                 {mine > 0
                   ? "Owed to you"
@@ -112,7 +121,9 @@ export default function ExpensesTab({
             </section>
             <section className={`${styles.spending} panel`}>
               <span>Shared spending this month</span>
-              <strong>{expenseMoney(monthTotal)}</strong>
+              <strong>
+                <AnimatedMoney cents={monthTotal} />
+              </strong>
               <p>Purchases only · Repayments excluded</p>
             </section>
           </div>
@@ -126,25 +137,27 @@ export default function ExpensesTab({
                 Record repayment <Plus size={14} />
               </Button>
             </div>
-            {suggestedRepayments(balances).map((payment) => (
-              <div
-                className={styles.payment}
-                key={`${payment.from}-${payment.to}`}
-              >
-                <span>
-                  <b>{name(payment.from)}</b>
-                  <ArrowRight size={14} />
-                  <b>{name(payment.to)}</b>
-                </span>
-                <strong>{expenseMoney(payment.amount)}</strong>
-                <Button
-                  className="button secondary small"
-                  onClick={() => setDraft({ kind: "settlement", ...payment })}
+            <AnimatePresence initial={false}>
+              {suggestedRepayments(balances).map((payment) => (
+                <PresenceRow
+                  className={styles.payment}
+                  key={`${payment.from}-${payment.to}`}
                 >
-                  Record paid
-                </Button>
-              </div>
-            ))}
+                  <span>
+                    <b>{name(payment.from)}</b>
+                    <ArrowRight size={14} />
+                    <b>{name(payment.to)}</b>
+                  </span>
+                  <strong>{expenseMoney(payment.amount)}</strong>
+                  <Button
+                    className="button secondary small"
+                    onClick={() => setDraft({ kind: "settlement", ...payment })}
+                  >
+                    Record paid
+                  </Button>
+                </PresenceRow>
+              ))}
+            </AnimatePresence>
             {!suggestedRepayments(balances).length && (
               <p className={styles.settled}>No outstanding balances.</p>
             )}
@@ -182,47 +195,88 @@ export default function ExpensesTab({
                 {expenses.length} {expenses.length === 1 ? "record" : "records"}
               </span>
             </div>
-            {[...expenses]
-              .sort(
-                (a, b) =>
-                  b.date.localeCompare(a.date) ||
-                  b.created_at.localeCompare(a.created_at),
-              )
-              .map((item) => (
-                <Button
-                  key={item.id}
-                  className={styles.row}
-                  onClick={() => setDraft({ kind: item.kind, entry: item })}
-                >
-                  <span
-                    className={`${styles.rowIcon} ${item.kind === "settlement" ? styles.repaymentIcon : ""}`}
-                    aria-hidden="true"
-                  >
-                    {item.kind === "expense" ? (
-                      <ReceiptText size={19} />
-                    ) : (
-                      <ArrowDownLeft size={19} />
-                    )}
-                  </span>
-                  <span className={styles.copy}>
-                    <strong>
-                      {item.kind === "settlement"
-                        ? `${name(item.paid_by)} paid ${name(item.recipient!)}`
-                        : item.title}
-                    </strong>
-                    <small>
-                      {item.date} ·{" "}
-                      {item.kind === "expense"
-                        ? `${name(item.paid_by)} paid · Split ${Object.keys(item.shares).length} ${Object.keys(item.shares).length === 1 ? "way" : "ways"}`
-                        : "Repayment"}
-                    </small>
-                  </span>
-                  <strong className={styles.amount}>
-                    {expenseMoney(item.amount_cents)}
-                  </strong>
-                  <ArrowUpRight size={15} aria-hidden="true" />
-                </Button>
-              ))}
+            <AnimatePresence initial={false}>
+              {[...new Set(expenses.map((item) => item.date.slice(0, 7)))]
+                .sort()
+                .reverse()
+                .map((period) => (
+                  <PresenceRow key={period}>
+                    <Collapsible.Root
+                      defaultOpen={period === month}
+                      className="expense-month"
+                    >
+                      <Collapsible.Trigger className="expense-month-heading">
+                        {new Date(`${period}-02T12:00:00`).toLocaleDateString(
+                          "en-US",
+                          { month: "long", year: "numeric" },
+                        )}
+                        <span>⌄</span>
+                      </Collapsible.Trigger>
+                      <Collapsible.Content className="expense-month-content">
+                        <AnimatePresence initial={false}>
+                          {[...expenses]
+                            .filter((item) => item.date.startsWith(period))
+                            .sort(
+                              (a, b) =>
+                                b.date.localeCompare(a.date) ||
+                                b.created_at.localeCompare(a.created_at),
+                            )
+                            .map((item) => (
+                              <Button
+                                key={item.id}
+                                layout={reduced ? false : "position"}
+                                layoutId={
+                                  reduced ? undefined : `expense-${item.id}`
+                                }
+                                initial={reduced ? false : { opacity: 0, y: 5 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                exit={{
+                                  opacity: 0,
+                                  height: 0,
+                                  paddingTop: 0,
+                                  paddingBottom: 0,
+                                }}
+                                transition={{ duration: reduced ? 0 : 0.18 }}
+                                className={styles.row}
+                                onClick={() =>
+                                  setDraft({ kind: item.kind, entry: item })
+                                }
+                              >
+                                <span
+                                  className={`${styles.rowIcon} ${item.kind === "settlement" ? styles.repaymentIcon : ""}`}
+                                  aria-hidden="true"
+                                >
+                                  {item.kind === "expense" ? (
+                                    <ReceiptText size={19} />
+                                  ) : (
+                                    <ArrowDownLeft size={19} />
+                                  )}
+                                </span>
+                                <span className={styles.copy}>
+                                  <strong>
+                                    {item.kind === "settlement"
+                                      ? `${name(item.paid_by)} paid ${name(item.recipient!)}`
+                                      : item.title}
+                                  </strong>
+                                  <small>
+                                    {item.date} ·{" "}
+                                    {item.kind === "expense"
+                                      ? `${name(item.paid_by)} paid · Split ${Object.keys(item.shares).length} ${Object.keys(item.shares).length === 1 ? "way" : "ways"}`
+                                      : "Repayment"}
+                                  </small>
+                                </span>
+                                <strong className={styles.amount}>
+                                  {expenseMoney(item.amount_cents)}
+                                </strong>
+                                <ArrowUpRight size={15} aria-hidden="true" />
+                              </Button>
+                            ))}
+                        </AnimatePresence>
+                      </Collapsible.Content>
+                    </Collapsible.Root>
+                  </PresenceRow>
+                ))}
+            </AnimatePresence>
             {!expenses.length && (
               <div className={styles.empty}>
                 <ReceiptText size={28} />
@@ -243,26 +297,34 @@ export default function ExpensesTab({
           </section>
         </>
       )}
-      {draft && (
-        <ExpenseDialog
-          draft={draft}
-          members={members}
-          memberId={memberId}
-          onClose={() => setDraft(null)}
-          onSave={(values) => {
-            controller.save(values, draft.entry?.id);
-            setDraft(null);
-          }}
-          onDelete={
-            draft.entry
-              ? () => {
-                  controller.remove(draft.entry!.id);
-                  setDraft(null);
-                }
-              : undefined
-          }
-        />
-      )}
+      <AnimatePresence>
+        {draft && (
+          <ExpenseDialog
+            draft={draft}
+            members={members}
+            memberId={memberId}
+            onClose={() => setDraft(null)}
+            onSave={(values) => {
+              controller.save(values, draft.entry?.id);
+              if (values.kind === "settlement" && !draft.entry)
+                celebrate({
+                  kind: "settlement",
+                  from: name(values.paid_by),
+                  to: name(values.recipient!),
+                });
+              setDraft(null);
+            }}
+            onDelete={
+              draft.entry
+                ? () => {
+                    controller.remove(draft.entry!.id);
+                    setDraft(null);
+                  }
+                : undefined
+            }
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 }
@@ -281,7 +343,6 @@ function ExpenseDialog({
   onSave: (values: ExpenseValues) => void;
   onDelete?: () => void;
 }) {
-  const dialog = useRef<HTMLDialogElement>(null);
   const [amount, setAmount] = useState(
     draft.entry
       ? (draft.entry.amount_cents / 100).toFixed(2)
@@ -301,15 +362,12 @@ function ExpenseDialog({
   const settlement = draft.kind === "settlement";
   const cents = toCents(amount);
   const split = splitEvenly(cents || 0, people);
-  useEffect(() => {
-    dialog.current?.showModal();
-  }, []);
   return (
-    <dialog
-      ref={dialog}
+    <PaperDialog
+      onClose={onClose}
       className={`entry-dialog ${styles.dialog}`}
       aria-labelledby="expense-title"
-      onCancel={onClose}
+      sharedId={draft.entry ? `expense-${draft.entry.id}` : undefined}
     >
       <form
         onSubmit={(event) => {
@@ -481,6 +539,6 @@ function ExpenseDialog({
           </Button>
         </div>
       </form>
-    </dialog>
+    </PaperDialog>
   );
 }

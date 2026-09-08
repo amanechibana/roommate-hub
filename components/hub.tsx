@@ -1,12 +1,16 @@
 "use client";
+import { EntryMenu, NoteComposer, MemberCard } from "./ui/house-controls";
+import { PresenceRow, memberPaper } from "./ui/presence";
+import { useListOrder, DraggableRow } from "./ui/list-order";
+import { PaperDialog } from "./ui/dialog";
 
 import styles from "./hub.module.css";
 import ExpensesTab, { estimateCents } from "./expenses-tab";
-import { expenseMoney, splitEvenly } from "@/lib/expenses";
+import { expenseBalances, expenseMoney, splitEvenly } from "@/lib/expenses";
 import { useExpenses } from "@/lib/use-expenses";
 import { HouseCompanion } from "@/components/ui/house-companion";
 
-import { m } from "motion/react";
+import { AnimatePresence, m } from "motion/react";
 import { Button } from "@/components/ui/button";
 import { AnimatedCheck } from "@/components/ui/animated-check";
 import { useHouseMotion } from "@/components/ui/motion-provider";
@@ -161,6 +165,10 @@ export default function Hub() {
     uid,
     demo,
     tab === "Expenses" || tab === "Overview" || display,
+  );
+  const taskOrder = useListOrder(`common-ground-order:${household?.id}:tasks`);
+  const shoppingOrder = useListOrder(
+    `common-ground-order:${household?.id}:shopping`,
   );
   const pending = useRef(0);
   const writes = useRef(Promise.resolve());
@@ -321,7 +329,11 @@ export default function Hub() {
     const onKey = (event: KeyboardEvent) => {
       if (event.metaKey || event.ctrlKey || event.altKey) return;
       const target = event.target as HTMLElement | null;
-      if (target?.closest("input, textarea, select, dialog, [contenteditable]"))
+      if (
+        target?.closest(
+          'input, textarea, select, dialog, [role="dialog"], [role="menu"], [contenteditable]',
+        )
+      )
         return;
       if (event.key === "?") {
         event.preventDefault();
@@ -536,7 +548,15 @@ export default function Hub() {
     setEditing(null);
   }
   async function toggle(entry: Entry) {
-    if (!entry.done) celebrate();
+    if (!entry.done)
+      celebrate({
+        kind:
+          entry.kind === "task" &&
+          entries.filter((item) => item.kind === "task" && !item.done)
+            .length === 1
+            ? "all-done"
+            : "task",
+      });
     setEntries((current) =>
       current.map((e) => (e.id === entry.id ? { ...e, done: !entry.done } : e)),
     );
@@ -565,6 +585,7 @@ export default function Hub() {
   function togglePayment(entry: Entry) {
     if (!uid) return;
     const paid = !entry.paid_by?.includes(uid);
+    if (paid) celebrate({ kind: "paid" });
     setEntries((current) =>
       current.map((e) => (e.id === entry.id ? markPaid(e, uid, paid) : e)),
     );
@@ -694,8 +715,22 @@ export default function Hub() {
       setBusy(false);
     }
   }
-  const tasks = entries.filter((e) => e.kind === "task");
-  const shopping = entries.filter((e) => e.kind === "request");
+  const tasks = taskOrder.sort(entries.filter((e) => e.kind === "task"));
+  const shopping = shoppingOrder.sort(
+    entries.filter((e) => e.kind === "request"),
+  );
+  const filteredTasks = tasks.filter(
+    (e) =>
+      filter === "All" ||
+      (filter === "Mine" && e.assignee === uid) ||
+      (filter === "Open" && !e.done) ||
+      (filter === "Done" && e.done),
+  );
+  const filteredShopping = shopping.filter((e) =>
+    filter === "Bought"
+      ? e.done
+      : !e.done && (filter === "All" || e.category === filter),
+  );
   const notes = entries.filter((e) => e.kind === "note");
   const monthEntries = entries
     .filter(
@@ -716,13 +751,24 @@ export default function Hub() {
             day: "numeric",
           });
   const avatar = (member: Member, i: number) => (
-    <span
+    <MemberCard
       key={member.user_id}
-      title={member.name}
-      className={`avatar tone-${i % 3}`}
+      name={member.name}
+      balance={
+        expenseController.loaded && !expenseController.error
+          ? expenseBalances(expenseController.expenses)[member.user_id] || 0
+          : null
+      }
+      chores={
+        tasks.filter(
+          (entry) => !entry.done && entry.assignee === member.user_id,
+        ).length
+      }
     >
-      {member.name.slice(0, 1).toUpperCase()}
-    </span>
+      <span title={member.name} className={`avatar tone-${i % 3}`}>
+        {member.name.slice(0, 1).toUpperCase()}
+      </span>
+    </MemberCard>
   );
   const quickAdd = (kind: "task" | "request") => (
     <form
@@ -768,10 +814,12 @@ export default function Hub() {
       {text}
     </Button>
   );
-  const taskRow = (entry: Entry) => (
-    <m.div
-      layout={reduced ? false : "position"}
-      initial={false}
+  const taskRow = (entry: Entry, index: number) => (
+    <DraggableRow
+      title={entry.title}
+      index={index}
+      count={filteredTasks.length}
+      onMove={(to) => taskOrder.move(filteredTasks, index, to)}
       className={`task-row ${entry.done ? "completed" : ""}`}
       key={entry.id}
     >
@@ -821,7 +869,12 @@ export default function Hub() {
           {person(entry.assignee)}
         </span>
       )}
-    </m.div>
+      <EntryMenu
+        title={entry.title}
+        onEdit={() => setEditing({ kind: entry.kind, entry })}
+        onDelete={() => void remove(entry)}
+      />
+    </DraggableRow>
   );
 
   if (!ready)
@@ -873,7 +926,9 @@ export default function Hub() {
                   disabled={busy}
                   onClick={() => void choosePerson(member)}
                 >
-                  {avatar(member, i)}
+                  <span className={`avatar tone-${i % 3}`}>
+                    {member.name.slice(0, 1).toUpperCase()}
+                  </span>
                   {member.name}
                 </Button>
               ))}
@@ -894,38 +949,41 @@ export default function Hub() {
 
   const toasts = (
     <div className="toast-stack">
-      {notice && (
-        <m.div
-          initial={reduced ? false : { opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="toast"
-          role="status"
-        >
-          {notice}
-        </m.div>
-      )}
-      {undoDeletes.map((item) => (
-        <m.div
-          layout={reduced ? false : "position"}
-          initial={reduced ? false : { opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="toast"
-          role="status"
-          key={item.token}
-        >
-          <span>
-            {item.entries.length > 1
-              ? `${item.entries.length} occurrences deleted`
-              : `Deleted “${item.entries[0]?.title}”`}
-          </span>
-          <Button
-            className="undo-button"
-            onClick={() => undoDelete(item.token)}
+      <AnimatePresence initial={false}>
+        {notice && (
+          <PresenceRow
+            initial={reduced ? false : { opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="toast"
+            key="notice"
+            role="status"
           >
-            Undo
-          </Button>
-        </m.div>
-      ))}
+            {notice}
+          </PresenceRow>
+        )}
+        {undoDeletes.map((item) => (
+          <PresenceRow
+            layout={reduced ? false : "position"}
+            initial={reduced ? false : { opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="toast"
+            role="status"
+            key={item.token}
+          >
+            <span>
+              {item.entries.length > 1
+                ? `${item.entries.length} occurrences deleted`
+                : `Deleted “${item.entries[0]?.title}”`}
+            </span>
+            <Button
+              className="undo-button"
+              onClick={() => undoDelete(item.token)}
+            >
+              Undo
+            </Button>
+          </PresenceRow>
+        ))}
+      </AnimatePresence>
     </div>
   );
 
@@ -1057,7 +1115,15 @@ export default function Hub() {
               aria-label="Open household settings"
               onClick={() => setTab("Our household")}
             >
-              {members.map(avatar)}
+              {members.map((member, i) => (
+                <span
+                  key={member.user_id}
+                  title={member.name}
+                  className={`avatar tone-${i % 3}`}
+                >
+                  {member.name.slice(0, 1).toUpperCase()}
+                </span>
+              ))}
             </Button>
             {!demo && (
               <Button
@@ -1405,15 +1471,9 @@ export default function Hub() {
                 </div>
               </div>
               {quickAdd("task")}
-              {tasks
-                .filter(
-                  (e) =>
-                    filter === "All" ||
-                    (filter === "Mine" && e.assignee === uid) ||
-                    (filter === "Open" && !e.done) ||
-                    (filter === "Done" && e.done),
-                )
-                .map(taskRow)}
+              <AnimatePresence initial={false}>
+                {filteredTasks.map(taskRow)}
+              </AnimatePresence>
               {!tasks.filter(
                 (e) =>
                   filter === "All" ||
@@ -1450,16 +1510,15 @@ export default function Hub() {
               </div>
               {quickAdd("request")}
               <div className="shopping-list">
-                {shopping
-                  .filter((e) =>
-                    filter === "Bought"
-                      ? e.done
-                      : !e.done && (filter === "All" || e.category === filter),
-                  )
-                  .map((entry) => (
-                    <m.article
-                      layout={reduced ? false : "position"}
-                      initial={false}
+                <AnimatePresence initial={false}>
+                  {filteredShopping.map((entry, index) => (
+                    <DraggableRow
+                      title={entry.title}
+                      index={index}
+                      count={filteredShopping.length}
+                      onMove={(to) =>
+                        shoppingOrder.move(filteredShopping, index, to)
+                      }
                       className={`task-row shopping-row ${entry.done ? "completed" : ""}`}
                       key={entry.id}
                     >
@@ -1506,8 +1565,14 @@ export default function Hub() {
                           <ExternalLink size={16} />
                         </a>
                       )}
-                    </m.article>
+                      <EntryMenu
+                        title={entry.title}
+                        onEdit={() => setEditing({ kind: entry.kind, entry })}
+                        onDelete={() => void remove(entry)}
+                      />
+                    </DraggableRow>
                   ))}
+                </AnimatePresence>
               </div>
               {!shopping.filter((e) =>
                 filter === "Bought"
@@ -1520,23 +1585,60 @@ export default function Hub() {
           )}
 
           {tab === "House notes" && (
-            <div className="notes-grid">
-              {notes.map((entry) => (
-                <article className="notice-board" key={entry.id}>
-                  <span className="tape" />
-                  <Button
-                    className="note-preview"
-                    onClick={() => setEditing({ kind: "note", entry })}
-                  >
-                    <h3>{entry.title}</h3>
-                    <p>{entry.description}</p>
-                    <span>— {person(entry.assignee || entry.created_by)}</span>
-                  </Button>
-                </article>
-              ))}
-              {!notes.length && (
-                <Empty text="Your fridge is a blank canvas. Leave a note." />
-              )}
+            <div className="notes-page">
+              <NoteComposer
+                onSave={(title, description) =>
+                  void save({
+                    kind: "note",
+                    title,
+                    description,
+                    category: "Note",
+                    date: null,
+                    assignee: null,
+                    amount: null,
+                    url: "",
+                  })
+                }
+              />
+              <div className="notes-grid">
+                <AnimatePresence>
+                  {notes.map((entry, index) => (
+                    <PresenceRow
+                      className="notice-board"
+                      key={entry.id}
+                      paper={entry.id}
+                      index={index}
+                      style={{
+                        backgroundColor: memberPaper(
+                          entry.assignee || entry.created_by,
+                        ),
+                      }}
+                      layoutId={reduced ? undefined : `note-${entry.id}`}
+                    >
+                      <span className="tape" />
+                      <EntryMenu
+                        title={entry.title}
+                        onEdit={() => setEditing({ kind: "note", entry })}
+                        onConvert={() => setEditing({ kind: "note", entry })}
+                        onDelete={() => void remove(entry)}
+                      />
+                      <Button
+                        className="note-preview"
+                        onClick={() => setEditing({ kind: "note", entry })}
+                      >
+                        <h3>{entry.title}</h3>
+                        <p>{entry.description}</p>
+                        <span>
+                          — {person(entry.assignee || entry.created_by)}
+                        </span>
+                      </Button>
+                    </PresenceRow>
+                  ))}
+                </AnimatePresence>
+                {!notes.length && (
+                  <Empty text="Your fridge is a blank canvas. Leave a note." />
+                )}
+              </div>
             </div>
           )}
 
@@ -1626,64 +1728,68 @@ export default function Hub() {
         </main>
       </div>
       {toasts}
-      {selectedDay && (
-        <DayDialog
-          date={selectedDay}
-          entries={entries.filter(
-            (e) => e.date === selectedDay && ["task", "event"].includes(e.kind),
-          )}
-          onClose={() => setSelectedDay(null)}
-          onOpen={(entry) => {
-            setSelectedDay(null);
-            setEditing({ kind: entry.kind, entry });
-          }}
-          onAdd={() => {
-            setEditing({ kind: "event", date: selectedDay });
-            setSelectedDay(null);
-          }}
-        />
-      )}
-      {editing && (
-        <EntryDialog
-          editing={{
-            ...editing,
-            entry: editing.entry
-              ? entries.find(
-                  (e) =>
-                    e.id ===
-                    (savedIds.current.get(editing.entry!.id) ||
-                      editing.entry!.id),
-                ) || editing.entry
-              : undefined,
-          }}
-          uid={uid}
-          onPayment={togglePayment}
-          onCover={coverBill}
-          members={members.filter((m) => m.name !== "Housemates")}
-          busy={busy}
-          error={error}
-          onClose={() => {
-            if (!busy) {
-              setEditing(null);
-              setError("");
-            }
-          }}
-          onSave={save}
-          onDelete={remove}
-        />
-      )}
-      {showShortcuts && (
-        <ShortcutsDialog onClose={() => setShowShortcuts(false)} />
-      )}
+      <AnimatePresence>
+        {selectedDay && (
+          <DayDialog
+            key="day"
+            date={selectedDay}
+            entries={entries.filter(
+              (e) =>
+                e.date === selectedDay && ["task", "event"].includes(e.kind),
+            )}
+            onClose={() => setSelectedDay(null)}
+            onOpen={(entry) => {
+              setSelectedDay(null);
+              setEditing({ kind: entry.kind, entry });
+            }}
+            onAdd={() => {
+              setEditing({ kind: "event", date: selectedDay });
+              setSelectedDay(null);
+            }}
+          />
+        )}
+        {editing && (
+          <EntryDialog
+            key="entry"
+            editing={{
+              ...editing,
+              entry: editing.entry
+                ? entries.find(
+                    (e) =>
+                      e.id ===
+                      (savedIds.current.get(editing.entry!.id) ||
+                        editing.entry!.id),
+                  ) || editing.entry
+                : undefined,
+            }}
+            uid={uid}
+            onPayment={togglePayment}
+            onCover={coverBill}
+            members={members.filter((m) => m.name !== "Housemates")}
+            busy={busy}
+            error={error}
+            onClose={() => {
+              if (!busy) {
+                setEditing(null);
+                setError("");
+              }
+            }}
+            onSave={save}
+            onDelete={remove}
+          />
+        )}
+        {showShortcuts && (
+          <ShortcutsDialog
+            key="shortcuts"
+            onClose={() => setShowShortcuts(false)}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 }
 
 function ShortcutsDialog({ onClose }: { onClose: () => void }) {
-  const dialog = useRef<HTMLDialogElement>(null);
-  useEffect(() => {
-    dialog.current?.showModal();
-  }, []);
   const rows: [string, string][] = [
     ["1 – 6", "Switch tabs"],
     ["N", "Add to the current tab"],
@@ -1692,11 +1798,10 @@ function ShortcutsDialog({ onClose }: { onClose: () => void }) {
     ["?", "Show these shortcuts"],
   ];
   return (
-    <dialog
-      ref={dialog}
+    <PaperDialog
+      onClose={onClose}
       className="entry-dialog"
       aria-labelledby="shortcuts-title"
-      onCancel={onClose}
     >
       <div className="dialog-heading">
         <h2 id="shortcuts-title">Keyboard shortcuts</h2>
@@ -1714,7 +1819,7 @@ function ShortcutsDialog({ onClose }: { onClose: () => void }) {
           <span>{action}</span>
         </div>
       ))}
-    </dialog>
+    </PaperDialog>
   );
 }
 
@@ -1731,18 +1836,11 @@ function DayDialog({
   onOpen: (entry: Entry) => void;
   onAdd: () => void;
 }) {
-  const dialog = useRef<HTMLDialogElement>(null);
-  useEffect(() => {
-    dialog.current?.showModal();
-  }, []);
   return (
-    <m.dialog
-      initial={false}
-      animate={{ opacity: 1 }}
-      ref={dialog}
+    <PaperDialog
+      onClose={onClose}
       className="entry-dialog"
       aria-labelledby="day-title"
-      onCancel={onClose}
     >
       <div className="dialog-heading">
         <h2 id="day-title">
@@ -1773,7 +1871,7 @@ function DayDialog({
         <Plus size={16} />
         Add event
       </Button>
-    </m.dialog>
+    </PaperDialog>
   );
 }
 
@@ -1809,7 +1907,6 @@ function EntryDialog({
   onSave: (values: SaveValues) => Promise<void>;
   onDelete: (entry: Entry, scope?: "series") => Promise<void>;
 }) {
-  const dialog = useRef<HTMLDialogElement>(null);
   const [kind, setKind] = useState<Kind>(editing.kind);
   const [validation, setValidation] = useState("");
   const [lookup, setLookup] = useState<"" | "loading" | "failed">("");
@@ -1821,9 +1918,6 @@ function EntryDialog({
     editing.entry?.category || categories[editing.kind][0],
   );
   const entry = editing.entry;
-  useEffect(() => {
-    dialog.current?.showModal();
-  }, []);
   // Fill only fields the person hasn't typed in; their words always win.
   async function fillFromLink(input: HTMLInputElement) {
     const url = safeUrl(input.value.trim());
@@ -1891,19 +1985,11 @@ function EntryDialog({
     });
   }
   return (
-    <m.dialog
-      initial={false}
-      animate={{ opacity: 1 }}
-      ref={dialog}
+    <PaperDialog
+      onClose={onClose}
       className="entry-dialog"
       aria-labelledby="dialog-title"
-      onCancel={(event) => {
-        event.preventDefault();
-        onClose();
-      }}
-      onClick={(event) => {
-        if (event.target === event.currentTarget) onClose();
-      }}
+      sharedId={entry?.kind === "note" ? `note-${entry.id}` : undefined}
     >
       <div className="dialog-heading">
         <div>
@@ -2182,7 +2268,7 @@ function EntryDialog({
           </Button>
         </div>
       </form>
-    </m.dialog>
+    </PaperDialog>
   );
 }
 

@@ -12,6 +12,16 @@ Display mode uses the same signed-in household session and refreshes shared reco
 
 Controls use Radix UI primitives and Motion, styled to match the house: sliding filter highlights, tactile buttons, drawn checkmarks, and gentle entrances. A living windowsill illustration appears across the app: tap the cat to make it stretch, or complete a to-do to get a small reaction. The cat breathes and flicks its tail, the plant sways, and clouds drift past. On phones the cat sits in the top bar; on a TV the scene sits beside the clock. The TV button has a soft idle shimmer, and display mode has slowly drifting background color. Use **Motion on/off** in display mode or household settings to pause ambient effects; the choice stays on this device. Idle effects stop in hidden tabs, and system reduced-motion preferences are respected.
 
+## Tactile motion
+
+Lists and undo notices animate out while writes continue in the background. Surviving rows move into place; dialog closes preserve focus and keyboard dismissal. Notes and expense editors share a transition with their source card or row. Reduced motion removes these transitions.
+
+To-dos and shopping rows have drag handles: use a pointer or focus the handle and press Up/Down (Home/End also work). Order is remembered **on this device, per household**, including across reloads. It does not change the household's due dates or synchronize a new order to other devices. Row menus offer edit and delete; the usual undo still works. House notes have a quick composer, member-colored paper, individual tilts, and crumpling exits. In household settings, hover or focus a member magnet for their open chore count and balance.
+
+Completing items releases paper scraps; finishing the last chore gets an all-done message. Paid bills receive a stamp, repayments get a short transfer illustration, and expense totals count to their new values. Activity is grouped by month, with older months collapsed. Repayment feedback indicates a ledger entry, not a money transfer.
+
+The cat window follows local device time and the commute strip's weather reading. Wall display changes its palette in the morning/evening and dims from 22:00–06:00. Weather particles, seasonal leaves/snow, a subtle card spotlight, and a one-pixel drift all follow the existing ambient gate. Ambient pause also stops automatic board paging and flip animation; actual time and household data stay current. Decorative loops pause in hidden tabs. Seasonal decoration follows the device's calendar month; it is not a forecast.
+
 ## Expenses
 
 The Expenses tab records shared purchases, who paid, and even splits among selected housemates. Amounts are calculated in whole cents; any remainder is assigned consistently so shares always add up to the total. Balances show who owes whom, and repayments reduce the balance without increasing monthly spending. Purchases and repayments can be edited or deleted from Activity. Entries save optimistically and refresh across devices.
