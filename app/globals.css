@@ -1232,6 +1232,24 @@ footer svg {
   background: #28322565;
   backdrop-filter: blur(4px);
 }
+.shortcut-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 8px 0;
+  font-size: 13px;
+}
+.shortcut-row kbd {
+  min-width: 46px;
+  text-align: center;
+  padding: 3px 8px;
+  border: 1px solid var(--line);
+  border-bottom-width: 2px;
+  border-radius: 6px;
+  background: var(--paper);
+  font-family: ui-monospace, monospace;
+  font-size: 12px;
+}
 .dialog-heading {
   display: flex;
   align-items: center;

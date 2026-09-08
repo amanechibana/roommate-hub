@@ -128,6 +128,7 @@ export default function Hub() {
     date?: string;
   } | null>(null);
   const [logPurchase, setLogPurchase] = useState<Entry | null>(null);
+  const [showShortcuts, setShowShortcuts] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
@@ -210,6 +211,7 @@ export default function Hub() {
     setLoaded(false);
     setEditing(null);
     setLogPurchase(null);
+    setShowShortcuts(false);
     setSelectedDay(null);
     setError("");
     setReady(true);
@@ -289,6 +291,44 @@ export default function Hub() {
   useEffect(() => {
     setFilter("All");
   }, [tab]);
+  const shortcutsGated =
+    !household || (!demo && !identity) || choosingPerson || display;
+  useEffect(() => {
+    if (shortcutsGated) return;
+    const onKey = (event: KeyboardEvent) => {
+      if (event.metaKey || event.ctrlKey || event.altKey) return;
+      const target = event.target as HTMLElement | null;
+      if (target?.closest("input, textarea, select, dialog, [contenteditable]"))
+        return;
+      if (event.key === "?") {
+        event.preventDefault();
+        setShowShortcuts(true);
+      } else if (event.key >= "1" && event.key <= "6") {
+        event.preventDefault();
+        setTab(tabs[Number(event.key) - 1].name);
+      } else if (event.key === "n") {
+        const kind = {
+          Calendar: "event",
+          "To-dos": "task",
+          "Shopping list": "request",
+          "House notes": "note",
+        }[tab as string] as Kind | undefined;
+        if (kind) {
+          event.preventDefault();
+          setEditing({ kind });
+        }
+      } else if (event.key === "/") {
+        const input =
+          document.querySelector<HTMLInputElement>(".quick-add input");
+        if (input) {
+          event.preventDefault();
+          input.focus();
+        }
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [shortcutsGated, tab]);
   useEffect(() => {
     if (notice) {
       const timer = setTimeout(() => setNotice(""), 5000);
@@ -1553,6 +1593,9 @@ export default function Hub() {
           onDelete={remove}
         />
       )}
+      {showShortcuts && (
+        <ShortcutsDialog onClose={() => setShowShortcuts(false)} />
+      )}
       {logPurchase && uid && (
         <ExpenseDialog
           draft={{
@@ -1570,6 +1613,45 @@ export default function Hub() {
         />
       )}
     </div>
+  );
+}
+
+function ShortcutsDialog({ onClose }: { onClose: () => void }) {
+  const dialog = useRef<HTMLDialogElement>(null);
+  useEffect(() => {
+    dialog.current?.showModal();
+  }, []);
+  const rows: [string, string][] = [
+    ["1 – 6", "Switch tabs"],
+    ["N", "Add to the current tab"],
+    ["/", "Jump to quick add"],
+    ["Esc", "Close dialogs"],
+    ["?", "Show these shortcuts"],
+  ];
+  return (
+    <dialog
+      ref={dialog}
+      className="entry-dialog"
+      aria-labelledby="shortcuts-title"
+      onCancel={onClose}
+    >
+      <div className="dialog-heading">
+        <h2 id="shortcuts-title">Keyboard shortcuts</h2>
+        <Button
+          className="icon-button"
+          aria-label="Close shortcuts"
+          onClick={onClose}
+        >
+          <X size={20} />
+        </Button>
+      </div>
+      {rows.map(([keys, action]) => (
+        <div className="shortcut-row" key={keys}>
+          <kbd>{keys}</kbd>
+          <span>{action}</span>
+        </div>
+      ))}
+    </dialog>
   );
 }
 

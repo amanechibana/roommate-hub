@@ -83,6 +83,54 @@ test("shopping filters, event export, and dialog keyboard support", async ({
   await expect(page.getByRole("dialog")).not.toBeVisible();
 });
 
+test("keyboard shortcuts switch tabs, add entries, and stay out of inputs", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await expect(
+    page.getByRole("heading", { name: "Home sweet home." }),
+  ).toBeVisible();
+  await expect
+    .poll(async () => {
+      await page.keyboard.press("4");
+      return page
+        .getByRole("heading", { level: 1, name: "Shopping list" })
+        .isVisible();
+    })
+    .toBe(true);
+  await page.keyboard.press("/");
+  await expect(
+    page.getByRole("textbox", { name: "Quick add item" }),
+  ).toBeFocused();
+  await page.keyboard.type("Batteries 4 pack");
+  await page.keyboard.press("Enter");
+  await expect(
+    page.getByRole("heading", { name: "Batteries 4 pack" }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("heading", { level: 1, name: "Shopping list" }),
+  ).toBeVisible();
+  await page.getByRole("heading", { level: 1, name: "Shopping list" }).click();
+  await page.keyboard.press("3");
+  await expect(
+    page.getByRole("heading", { level: 1, name: "To-dos" }),
+  ).toBeVisible();
+  await page.keyboard.press("n");
+  await expect(page.getByRole("dialog")).toBeVisible();
+  await page.keyboard.press("1");
+  await expect(page.getByRole("dialog")).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(
+    page.getByRole("heading", { level: 1, name: "To-dos" }),
+  ).toBeVisible();
+  await page.keyboard.press("?");
+  await expect(
+    page.getByRole("heading", { name: "Keyboard shortcuts" }),
+  ).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("dialog")).not.toBeVisible();
+});
+
 test("mobile navigation and layout fit the screen", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/");
