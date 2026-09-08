@@ -23,6 +23,7 @@ import {
   demoData,
   parseDate,
   seriesDates,
+  shiftDay,
   type Entry,
   type Household,
   type Kind,
@@ -848,10 +849,14 @@ export function useHousehold() {
       ? "Anytime"
       : date === today
         ? "Today"
-        : parseDate(date).toLocaleDateString("en-US", {
-            month: "short",
-            day: "numeric",
-          });
+        : date === shiftDay(today, 1)
+          ? "Tomorrow"
+          : date === shiftDay(today, -1)
+            ? "Yesterday"
+            : parseDate(date).toLocaleDateString("en-US", {
+                month: "short",
+                day: "numeric",
+              });
   return {
     activity,
     reduced,
