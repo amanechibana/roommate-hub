@@ -110,9 +110,8 @@ for (const member of ["you", "alex"]) {
     const balance = page.getByLabel("Expense balance");
     await expect(balance).toHaveText("Loading expenses…");
     release();
-    const expected =
-      member === "you" ? "Barnatt owes you $23.00" : "You owe Amane $23.00";
-    await expect(balance).toHaveText(expected);
+    // The wall is read by the whole home, so the summary names both people.
+    await expect(balance).toHaveText("Barnatt owes Amane $23.00");
     await page.setViewportSize({ width: 320, height: 568 });
     await expect(balance).toBeInViewport();
     expect(

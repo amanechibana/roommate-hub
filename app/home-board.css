@@ -1231,6 +1231,21 @@ body {
   overflow: hidden;
   text-overflow: ellipsis;
 }
+/* Planned work reads quieter than a live disruption. */
+.commute-planned {
+  opacity: 0.72;
+}
+.commute-alert-tag {
+  flex-shrink: 0;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: #f4ece0;
+  color: #8a7256;
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+}
 .commute-icon {
   display: grid;
   place-items: center;
@@ -1314,6 +1329,9 @@ body {
   min-width: clamp(18px, 1.3vw, 27px);
   height: clamp(18px, 1.3vw, 27px);
   font-size: clamp(9.5px, 0.65vw, 14px);
+}
+.commute-wall .commute-alert-tag {
+  font-size: clamp(9px, 0.6vw, 13px);
 }
 
 /* Station picker -------------------------------------------------------- */
@@ -1645,6 +1663,11 @@ body {
 .commute-due .commute-when {
   color: #a4664d;
   font-weight: 700;
+}
+/* A train the walk can no longer reach stays listed but stops asking for a
+   run. */
+.commute-missed {
+  opacity: 0.62;
 }
 .commute-stale {
   display: flex;

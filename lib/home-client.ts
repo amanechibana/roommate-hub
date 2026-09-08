@@ -13,11 +13,17 @@ export async function homeRequest(
     headers: body ? { "Content-Type": "application/json" } : undefined,
     body: body ? JSON.stringify(body) : undefined,
   });
-  const result = await response.json();
+  // A proxy error page isn't JSON; the status code still has to be honored.
+  let result: any = {};
+  try {
+    result = JSON.parse(await response.text()) ?? {};
+  } catch {}
   if (!response.ok) {
     if (response.status === 401 && path === "/api/home")
       window.dispatchEvent(new Event("household-signed-out"));
-    throw new Error(result.error || "Could not reach your home.");
+    const error = new Error(result.error || "Could not reach your home.");
+    if (result.rejected === true) Object.assign(error, { rejected: true });
+    throw error;
   }
   return result;
 }

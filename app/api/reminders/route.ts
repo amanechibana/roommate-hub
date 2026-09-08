@@ -65,7 +65,9 @@ async function sendDigests(onlyMember: string | null) {
       sent++;
     } catch (error) {
       const status = (error as { statusCode?: number }).statusCode;
-      if (status === 404 || status === 410) {
+      // Statuses that mean the subscription itself is dead or malformed;
+      // transient ones (402/413/429/5xx/no status) retry next morning.
+      if (status !== undefined && [400, 401, 403, 404, 410].includes(status)) {
         await sharedDatabase(
           "unsubscribe",
           { endpoint: sub.endpoint },

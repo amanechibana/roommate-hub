@@ -2,6 +2,8 @@
 // served as JSON with the MTA's "Mercury" extension fields. Only the route
 // handler fetches the feed; these helpers stay pure so they can be tested.
 
+import { normalizeSubwayRoute } from "./transit";
+
 export type TransitAlert = {
   id: string;
   routes: string[];
@@ -9,6 +11,8 @@ export type TransitAlert = {
   /** The feed's category, e.g. "Delays" or "Planned - Part Suspended". */
   kind: string;
   planned: boolean;
+  /** Stated active windows, unix seconds; empty means simply in effect. */
+  periods: { start?: number; end?: number }[];
 };
 
 type Translation = { text?: string; language?: string };
@@ -19,38 +23,24 @@ type FeedAlert = {
   "transit_realtime.mercury_alert"?: { alert_type?: string };
 };
 
-// The alerts feed ids shuttles and expresses differently from the station
-// table (GS/FS/H are the S shuttles, SI is SIR, 6X/7X are the expresses).
-function normalizeRoute(route: string): string {
-  if (route === "GS" || route === "FS" || route === "H") return "S";
-  if (route === "SI") return "SIR";
-  return route.replace(/X$/, "");
-}
-
-/** Every alert active at `now` (unix seconds), with normalized route lists. */
-export function parseAlertsFeed(feed: unknown, now: number): TransitAlert[] {
+/**
+ * Every alert in the feed, with normalized route lists. Deliberately not
+ * filtered by time: the parsed list is cached, so which alerts are active is
+ * a question for each request's clock, not the parse's.
+ */
+export function parseAlertsFeed(feed: unknown): TransitAlert[] {
   const entities =
     (feed as { entity?: { id?: string; alert?: FeedAlert }[] })?.entity ?? [];
   const alerts: TransitAlert[] = [];
   for (const entity of entities) {
     const alert = entity?.alert;
     if (!alert) continue;
-    const periods = alert.active_period ?? [];
-    // No stated window means the alert is simply in effect.
-    const active =
-      !periods.length ||
-      periods.some(
-        (period) =>
-          (period.start ?? 0) <= now &&
-          (period.end === undefined || period.end >= now),
-      );
-    if (!active) continue;
     const routes = [
       ...new Set(
         (alert.informed_entity ?? [])
           .map((informed) =>
             typeof informed?.route_id === "string"
-              ? normalizeRoute(informed.route_id)
+              ? normalizeSubwayRoute(informed.route_id)
               : "",
           )
           .filter(Boolean),
@@ -70,9 +60,27 @@ export function parseAlertsFeed(feed: unknown, now: number): TransitAlert[] {
       text,
       kind,
       planned: kind.startsWith("Planned"),
+      periods: alert.active_period ?? [],
     });
   }
   return alerts;
+}
+
+/** The alerts active at `now` (unix seconds). */
+export function activeAlerts(
+  alerts: TransitAlert[],
+  now: number,
+): TransitAlert[] {
+  return alerts.filter(
+    (alert) =>
+      // No stated window means the alert is simply in effect.
+      !alert.periods.length ||
+      alert.periods.some(
+        (period) =>
+          (period.start ?? 0) <= now &&
+          (period.end === undefined || period.end >= now),
+      ),
+  );
 }
 
 /** The alerts touching `routes`, live disruptions before planned work. */

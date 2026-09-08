@@ -47,18 +47,24 @@ export async function sharedDatabase(
     operation,
     payload,
   });
-  if (error)
+  if (error) {
+    // P0001 marks a deliberate `raise exception` in the gateway functions;
+    // those messages are written for the person, so pass them through.
+    if (error.code === "P0001")
+      throw Object.assign(new Error(error.message), { rejected: true });
     throw new Error(
       "The household could not be loaded or updated. Please try again.",
     );
+  }
   return data;
 }
 // The broadcast channel name is a secret shared only with signed-in clients;
 // pings carry no household data, so knowing the name reveals activity timing
-// at most. Derived rather than stored so code rotation needs no migration.
+// at most. Derived rather than stored so rotation needs no migration; the
+// access code is mixed in so rotating it also cuts ex-devices off the channel.
 export function realtimeChannel() {
   return `hub-${createHmac("sha256", process.env.HOUSEHOLD_SESSION_SECRET!)
-    .update("realtime-broadcast-channel")
+    .update(`realtime-broadcast-channel:${process.env.HOUSEHOLD_ACCESS_CODE}`)
     .digest("base64url")
     .slice(0, 24)}`;
 }

@@ -6,7 +6,12 @@ import { PaperDialog } from "./ui/dialog";
 
 import styles from "./hub.module.css";
 import ExpensesTab, { estimateCents } from "./expenses-tab";
-import { expenseBalances, expenseMoney, splitEvenly } from "@/lib/expenses";
+import {
+  expenseBalances,
+  expenseMoney,
+  splitEvenly,
+  type ExpenseValues,
+} from "@/lib/expenses";
 import { useExpenses } from "@/lib/use-expenses";
 import { HouseCompanion } from "@/components/ui/house-companion";
 
@@ -84,6 +89,7 @@ type SaveValues = Partial<Entry> & {
   cover?: boolean;
   undo_token?: string;
   scope?: "series";
+  expense?: ExpenseValues & { id: string };
 };
 
 type Tab =
@@ -146,6 +152,11 @@ export default function Hub() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
+  const [noticeAction, setNoticeAction] = useState<{
+    text: string;
+    label: string;
+    run: () => void;
+  } | null>(null);
   const [undoDeletes, setUndoDeletes] = useState<
     { token: string; entries: Entry[]; expires: number }[]
   >([]);
@@ -160,22 +171,29 @@ export default function Hub() {
   const [channel, setChannel] = useState<string | null>(null);
   const [choosingPerson, setChoosingPerson] = useState(false);
   const uid = demo ? identity || "you" : identity;
-  const expenseController = useExpenses(
-    household?.id,
-    uid,
-    demo,
-    tab === "Expenses" || tab === "Overview" || display,
-  );
-  const taskOrder = useListOrder(`common-ground-order:${household?.id}:tasks`);
-  const shoppingOrder = useListOrder(
-    `common-ground-order:${household?.id}:shopping`,
-  );
   const pending = useRef(0);
   const writes = useRef(Promise.resolve());
   const needsRecovery = useRef(false);
   const sessionGeneration = useRef(0);
   const savedIds = useRef(new Map<string, string>());
   const savedSeriesIds = useRef(new Map<string, string>());
+  const expenseController = useExpenses(
+    household?.id,
+    uid,
+    demo,
+    tab === "Expenses" || tab === "Overview" || display,
+    // Purchase expenses reuse entry ids; draining the home queue and mirroring
+    // its optimistic-id remaps keeps them matched to the saved entry. Home
+    // writes must never await the expenses queue, or drain() deadlocks.
+    {
+      drain: () => writes.current,
+      resolveId: (id) => savedIds.current.get(id) || id,
+    },
+  );
+  const taskOrder = useListOrder(`common-ground-order:${household?.id}:tasks`);
+  const shoppingOrder = useListOrder(
+    `common-ground-order:${household?.id}:shopping`,
+  );
   const today = dateKey(new Date());
   const loadSequence = useRef(0);
   const weeks = Math.ceil(
@@ -222,6 +240,7 @@ export default function Hub() {
     setIdentity(null);
     setChannel(null);
     setNotice("");
+    setNoticeAction(null);
     setUndoDeletes([]);
     needsRecovery.current = false;
     setSession(false);
@@ -341,7 +360,7 @@ export default function Hub() {
       } else if (event.key >= "1" && event.key <= "6") {
         event.preventDefault();
         setTab(tabs[Number(event.key) - 1].name);
-      } else if (event.key === "n") {
+      } else if (event.key.toLowerCase() === "n") {
         const kind = {
           Calendar: "event",
           "To-dos": "task",
@@ -370,6 +389,12 @@ export default function Hub() {
       return () => clearTimeout(timer);
     }
   }, [notice]);
+  useEffect(() => {
+    if (noticeAction) {
+      const timer = setTimeout(() => setNoticeAction(null), 10000);
+      return () => clearTimeout(timer);
+    }
+  }, [noticeAction]);
 
   useEffect(() => {
     if (!undoDeletes.length) return;
@@ -390,6 +415,8 @@ export default function Hub() {
     operation: string,
     payload: SaveValues,
     copies: Entry[] = [],
+    onError?: () => void,
+    skipIf?: () => boolean,
   ) {
     if (demo) return;
     ++loadSequence.current;
@@ -398,6 +425,7 @@ export default function Hub() {
     writes.current = writes.current
       .then(async () => {
         if (generation !== sessionGeneration.current) return;
+        if (skipIf?.()) return;
         try {
           const result = await homeRequest("/api/home", "POST", {
             operation,
@@ -405,6 +433,16 @@ export default function Hub() {
               ...payload,
               ...(payload.id
                 ? { id: savedIds.current.get(payload.id) || payload.id }
+                : {}),
+              ...(payload.expense
+                ? {
+                    expense: {
+                      ...payload.expense,
+                      id:
+                        savedIds.current.get(payload.expense.id) ||
+                        payload.expense.id,
+                    },
+                  }
                 : {}),
             },
             sender: TAB_ID,
@@ -444,14 +482,19 @@ export default function Hub() {
               }),
             );
           }
-        } catch {
+        } catch (err) {
           if (operation === "delete")
             setUndoDeletes((current) =>
               current.filter((item) => item.token !== payload.undo_token),
             );
           if (generation !== sessionGeneration.current) return;
           needsRecovery.current = true;
-          setNotice("Couldn’t save. Refreshing your home…");
+          onError?.();
+          setNotice(
+            (err as Error & { rejected?: boolean }).rejected
+              ? (err as Error).message
+              : "Couldn’t save. Refreshing your home…",
+          );
         }
       })
       .finally(() => {
@@ -472,8 +515,37 @@ export default function Hub() {
         ) || editing.entry
       : undefined;
     setError("");
-    if (entry) {
+    // Turning a single entry into a series is a client-side delete + create;
+    // the sequential write queue keeps the order.
+    const converting = Boolean(
+      entry && !entry.series_id && values.repeat && values.repeat_until,
+    );
+    // Conversion recreates the entry with fresh checks, so it would silently
+    // destroy paid records the update guard protects.
+    if (converting && isBill(entry!) && entry!.paid_by?.length) {
+      setNotice("Clear paid checks before making this bill repeat.");
+      return;
+    }
+    if (entry && !converting) {
       const { scope, ...rest } = values;
+      if (
+        isBill(entry) &&
+        !isBill({
+          kind: rest.kind ?? entry.kind,
+          category: rest.category ?? entry.category,
+        }) &&
+        entries.some(
+          (e) =>
+            (scope === "series" && entry.series_id
+              ? e.series_id === entry.series_id
+              : e.id === entry.id) && e.paid_by?.length,
+        )
+      ) {
+        setNotice(
+          "Clear paid checks before changing this bill to another category.",
+        );
+        return;
+      }
       setEntries((current) => {
         const updated = editEntries(current, entry, rest, scope === "series");
         return updated.map((e) => {
@@ -497,13 +569,18 @@ export default function Hub() {
           `Turned “${values.title || entry.title}” into a ${labels[values.kind]}. It now lives under ${kindTabs[values.kind]}.`,
         );
     } else {
+      if (converting)
+        setEntries((current) => current.filter((e) => e.id !== entry!.id));
+      const createValues = converting
+        ? { kind: entry!.kind, ...values }
+        : values;
       const {
         repeat,
         repeat_until,
         rotation_partner,
         scope: _scope,
         ...rest
-      } = values;
+      } = createValues;
       const sid = crypto.randomUUID();
       const dates =
         repeat && repeat_until && rest.date
@@ -543,7 +620,43 @@ export default function Hub() {
           }) as Entry,
       );
       setEntries((current) => [...copies, ...current]);
-      persist("create", values, copies);
+      // Conversion creates the series before deleting the original so a
+      // dropped create can't silently lose the entry; a failed delete leaves
+      // a visible duplicate the recovery refresh surfaces instead.
+      const conversion = { failed: false };
+      persist(
+        "create",
+        createValues,
+        copies,
+        converting
+          ? () => {
+              conversion.failed = true;
+            }
+          : undefined,
+      );
+      if (converting) {
+        persist(
+          "delete",
+          { id: entry!.id, undo_token: crypto.randomUUID() },
+          [],
+          undefined,
+          () => conversion.failed,
+        );
+        if (repeat && repeat_until)
+          setNotice(
+            `Now repeats ${
+              {
+                weekly: "weekly",
+                biweekly: "every 2 weeks",
+                monthly: "monthly",
+              }[repeat]
+            } until ${parseDate(repeat_until).toLocaleDateString("en-US", {
+              month: "short",
+              day: "numeric",
+              year: "numeric",
+            })}.`,
+          );
+      }
     }
     setEditing(null);
   }
@@ -563,24 +676,51 @@ export default function Hub() {
     persist("update", { id: entry.id, done: !entry.done });
   }
   // Priced items are pre-set expenses: buying one logs it without a dialog.
+  // The expense reuses the entry id so re-buying can't double-log.
   function logPurchase(entry: Entry) {
     const cents = estimateCents(entry);
     const payers = members
       .filter((m) => m.name !== "Housemates")
       .map((m) => m.user_id);
     if (!uid || !cents || !payers.length) return;
-    expenseController.save({
-      kind: "expense",
-      title: entry.title,
-      date: dateKey(new Date()),
-      amount_cents: cents,
-      paid_by: uid,
-      shares: splitEvenly(cents, payers),
-      recipient: null,
-    });
+    const logged = expenseController.expenses.find((e) => e.id === entry.id);
+    if (logged) {
+      setNotice(
+        `Already logged ${expenseMoney(logged.amount_cents)} for “${entry.title}”. Adjust it in the Expenses tab.`,
+      );
+      return;
+    }
+    expenseController.create(
+      {
+        kind: "expense",
+        title: entry.title,
+        date: dateKey(new Date()),
+        amount_cents: cents,
+        paid_by: uid,
+        shares: splitEvenly(cents, payers),
+        recipient: null,
+      },
+      entry.id,
+    );
     setNotice(
       `Logged ${expenseMoney(cents)} to expenses for “${entry.title}”. Adjust it in the Expenses tab if the price differed.`,
     );
+  }
+  // Shared by the Shopping tab and the Overview board so buying a priced item
+  // logs its expense on both paths; tasks just toggle.
+  function toggleBought(entry: Entry) {
+    void toggle(entry);
+    if (entry.kind !== "request") return;
+    if (!entry.done && entry.amount != null) logPurchase(entry);
+    else if (entry.done) {
+      const logged = expenseController.expenses.find((e) => e.id === entry.id);
+      if (logged)
+        setNoticeAction({
+          text: `Reopened “${entry.title}”. Remove the ${expenseMoney(logged.amount_cents)} expense too?`,
+          label: "Remove",
+          run: () => expenseController.remove(entry.id),
+        });
+    }
   }
   function togglePayment(entry: Entry) {
     if (!uid) return;
@@ -592,7 +732,9 @@ export default function Hub() {
     persist("payment", { id: entry.id, paid });
   }
   // One person paid the biller for everyone: check every payer and put the
-  // split on the ledger so the others owe them their shares.
+  // split on the ledger so the others owe them their shares. One write creates
+  // both server-side; the expense row is only injected optimistically here so
+  // a failed write can't leave a payment without its expense (or vice versa).
   function coverBill(entry: Entry) {
     const cents = estimateCents(entry);
     if (!uid || !cents || !entry.payment_members?.length) return;
@@ -600,8 +742,8 @@ export default function Hub() {
     setEntries((current) =>
       current.map((e) => (e.id === entry.id ? markAllPaid(e) : e)),
     );
-    persist("payment", { id: entry.id, paid: true, cover: true });
-    expenseController.save({
+    const expense: ExpenseValues & { id: string } = {
+      id: entry.id,
       kind: "expense",
       title: entry.title,
       date: dateKey(new Date()),
@@ -609,7 +751,20 @@ export default function Hub() {
       paid_by: uid,
       shares: splitEvenly(cents, entry.payment_members),
       recipient: null,
+    };
+    expenseController.inject({
+      ...expense,
+      household_id: entry.household_id,
+      created_by: uid,
+      created_at: new Date().toISOString(),
     });
+    persist(
+      "payment",
+      { id: entry.id, paid: true, cover: true, expense },
+      [],
+      expenseController.recover,
+    );
+    expenseController.hold(writes.current);
     setNotice(
       `Marked everyone paid and logged ${expenseMoney(cents)} to expenses for “${entry.title}”.`,
     );
@@ -961,6 +1116,26 @@ export default function Hub() {
             {notice}
           </PresenceRow>
         )}
+        {noticeAction && (
+          <PresenceRow
+            initial={reduced ? false : { opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="toast"
+            key="notice-action"
+            role="status"
+          >
+            <span>{noticeAction.text}</span>
+            <Button
+              className="undo-button"
+              onClick={() => {
+                noticeAction.run();
+                setNoticeAction(null);
+              }}
+            >
+              {noticeAction.label}
+            </Button>
+          </PresenceRow>
+        )}
         {undoDeletes.map((item) => (
           <PresenceRow
             layout={reduced ? false : "position"}
@@ -1004,7 +1179,7 @@ export default function Hub() {
     onExit: () => changeDisplay(false),
     onOpen: (kind: Kind, entry?: Entry) => setEditing({ kind, entry }),
     onNavigate: setTab,
-    onToggle: (entry: Entry) => void toggle(entry),
+    onToggle: toggleBought,
   };
   if (display)
     return (
@@ -1495,18 +1670,20 @@ export default function Hub() {
                   value={filter}
                   onChange={setFilter}
                 />
-                {shopping.some((e) => !e.done && e.amount != null) && (
-                  <span className="subtle">
-                    Estimated total ·{" "}
-                    <strong>
-                      {money(
-                        shopping
-                          .filter((e) => !e.done)
-                          .reduce((sum, e) => sum + Number(e.amount || 0), 0),
-                      )}
-                    </strong>
-                  </span>
-                )}
+                {filter !== "Bought" &&
+                  filteredShopping.some((e) => e.amount != null) && (
+                    <span className="subtle">
+                      Estimated total ·{" "}
+                      <strong>
+                        {money(
+                          filteredShopping.reduce(
+                            (sum, e) => sum + Number(e.amount || 0),
+                            0,
+                          ),
+                        )}
+                      </strong>
+                    </span>
+                  )}
               </div>
               {quickAdd("request")}
               <div className="shopping-list">
@@ -1526,11 +1703,7 @@ export default function Hub() {
                         className="checkbox"
                         aria-label={`${entry.done ? "Reopen" : "Mark as bought"}: ${entry.title}`}
                         aria-pressed={entry.done}
-                        onClick={() => {
-                          void toggle(entry);
-                          if (!entry.done && entry.amount != null)
-                            logPurchase(entry);
-                        }}
+                        onClick={() => toggleBought(entry)}
                       >
                         {entry.done && <AnimatedCheck size={14} />}
                       </Button>
@@ -1954,7 +2127,9 @@ function EntryDialog({
     const date = String(data.get("date") || "") || null;
     const until = String(data.get("repeat_until") || "");
     const repeating =
-      !entry && repeat && ["task", "event"].includes(kind) ? repeat : null;
+      (!entry || !entry.series_id) && repeat && ["task", "event"].includes(kind)
+        ? repeat
+        : null;
     if (repeating && !date) {
       setValidation("Pick a start date for a repeating plan.");
       return;
@@ -1962,6 +2137,14 @@ function EntryDialog({
     if (repeating && until < date!) {
       setValidation("The repeat end date should be after the start.");
       return;
+    }
+    if (repeating) {
+      const cap = parseDate(date!);
+      cap.setFullYear(cap.getFullYear() + 2);
+      if (until > dateKey(cap)) {
+        setValidation("Pick a repeat end date within two years.");
+        return;
+      }
     }
     const partner = String(data.get("rotation_partner") || "");
     const rotating = kind === "task" && repeating && alternating;
@@ -2106,7 +2289,7 @@ function EntryDialog({
               />
             </label>
           )}
-          {!entry && ["task", "event"].includes(kind) && (
+          {(!entry || !entry.series_id) && ["task", "event"].includes(kind) && (
             <label>
               Repeats
               <select
@@ -2150,12 +2333,14 @@ function EntryDialog({
               )}
             </>
           )}
-          {!entry && ["task", "event"].includes(kind) && repeat && (
-            <label>
-              Repeat until
-              <input name="repeat_until" type="date" required />
-            </label>
-          )}
+          {(!entry || !entry.series_id) &&
+            ["task", "event"].includes(kind) &&
+            repeat && (
+              <label>
+                Repeat until
+                <input name="repeat_until" type="date" required />
+              </label>
+            )}
           {["event", "request"].includes(kind) && (
             <label>
               Amount in USD (optional)

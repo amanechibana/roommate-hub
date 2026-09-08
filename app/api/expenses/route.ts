@@ -58,7 +58,9 @@ export async function POST(request: Request) {
     );
     broadcastChange("expenses", sender);
     return json(result);
-  } catch {
+  } catch (err) {
+    if ((err as { rejected?: boolean }).rejected)
+      return json({ error: (err as Error).message, rejected: true }, 400);
     return json(
       {
         error:

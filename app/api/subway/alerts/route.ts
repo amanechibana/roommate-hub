@@ -1,5 +1,9 @@
 import { fetchWithTimeout, withCache } from "@/lib/cache";
-import { alertsForRoutes, parseAlertsFeed } from "@/lib/subway-alerts";
+import {
+  activeAlerts,
+  alertsForRoutes,
+  parseAlertsFeed,
+} from "@/lib/subway-alerts";
 import { findStation } from "@/lib/subway-data";
 
 const FEED =
@@ -19,17 +23,26 @@ export async function GET(request: Request) {
       { headers: { "Cache-Control": "no-store" } },
     );
   try {
-    const { value } = await withCache("subway:alerts", 5 * 60_000, async () => {
-      const response = await fetchWithTimeout(FEED);
-      if (!response.ok)
-        throw new Error(`MTA alerts returned ${response.status}`);
-      return parseAlertsFeed(
-        await response.json(),
-        Math.floor(Date.now() / 1000),
-      );
-    });
+    // The cache holds the whole parsed feed, active windows included; which
+    // alerts are live is decided per request, so a stale cache cannot pin
+    // expired alerts or hide planned work whose window has since opened.
+    const { value, fresh, at } = await withCache(
+      "subway:alerts",
+      5 * 60_000,
+      async () => {
+        const response = await fetchWithTimeout(FEED);
+        if (!response.ok)
+          throw new Error(`MTA alerts returned ${response.status}`);
+        return parseAlertsFeed(await response.json());
+      },
+    );
+    const now = Math.floor(Date.now() / 1000);
     return Response.json(
-      { alerts: alertsForRoutes(value, [...routes]) },
+      {
+        alerts: alertsForRoutes(activeAlerts(value, now), [...routes]),
+        stale: !fresh,
+        fetchedAt: at,
+      },
       { headers: { "Cache-Control": "public, max-age=60, s-maxage=60" } },
     );
   } catch {
