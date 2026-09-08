@@ -1,5 +1,5 @@
 "use client";
-import { activityVerb, type HouseActivity } from "@/lib/activity";
+import { activityVerb, activityWhen, type HouseActivity } from "@/lib/activity";
 import type { Member } from "@/lib/model";
 
 export default function ActivityFeed({
@@ -9,6 +9,7 @@ export default function ActivityFeed({
   activity: HouseActivity[];
   members: Member[];
 }) {
+  const now = new Date();
   return (
     <section className="panel activity-feed" aria-labelledby="activity-title">
       <h2 id="activity-title">Lately at home</h2>
@@ -27,12 +28,7 @@ export default function ActivityFeed({
                 dateTime={item.created_at}
                 title={new Date(item.created_at).toLocaleString()}
               >
-                {new Date(item.created_at).toLocaleString("en-US", {
-                  month: "short",
-                  day: "numeric",
-                  hour: "numeric",
-                  minute: "2-digit",
-                })}
+                {activityWhen(new Date(item.created_at).getTime(), now)}
               </time>
             </li>
           ))}

@@ -1,5 +1,5 @@
 "use client";
-import { activityVerb, type HouseActivity } from "@/lib/activity";
+import { activityVerb, activityWhen, type HouseActivity } from "@/lib/activity";
 
 import { AnimatePresence, m } from "motion/react";
 import { PresenceRow } from "./ui/presence";
@@ -205,19 +205,6 @@ export default function HomeBoard({
       Date.now() - event.at < 48 * 3600000 &&
       (display || !viewer || event.member !== viewer.name),
   );
-  const activityWhen = (at: number) => {
-    const then = new Date(at);
-    if (Date.now() - at < 5 * 60000) return "just now";
-    if (dateKey(then) === today) {
-      const h = then.getHours();
-      return h < 12 ? "this morning" : h < 17 ? "this afternoon" : "tonight";
-    }
-    const yesterday = new Date(now);
-    yesterday.setDate(now.getDate() - 1);
-    return dateKey(then) === dateKey(yesterday)
-      ? "yesterday"
-      : then.toLocaleDateString("en-US", { weekday: "long" });
-  };
   const pages = Math.max(
     1,
     Math.ceil(tasks.length / limit),
@@ -474,7 +461,7 @@ export default function HomeBoard({
             <p className="board-lately">
               <Sparkles size={13} aria-hidden="true" />
               <span>
-                {lastActivity.line} · {activityWhen(lastActivity.at)}
+                {lastActivity.line} · {activityWhen(lastActivity.at, now)}
               </span>
             </p>
           )}
