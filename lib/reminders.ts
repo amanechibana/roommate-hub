@@ -105,18 +105,36 @@ function dueWhen(date: string, today: string) {
   return days < 0 ? `was due ${when}` : `is due ${when}`;
 }
 
-// One housemate poking another about an open to-do of theirs. Null when the
-// to-do isn't something a nudge makes sense for (done, or nobody's).
+// One housemate poking another: about an open to-do of theirs, or about a
+// bill share they haven't checked off (`to` says whose share). Null when a
+// nudge makes no sense (done, nobody's, already paid).
 export function nudgeMessage(
   entry: Entry,
   from: Member,
   today: string,
+  to?: Member,
 ): Digest | null {
+  const title = `${from.name} gave you a nudge`;
+  if (isBill(entry) && to) {
+    if (
+      !entry.payment_members?.includes(to.user_id) ||
+      entry.paid_by?.includes(to.user_id)
+    )
+      return null;
+    const amount = entry.amount ? ` (${money(entry.amount)})` : "";
+    const when = entry.date ? ` ${dueWhen(entry.date, today)}` : "";
+    return {
+      title,
+      lines: [
+        `“${entry.title}”${amount}${when} — your share isn’t checked off`,
+      ],
+    };
+  }
   if (entry.kind !== "task" || entry.done || !entry.assignee) return null;
   const line = entry.date
     ? `“${entry.title}” ${dueWhen(entry.date, today)}`
     : `“${entry.title}” is waiting on you`;
-  return { title: `${from.name} gave you a nudge`, lines: [line] };
+  return { title, lines: [line] };
 }
 
 export function quietDigest(name: string): Digest {

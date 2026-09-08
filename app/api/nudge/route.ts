@@ -11,6 +11,7 @@ import {
   sendPush,
   type Subscription,
 } from "@/lib/push-server";
+import { isBill } from "@/lib/household-actions";
 import { localDateKey, nudgeMessage } from "@/lib/reminders";
 import type { Entry, Member } from "@/lib/model";
 
@@ -32,14 +33,19 @@ export async function POST(request: Request) {
   if (!from)
     return json({ error: "Choose who’s using this device first." }, 400);
   let id: unknown;
+  let member: unknown;
   try {
     const raw = await request.text();
-    if (raw.length > 200) return json({ error: "Invalid request." }, 400);
-    id = JSON.parse(raw)?.id;
+    if (raw.length > 300) return json({ error: "Invalid request." }, 400);
+    ({ id, member } = JSON.parse(raw) ?? {});
   } catch {
     return json({ error: "Invalid request." }, 400);
   }
-  if (typeof id !== "string" || !id)
+  if (
+    typeof id !== "string" ||
+    !id ||
+    (member !== undefined && typeof member !== "string")
+  )
     return json({ error: "Invalid request." }, 400);
   try {
     const [home, push] = await Promise.all([
@@ -51,15 +57,26 @@ export async function POST(request: Request) {
       members.find((m) => m.user_id === uid && m.name !== "Housemates");
     const sender = real(from);
     const entry = (home.entries as Entry[]).find((e) => e.id === id);
-    const target = entry ? real(entry.assignee) : undefined;
-    if (!sender || !entry || !target)
-      return json({ error: "That to-do isn’t waiting on anyone." }, 400);
+    // A bill names whose share is being chased; a to-do has one assignee.
+    const bill = !!entry && isBill(entry);
+    const target = entry
+      ? real(bill ? ((member as string | undefined) ?? null) : entry.assignee)
+      : undefined;
+    const nothing = bill
+      ? "That share is already settled."
+      : "That to-do isn’t waiting on anyone.";
+    if (!sender || !entry || !target) return json({ error: nothing }, 400);
     if (target.user_id === sender.user_id)
       return json({ error: "That one’s yours." }, 400);
-    const message = nudgeMessage(entry, sender, localDateKey(new Date()));
-    if (!message)
-      return json({ error: "That to-do isn’t waiting on anyone." }, 400);
-    const last = recent.get(entry.id);
+    const message = nudgeMessage(
+      entry,
+      sender,
+      localDateKey(new Date()),
+      bill ? target : undefined,
+    );
+    if (!message) return json({ error: nothing }, 400);
+    const slot = bill ? `${entry.id}:${target.user_id}` : entry.id;
+    const last = recent.get(slot);
     if (last && Date.now() - last < NUDGE_COOLDOWN)
       return json(
         { error: `${target.name} was nudged about that a moment ago.` },
@@ -69,7 +86,7 @@ export async function POST(request: Request) {
     // that reached nobody gives the slot back so a retry can go through.
     for (const [key, at] of recent)
       if (Date.now() - at >= NUDGE_COOLDOWN) recent.delete(key);
-    recent.set(entry.id, Date.now());
+    recent.set(slot, Date.now());
     const devices = (push.subscriptions as Subscription[]).filter(
       (sub) => sub.member === target.user_id,
     );
@@ -87,7 +104,7 @@ export async function POST(request: Request) {
         )
           sent++;
     }
-    if (!sent) recent.delete(entry.id);
+    if (!sent) recent.delete(slot);
     return json({ sent, devices: devices.length });
   } catch (err) {
     console.error("POST /api/nudge", err);
