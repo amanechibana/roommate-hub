@@ -1560,8 +1560,9 @@ export default function Hub() {
                 <h3>Shopping, with fewer tabs</h3>
                 <p className="subtle">
                   Paste an Amazon or other store’s product link when adding an
-                  item. Prices are entered manually; account linking and live
-                  prices aren’t connected.
+                  item and the name and price fill in when the store allows it.
+                  Some stores block lookups — you can always type the details
+                  yourself. Account linking isn’t connected.
                 </p>
               </section>
             </div>
@@ -1752,6 +1753,7 @@ function EntryDialog({
   const dialog = useRef<HTMLDialogElement>(null);
   const [kind, setKind] = useState<Kind>(editing.kind);
   const [validation, setValidation] = useState("");
+  const [lookup, setLookup] = useState<"" | "loading" | "failed">("");
   const [repeat, setRepeat] = useState<Repeat | "">("");
   const [wholeSeries, setWholeSeries] = useState(false);
   const [alternating, setAlternating] = useState(false);
@@ -1763,6 +1765,26 @@ function EntryDialog({
   useEffect(() => {
     dialog.current?.showModal();
   }, []);
+  // Fill only fields the person hasn't typed in; their words always win.
+  async function fillFromLink(input: HTMLInputElement) {
+    const url = safeUrl(input.value.trim());
+    const form = input.form;
+    if (!url || !form) return;
+    const title = form.elements.namedItem("title") as HTMLInputElement;
+    const amount = form.elements.namedItem("amount") as HTMLInputElement | null;
+    if (title.value && amount?.value) return;
+    setLookup("loading");
+    try {
+      const data = await homeRequest("/api/preview", "POST", { url });
+      if (!form.isConnected) return;
+      if (!title.value && data.title) title.value = data.title;
+      if (amount && !amount.value && data.price != null)
+        amount.value = String(data.price);
+      setLookup(data.title || data.price != null ? "" : "failed");
+    } catch {
+      setLookup("failed");
+    }
+  }
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const data = new FormData(event.currentTarget);
@@ -1998,16 +2020,30 @@ function EntryDialog({
           )}
         </div>
         {kind === "request" && (
-          <label>
-            Product link (optional)
-            <input
-              name="url"
-              type="url"
-              maxLength={2048}
-              placeholder="https://www.amazon.com/…"
-              defaultValue={entry?.url}
-            />
-          </label>
+          <>
+            <label>
+              Product link (optional)
+              <input
+                name="url"
+                type="url"
+                maxLength={2048}
+                placeholder="https://www.amazon.com/…"
+                defaultValue={entry?.url}
+                onBlur={(event) => void fillFromLink(event.currentTarget)}
+                onPaste={(event) => {
+                  const input = event.currentTarget;
+                  setTimeout(() => void fillFromLink(input), 0);
+                }}
+              />
+            </label>
+            {lookup && (
+              <p className="subtle" role="status">
+                {lookup === "loading"
+                  ? "Looking up the link…"
+                  : "Couldn’t read that link — fill in the details yourself."}
+              </p>
+            )}
+          </>
         )}
         {!entry && kind === "event" && ["Rent", "Bill"].includes(category) && (
           <p className="subtle">

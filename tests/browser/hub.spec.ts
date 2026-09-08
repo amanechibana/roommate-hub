@@ -80,6 +80,32 @@ test("shopping filters, event export, and dialog keyboard support", async ({
   await expect(page.getByRole("dialog")).not.toBeVisible();
 });
 
+test("a pasted product link fills in the item’s name and price", async ({
+  page,
+}) => {
+  await page.route("**/api/preview", (route) =>
+    route.fulfill({ json: { title: "Fancy Olive Oil 500ml", price: 18.5 } }),
+  );
+  await page.goto("/");
+  await page
+    .getByRole("navigation")
+    .getByRole("button", { name: "Shopping list" })
+    .click();
+  await page.getByRole("button", { name: "Add item", exact: true }).click();
+  await page
+    .getByLabel("Product link (optional)")
+    .fill("https://store.example.com/olive-oil");
+  await page.getByLabel("Product link (optional)").blur();
+  await expect(page.getByLabel("What’s on your mind?")).toHaveValue(
+    "Fancy Olive Oil 500ml",
+  );
+  await expect(page.getByLabel("Amount in USD (optional)")).toHaveValue("18.5");
+  await page.getByRole("button", { name: "Save to our home" }).click();
+  await expect(
+    page.getByRole("heading", { name: "Fancy Olive Oil 500ml" }),
+  ).toBeVisible();
+});
+
 test("keyboard shortcuts switch tabs, add entries, and stay out of inputs", async ({
   page,
 }) => {
