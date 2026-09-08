@@ -105,28 +105,30 @@ export default function ExpensesTab({
         </div>
       ) : (
         <>
-          <div className={styles.summary}>
-            <section className={`${styles.balance} panel`}>
-              <span>Your balance</span>
-              <strong>
-                <AnimatedMoney cents={Math.abs(mine)} />
-              </strong>
-              <p>
-                {mine > 0
-                  ? "Owed to you"
-                  : mine < 0
-                    ? "You owe"
-                    : "You’re settled up"}
-              </p>
-            </section>
-            <section className={`${styles.spending} panel`}>
-              <span>Shared spending this month</span>
-              <strong>
-                <AnimatedMoney cents={monthTotal} />
-              </strong>
-              <p>Purchases only · Repayments excluded</p>
-            </section>
-          </div>
+          {!!expenses.length && (
+            <div className={styles.summary}>
+              <section className={`${styles.balance} panel`}>
+                <span>Your balance</span>
+                <strong>
+                  <AnimatedMoney cents={Math.abs(mine)} />
+                </strong>
+                <p>
+                  {mine > 0
+                    ? "Owed to you"
+                    : mine < 0
+                      ? "You owe"
+                      : "You’re settled up"}
+                </p>
+              </section>
+              <section className={`${styles.spending} panel`}>
+                <span>Shared spending this month</span>
+                <strong>
+                  <AnimatedMoney cents={monthTotal} />
+                </strong>
+                <p>Purchases only · Repayments excluded</p>
+              </section>
+            </div>
+          )}
           <section className={`${styles.settlements} panel`}>
             <div className={styles.sectionHeading}>
               <h2>Who owes whom</h2>
