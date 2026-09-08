@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { demoData } from "../../lib/model";
+import { dateKey, demoData } from "../../lib/model";
 import type { Expense } from "../../lib/expenses";
 
 test("expenses calculate, survive tab changes, edit and record repayments", async ({
@@ -90,6 +90,63 @@ test("a bought shopping item turns its estimate into a real expense", async ({
   await expect(
     page.getByText("$48.00 estimated", { exact: true }),
   ).toBeVisible();
+});
+
+test("activity keeps old records behind a show-all toggle", async ({
+  page,
+}) => {
+  test.skip(!process.env.PW_SHARED_API);
+  const data = demoData();
+  data.members = data.members.slice(0, 2);
+  data.entries = [];
+  const day = (offset: number) => {
+    const date = new Date();
+    date.setDate(date.getDate() + offset);
+    return dateKey(date);
+  };
+  const expense = (id: string, title: string, date: string): Expense => ({
+    id,
+    household_id: "demo",
+    kind: "expense",
+    title,
+    date,
+    amount_cents: 2000,
+    paid_by: "you",
+    shares: { you: 1000, alex: 1000 },
+    recipient: null,
+    created_by: "you",
+    created_at: `${date}T12:00:00Z`,
+  });
+  const records = [
+    expense("new", "Fresh groceries", day(-3)),
+    expense("old", "Old rent", day(-120)),
+  ];
+  await page.route("**/api/session", (route) =>
+    route.fulfill({ json: { authenticated: true, member_id: "you" } }),
+  );
+  await page.route("**/api/home", (route) =>
+    route.fulfill({ json: { ...data, member_id: "you" } }),
+  );
+  await page.route("**/api/expenses", (route) =>
+    route.fulfill({ json: { expenses: records } }),
+  );
+  await page.goto("/");
+  await page
+    .getByRole("navigation")
+    .getByRole("button", { name: "Expenses", exact: true })
+    .click();
+  await expect(
+    page.getByRole("button", { name: /Fresh groceries/ }),
+  ).toBeVisible();
+  await expect(page.getByRole("button", { name: /Old rent/ })).toHaveCount(0);
+  await page
+    .getByRole("button", { name: "Show all 2 records", exact: true })
+    .click();
+  await expect(page.getByRole("button", { name: /Old rent/ })).toBeVisible();
+  await page
+    .getByRole("button", { name: "Show recent only", exact: true })
+    .click();
+  await expect(page.getByRole("button", { name: /Old rent/ })).toHaveCount(0);
 });
 
 test("shared expenses save optimistically without refetch and recover failed deletion", async ({

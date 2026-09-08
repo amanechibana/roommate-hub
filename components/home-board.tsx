@@ -138,13 +138,17 @@ export default function HomeBoard({
     : expenses.expenses.length
       ? "You’re all settled up"
       : "No shared expenses yet";
+  // Unpaid bills stay pinned for 30 days past due; after that only the calendar shows them.
+  const billWindow = new Date(now);
+  billWindow.setDate(billWindow.getDate() - 30);
   const events = entries
     .filter(
       (e) =>
         e.kind === "event" &&
         !e.done &&
         e.date &&
-        (e.date >= today || (isBill(e) && !billPaid(e))),
+        (e.date >= today ||
+          (isBill(e) && !billPaid(e) && e.date >= dateKey(billWindow))),
     )
     .sort((a, b) => a.date!.localeCompare(b.date!));
   const shopping = entries

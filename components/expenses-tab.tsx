@@ -45,6 +45,7 @@ export default function ExpensesTab({
   pending: Entry[];
 }) {
   const [draft, setDraft] = useState<Draft | null>(null);
+  const [showAll, setShowAll] = useState(false);
   const { expenses, loaded, error } = controller;
   const name = (id: string) =>
     members.find((member) => member.user_id === id)?.name || "Housemate";
@@ -54,6 +55,16 @@ export default function ExpensesTab({
   const monthTotal = expenses
     .filter((item) => item.kind === "expense" && item.date.startsWith(month))
     .reduce((sum, item) => sum + item.amount_cents, 0);
+  // Activity opens on the last 90 days; balances above still count every record.
+  const windowStart = new Date();
+  windowStart.setDate(windowStart.getDate() - 90);
+  const cutoff = dateKey(windowStart);
+  const activity = [...expenses].sort(
+    (a, b) =>
+      b.date.localeCompare(a.date) || b.created_at.localeCompare(a.created_at),
+  );
+  const recent = activity.filter((item) => item.date >= cutoff);
+  const shown = showAll ? activity : recent;
   return (
     <div className={styles.expenses}>
       <div className="page-heading">
@@ -182,47 +193,51 @@ export default function ExpensesTab({
                 {expenses.length} {expenses.length === 1 ? "record" : "records"}
               </span>
             </div>
-            {[...expenses]
-              .sort(
-                (a, b) =>
-                  b.date.localeCompare(a.date) ||
-                  b.created_at.localeCompare(a.created_at),
-              )
-              .map((item) => (
-                <Button
-                  key={item.id}
-                  className={styles.row}
-                  onClick={() => setDraft({ kind: item.kind, entry: item })}
+            {shown.map((item) => (
+              <Button
+                key={item.id}
+                className={styles.row}
+                onClick={() => setDraft({ kind: item.kind, entry: item })}
+              >
+                <span
+                  className={`${styles.rowIcon} ${item.kind === "settlement" ? styles.repaymentIcon : ""}`}
+                  aria-hidden="true"
                 >
-                  <span
-                    className={`${styles.rowIcon} ${item.kind === "settlement" ? styles.repaymentIcon : ""}`}
-                    aria-hidden="true"
-                  >
-                    {item.kind === "expense" ? (
-                      <ReceiptText size={19} />
-                    ) : (
-                      <ArrowDownLeft size={19} />
-                    )}
-                  </span>
-                  <span className={styles.copy}>
-                    <strong>
-                      {item.kind === "settlement"
-                        ? `${name(item.paid_by)} paid ${name(item.recipient!)}`
-                        : item.title}
-                    </strong>
-                    <small>
-                      {item.date} ·{" "}
-                      {item.kind === "expense"
-                        ? `${name(item.paid_by)} paid · Split ${Object.keys(item.shares).length} ${Object.keys(item.shares).length === 1 ? "way" : "ways"}`
-                        : "Repayment"}
-                    </small>
-                  </span>
-                  <strong className={styles.amount}>
-                    {expenseMoney(item.amount_cents)}
+                  {item.kind === "expense" ? (
+                    <ReceiptText size={19} />
+                  ) : (
+                    <ArrowDownLeft size={19} />
+                  )}
+                </span>
+                <span className={styles.copy}>
+                  <strong>
+                    {item.kind === "settlement"
+                      ? `${name(item.paid_by)} paid ${name(item.recipient!)}`
+                      : item.title}
                   </strong>
-                  <ArrowUpRight size={15} aria-hidden="true" />
-                </Button>
-              ))}
+                  <small>
+                    {item.date} ·{" "}
+                    {item.kind === "expense"
+                      ? `${name(item.paid_by)} paid · Split ${Object.keys(item.shares).length} ${Object.keys(item.shares).length === 1 ? "way" : "ways"}`
+                      : "Repayment"}
+                  </small>
+                </span>
+                <strong className={styles.amount}>
+                  {expenseMoney(item.amount_cents)}
+                </strong>
+                <ArrowUpRight size={15} aria-hidden="true" />
+              </Button>
+            ))}
+            {recent.length < activity.length && (
+              <Button
+                className="text-button"
+                onClick={() => setShowAll((current) => !current)}
+              >
+                {showAll
+                  ? "Show recent only"
+                  : `Show all ${activity.length} records`}
+              </Button>
+            )}
             {!expenses.length && (
               <div className={styles.empty}>
                 <ReceiptText size={28} />

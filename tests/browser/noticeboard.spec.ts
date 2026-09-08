@@ -1,5 +1,5 @@
 import { test, expect, type Page } from "@playwright/test";
-import { demoData } from "../../lib/model";
+import { dateKey, demoData } from "../../lib/model";
 import type { Expense } from "../../lib/expenses";
 
 test.skip(
@@ -73,6 +73,43 @@ test("noticeboard greets the selected person and moves their chores first after 
   await expect(
     page.getByRole("heading", { name: "Welcome home, Barnatt." }),
   ).toBeVisible();
+});
+
+test("unpaid bills drop off the board 30 days after their due date", async ({
+  page,
+}) => {
+  const data = demoData();
+  data.members = data.members.slice(0, 2);
+  const day = (offset: number) => {
+    const date = new Date();
+    date.setDate(date.getDate() + offset);
+    return dateKey(date);
+  };
+  const bill = data.entries.find((entry) => entry.category === "Rent")!;
+  data.entries = [
+    { ...bill, id: "stale", title: "Old rent", date: day(-45) },
+    {
+      ...bill,
+      id: "late",
+      title: "Water bill",
+      category: "Bill",
+      date: day(-10),
+    },
+    { ...bill, id: "next", title: "New rent", date: day(3) },
+  ];
+  await page.route("**/api/session", (route) =>
+    route.fulfill({ json: { authenticated: true, member_id: "you" } }),
+  );
+  await page.route("**/api/home", (route) =>
+    route.fulfill({ json: { ...data, member_id: "you" } }),
+  );
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto("/");
+  await expect(page.locator(".board-plan .board-entry-title")).toHaveText([
+    "Water bill",
+    "New rent",
+  ]);
+  await expect(page.getByText("Old rent")).toHaveCount(0);
 });
 
 for (const member of ["you", "alex"]) {
