@@ -623,6 +623,26 @@ export function useHousehold() {
     );
     persist("update", { id: entry.id, done: !entry.done });
   }
+  // One-tap row actions: a single occurrence moves or changes hands, never
+  // the whole series, matching what the row's edit dialog does by default.
+  function pushToTomorrow(entry: Entry) {
+    const date =
+      entry.date && entry.date > today
+        ? shiftDay(entry.date, 1)
+        : shiftDay(today, 1);
+    setEntries((current) =>
+      current.map((e) => (e.id === entry.id ? { ...e, date } : e)),
+    );
+    persist("update", { id: entry.id, date });
+  }
+  function handOff(entry: Entry, member: Member) {
+    setEntries((current) =>
+      current.map((e) =>
+        e.id === entry.id ? { ...e, assignee: member.user_id } : e,
+      ),
+    );
+    persist("update", { id: entry.id, assignee: member.user_id });
+  }
   // Priced items are pre-set expenses: buying one logs it without a dialog.
   // The expense reuses the entry id so re-buying can't double-log.
   function logPurchase(entry: Entry) {
@@ -910,6 +930,8 @@ export function useHousehold() {
     signOut,
     save,
     toggle,
+    pushToTomorrow,
+    handOff,
     toggleBought,
     togglePayment,
     coverBill,
