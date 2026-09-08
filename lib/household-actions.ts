@@ -69,6 +69,20 @@ export function remoteActivity(
   }
   return events;
 }
+/**
+ * Keeps one upcoming occurrence per series — the first in the given
+ * (date-sorted) list — while every overdue occurrence stays actionable.
+ * A monthly rent otherwise puts all of its future months on the board.
+ */
+export function collapseSeries(entries: Entry[], today: string): Entry[] {
+  const seen = new Set<string>();
+  return entries.filter((entry) => {
+    if (!entry.series_id || !entry.date || entry.date < today) return true;
+    if (seen.has(entry.series_id)) return false;
+    seen.add(entry.series_id);
+    return true;
+  });
+}
 export function occurrenceAssignee(
   first: string | null,
   partner: string | undefined,
