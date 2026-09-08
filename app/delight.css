@@ -498,6 +498,9 @@ html[data-ambient="on"] .skeleton {
 }
 .drag-handle {
   flex: 0 0 20px;
+  border: 0;
+  background: none;
+  padding: 0;
   color: #a49b88;
   cursor: grab;
   touch-action: none;
