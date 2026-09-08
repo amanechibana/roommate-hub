@@ -446,9 +446,148 @@ body {
   flex-shrink: 0;
 }
 .wall-clock time {
-  font-family: Georgia, serif;
-  font-size: clamp(27px, 3.2vw, 68px);
-  font-variant-numeric: tabular-nums;
+  --flip-h: clamp(34px, 3.4vw, 72px);
+  display: flex;
+  justify-content: flex-end;
+}
+.flip-clock .flip-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+.flip-clock .flip-cards {
+  display: flex;
+  align-items: center;
+  gap: calc(var(--flip-h) * 0.08);
+}
+.flip-clock .flip-digit {
+  position: relative;
+  width: calc(var(--flip-h) * 0.74);
+  height: var(--flip-h);
+  perspective: calc(var(--flip-h) * 5);
+}
+.flip-clock .flip-card {
+  position: absolute;
+  inset: 0;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: calc(var(--flip-h) * 0.66);
+  font-variant-numeric: tabular-nums lining-nums;
+  color: var(--ink);
+}
+.flip-clock .flip-half {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 50%;
+  overflow: hidden;
+  text-align: center;
+  font-weight: 400;
+}
+.flip-clock .flip-top,
+.flip-clock .flip-leaf-top {
+  top: 0;
+  line-height: var(--flip-h);
+  background: linear-gradient(#fdf6e8, #f6ecd6);
+  border: 1px solid #d9cfba;
+  border-bottom: none;
+  border-radius: calc(var(--flip-h) * 0.12) calc(var(--flip-h) * 0.12) 0 0;
+}
+.flip-clock .flip-bottom,
+.flip-clock .flip-leaf-bottom {
+  top: 50%;
+  /* Zero line-height parks the glyph's midpoint on the seam, so this half
+     shows exactly the bottom of the digit. */
+  line-height: 0;
+  background: linear-gradient(#fffaf0, #fbf2e0);
+  border: 1px solid #d9cfba;
+  border-top: 1px solid rgba(90, 70, 40, 0.18);
+  border-radius: 0 0 calc(var(--flip-h) * 0.12) calc(var(--flip-h) * 0.12);
+}
+.flip-clock .flip-bottom {
+  box-shadow: 0 2px 4px rgba(90, 70, 40, 0.14);
+}
+/* Spindle pins on the seam, like the real thing. */
+.flip-clock .flip-digit::before,
+.flip-clock .flip-digit::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  width: calc(var(--flip-h) * 0.05);
+  height: calc(var(--flip-h) * 0.16);
+  transform: translateY(-50%);
+  background: #b9ab8f;
+  border-radius: 2px;
+  z-index: 3;
+}
+.flip-clock .flip-digit::before {
+  left: 0;
+}
+.flip-clock .flip-digit::after {
+  right: 0;
+}
+/* Leaves rest in their finished pose; the keyframes replay the fold on each
+   remount, so disabled animations still leave the correct digit showing. */
+.flip-clock .flip-leaf-top,
+.flip-clock .flip-leaf-bottom {
+  z-index: 2;
+  backface-visibility: hidden;
+}
+.flip-clock .flip-leaf-top {
+  transform-origin: 50% 100%;
+  /* Hidden at rest — even edge-on, perspective would project a sliver. */
+  visibility: hidden;
+  transform: rotateX(-90deg);
+  animation: flip-fold 0.3s ease-in both;
+}
+.flip-clock .flip-leaf-bottom {
+  transform-origin: 50% 0;
+  animation: flip-fall 0.42s 0.28s ease-out both;
+}
+@keyframes flip-fold {
+  from {
+    visibility: visible;
+    transform: rotateX(0deg);
+    filter: brightness(1);
+  }
+  to {
+    visibility: hidden;
+    transform: rotateX(-90deg);
+    filter: brightness(0.72);
+  }
+}
+@keyframes flip-fall {
+  0% {
+    transform: rotateX(90deg);
+    filter: brightness(0.78);
+  }
+  55% {
+    transform: rotateX(0deg);
+    filter: brightness(1.02);
+  }
+  75% {
+    transform: rotateX(10deg);
+  }
+  100% {
+    transform: rotateX(0deg);
+    filter: brightness(1);
+  }
+}
+.flip-clock .flip-colon {
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: calc(var(--flip-h) * 0.44);
+  line-height: 1;
+  color: #a08a68;
+  padding: 0 calc(var(--flip-h) * 0.02);
+}
+.flip-clock .flip-meridiem {
+  align-self: flex-end;
+  font-size: calc(var(--flip-h) * 0.2);
+  line-height: 1.5;
+  letter-spacing: 0.09em;
+  color: #897052;
 }
 .wall-clock span {
   font-size: clamp(11px, 1.05vw, 24px);
@@ -723,7 +862,7 @@ body {
     max-width: 210px;
   }
   .wall-clock time {
-    font-size: 24px;
+    --flip-h: 26px;
   }
   .wall-clock span {
     font-size: 9px;
