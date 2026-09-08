@@ -4,7 +4,7 @@ A warm, private roommate hub built with Next.js, React, TypeScript, and Supabase
 
 ## Home and display mode
 
-The homepage and calendar fit the available viewport without page scrolling. Home cards adapt their item count to the space, with previous/next controls for additional items and notes. Complete chores or mark purchases directly, or use the To-do / Item / Plan shortcuts. Calendar rows resize to fit even six-week months; crowded days open a detail dialog. On phones, navigation stays at the bottom and the calendar becomes a paginated monthly agenda.
+The homepage and calendar fit the available viewport without page scrolling. Home cards adapt their item count to the space; a "See all" link on each card opens the full tab when more items exist. Complete chores or mark purchases directly, or use the To-do / Item / Plan shortcuts. Calendar rows resize to fit even six-week months; crowded days open a detail dialog. On phones, navigation stays at the bottom and the calendar becomes a paginated monthly agenda.
 
 Choose **Display mode** in the top bar for a monitor/TV, or bookmark `/?display=1`. It fills the browser viewport with four cards, a clock, and no scrolling. The number of visible items adapts to screen height. Extra items and notes rotate every 20 seconds; the bottom controls let you pause, change pages, enter full screen, or exit. Long titles and notes are shown as concise previews; open the normal app for full details.
 
@@ -19,8 +19,8 @@ Lists and undo notices animate out while writes continue in the background. Surv
 To-dos and shopping rows have drag handles: use a pointer or focus the handle and press Up/Down (Home/End also work). Order is remembered **on this device, per household**, including across reloads. It does not change the household's due dates or synchronize a new order to other devices. Row menus offer edit and delete; the usual undo still works. House notes have a quick composer, member-colored paper, individual tilts, and crumpling exits. In household settings, hover or focus a member magnet for their open chore count and balance.
 
 The home greeting highlights a recent action by another housemate. “Lately at
-home” below the cards shows the latest 20 completed chores, purchases, bill
-payments, reopened items, and notes. Actions are saved with the person who
+home” in household settings shows the latest 20 completed chores, purchases,
+bill payments, reopened items, and notes. Actions are saved with the person who
 performed them and the actual time, and appear across devices. Activity starts
 after migration 012; older entries are not given invented completion times.
 

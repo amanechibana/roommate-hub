@@ -78,9 +78,14 @@ test("noticeboard greets the selected person and moves their chores first after 
     "Barnatt chore",
     "Shared chore",
   ]);
+  await page.getByRole("button", { name: "Our household" }).click();
   await expect(page.locator(".activity-feed")).toContainText(
     "Barnatt completed Watered the kitchen plants",
   );
+  await page
+    .getByRole("navigation")
+    .getByRole("button", { name: "Overview", exact: true })
+    .click();
   await page.getByRole("button", { name: "Switch person" }).click();
   await page.getByRole("button", { name: "Barnatt", exact: true }).click();
   await expect(
@@ -92,12 +97,13 @@ test("noticeboard greets the selected person and moves their chores first after 
     "Amane chore",
   ]);
   await page.reload();
-  await expect(page.locator(".activity-feed")).toContainText(
-    "Barnatt completed Watered the kitchen plants",
-  );
   await expect(
     page.getByRole("heading", { name: "Welcome home, Barnatt." }),
   ).toBeVisible();
+  await page.getByRole("button", { name: "Our household" }).click();
+  await expect(page.locator(".activity-feed")).toContainText(
+    "Barnatt completed Watered the kitchen plants",
+  );
 });
 
 for (const member of ["you", "alex"]) {

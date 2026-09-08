@@ -1,19 +1,3 @@
-/* The personal home has room to scroll; only the wall display has pages. */
-.everyday-board .noticeboard-grid {
-  align-items: start;
-}
-.everyday-board .board-card {
-  height: auto;
-  min-height: 240px;
-}
-.everyday-board .board-rows,
-.everyday-board .fridge-stack {
-  overflow: visible;
-  flex: none;
-}
-.everyday-board .fridge-message p {
-  -webkit-line-clamp: unset;
-}
 .save-status {
   display: block;
   min-height: 0;
@@ -25,6 +9,14 @@
 }
 .save-status[data-error] {
   color: #985139;
+}
+/* The fitted home shares the viewport; keep the line's height constant so
+   saves don't reflow the cards and drop an item. */
+.fitted-app .home-content .save-status {
+  min-height: 18px;
+}
+.fitted-app .home-content .save-status:not(:empty) {
+  margin-bottom: 0;
 }
 .app-shell .commute-weather[data-error] .commute-weather-copy small {
   position: static;
@@ -78,12 +70,6 @@
     flex-basis: 44px;
     min-width: 44px;
     min-height: 44px;
-  }
-  .everyday-board .board-card {
-    min-height: 0;
-  }
-  .everyday-board .noticeboard-grid {
-    grid-template-columns: 1fr;
   }
   .activity-feed li {
     flex-wrap: wrap;

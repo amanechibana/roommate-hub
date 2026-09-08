@@ -9,9 +9,7 @@ for (const [width, height] of [
   [375, 667],
   [320, 568],
 ]) {
-  test(`home scrolls and calendar fits ${width}x${height}`, async ({
-    page,
-  }) => {
+  test(`home and calendar fit ${width}x${height}`, async ({ page }) => {
     await page.setViewportSize({ width, height });
     await page.goto("/");
     await expect(
@@ -20,21 +18,12 @@ for (const [width, height] of [
     await expect(
       page.getByRole("button", { name: "Next home page" }),
     ).toHaveCount(0);
-    await expect(page.locator(".board-task")).toHaveCount(3);
     expect(
       await page.evaluate(
         () => document.documentElement.scrollWidth <= innerWidth,
       ),
     ).toBe(true);
-    await page
-      .getByRole("heading", { name: "Lately at home" })
-      .scrollIntoViewIfNeeded();
-    await page.screenshot({
-      path: `test-results/home-scroll-${width}.png`,
-      fullPage: true,
-    });
-    await page.evaluate(() => window.scrollTo(0, 0));
-    for (const screen of ["calendar"]) {
+    for (const screen of ["home", "calendar"]) {
       if (screen === "calendar")
         await page
           .getByRole("navigation")
