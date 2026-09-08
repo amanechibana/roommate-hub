@@ -67,6 +67,8 @@ export async function POST(request: Request) {
       );
     // Claimed before the sends so an overlapping double tap sees it; a nudge
     // that reached nobody gives the slot back so a retry can go through.
+    for (const [key, at] of recent)
+      if (Date.now() - at >= NUDGE_COOLDOWN) recent.delete(key);
     recent.set(entry.id, Date.now());
     const devices = (push.subscriptions as Subscription[]).filter(
       (sub) => sub.member === target.user_id,
