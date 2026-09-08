@@ -52,6 +52,7 @@ type Props = {
   expenses: ExpensesController;
   display?: boolean;
   demo: boolean;
+  live?: boolean;
   error: string;
   onExit: () => void;
   onOpen: (kind: Kind, entry?: Entry) => void;
@@ -75,6 +76,7 @@ export default function HomeBoard({
   expenses,
   display = false,
   demo,
+  live = false,
   error,
   onExit,
   onOpen,
@@ -675,7 +677,9 @@ export default function HomeBoard({
           <span className="wall-status">
             {demo
               ? "Sample home · changes reset on reload"
-              : "Private household · updates every 15 seconds"}
+              : live
+                ? "Private household · updates live"
+                : "Private household · updates every 15 seconds"}
           </span>
           <div className="wall-pager">
             <Button
