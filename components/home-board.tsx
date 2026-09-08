@@ -31,6 +31,7 @@ import {
 import {
   dateKey,
   parseDate,
+  shiftDay,
   type Entry,
   type Household,
   type Kind,
@@ -146,10 +147,12 @@ export default function HomeBoard({
         ? "Today"
         : date < today
           ? "Overdue"
-          : parseDate(date).toLocaleDateString("en-US", {
-              month: "short",
-              day: "numeric",
-            });
+          : date === shiftDay(today, 1)
+            ? "Tomorrow"
+            : parseDate(date).toLocaleDateString("en-US", {
+                month: "short",
+                day: "numeric",
+              });
   const tasks = entries
     .filter((e) => e.kind === "task" && !e.done)
     .sort(

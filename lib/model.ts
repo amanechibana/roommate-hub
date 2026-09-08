@@ -28,6 +28,11 @@ export function dateKey(date: Date): string {
 export function parseDate(value: string): Date {
   return new Date(`${value}T12:00:00`);
 }
+export function shiftDay(date: string, days: number): string {
+  const next = parseDate(date);
+  next.setDate(next.getDate() + days);
+  return dateKey(next);
+}
 // Mirrors the server's expansion: monthly steps clamp to shorter months the
 // way Postgres date + interval does (Jan 31 -> Feb 28 -> Mar 31).
 export function seriesDates(
