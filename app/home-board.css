@@ -447,6 +447,7 @@ body {
 }
 .wall-clock time {
   --flip-h: clamp(34px, 3.4vw, 72px);
+  --flip-s: calc(var(--flip-h) * 0.58);
   display: flex;
   justify-content: flex-end;
 }
@@ -581,6 +582,20 @@ body {
   line-height: 1;
   color: #a08a68;
   padding: 0 calc(var(--flip-h) * 0.02);
+}
+.flip-clock .flip-seconds {
+  --flip-h: var(--flip-s);
+  display: flex;
+  align-self: flex-end;
+  gap: calc(var(--flip-h) * 0.08);
+}
+/* Seconds snap faster than the big cards, like the real thing. */
+.flip-clock .flip-seconds .flip-leaf-top {
+  animation-duration: 0.14s;
+}
+.flip-clock .flip-seconds .flip-leaf-bottom {
+  animation-duration: 0.22s;
+  animation-delay: 0.12s;
 }
 .flip-clock .flip-meridiem {
   align-self: flex-end;
