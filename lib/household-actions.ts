@@ -83,6 +83,17 @@ export function collapseSeries(entries: Entry[], today: string): Entry[] {
     return true;
   });
 }
+/**
+ * A calendar day shows one entry and hides the rest behind "+N", so the slot
+ * goes to whatever still wants doing: an open chore or an unpaid bill sits
+ * ahead of anything already crossed off or settled. Same order in the day
+ * dialog, so the row on the grid is the row at the top of the list.
+ */
+export function dayOrder(entries: Entry[]): Entry[] {
+  const settled = (entry: Entry) =>
+    entry.done || (isBill(entry) && billPaid(entry));
+  return [...entries].sort((a, b) => Number(settled(a)) - Number(settled(b)));
+}
 export function occurrenceAssignee(
   first: string | null,
   partner: string | undefined,
