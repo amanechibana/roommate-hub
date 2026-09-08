@@ -35,6 +35,7 @@ import {
 import { billPaid, isBill } from "@/lib/household-actions";
 import { AmbientToggle } from "@/components/ui/display-button";
 import CommuteStrip from "@/components/commute-strip";
+import FlipClock from "@/components/ui/flip-clock";
 
 type Props = {
   household: Household;
@@ -241,12 +242,7 @@ export default function HomeBoard({
           <div className="wall-clock">
             <HouseCompanion variant="wall" />
             <span className="clock-breath" aria-hidden="true" />
-            <time>
-              {now.toLocaleTimeString("en-US", {
-                hour: "numeric",
-                minute: "2-digit",
-              })}
-            </time>
+            <FlipClock />
             <span>
               {now.toLocaleDateString("en-US", {
                 weekday: "long",
