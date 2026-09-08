@@ -188,6 +188,7 @@ export default function HomeBoard({
     Math.ceil(tasks.length / limit),
     Math.ceil(events.length / limit),
     Math.ceil(shopping.length / limit),
+    display ? Math.ceil(notes.length / limit) : 1,
   );
   const activePage = page % pages;
   const visible = (items: Entry[]) =>
@@ -662,7 +663,7 @@ export default function HomeBoard({
           </div>
           {notes.length ? (
             <div className="fridge-stack">
-              {notes.map((note) => (
+              {(display ? visible(notes) : notes).map((note) => (
                 <div className="fridge-message" key={note.id}>
                   <h3>
                     {display ? (
@@ -702,6 +703,11 @@ export default function HomeBoard({
             >
               All {notes.length} notes <ArrowRight size={14} />
             </Button>
+          )}
+          {display && notes.length > limit && (
+            <small className="wall-page-hint">
+              Page {activePage + 1} of {pages}
+            </small>
           )}
         </m.section>
       </div>
@@ -792,6 +798,13 @@ export default function HomeBoard({
           {fullscreenError && (
             <p className="fullscreen-hint" role="status">
               {fullscreenError}
+              <Button
+                className="icon-button"
+                aria-label="Dismiss fullscreen message"
+                onClick={() => setFullscreenError("")}
+              >
+                <X size={14} />
+              </Button>
             </p>
           )}
         </footer>

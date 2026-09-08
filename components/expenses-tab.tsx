@@ -14,6 +14,7 @@ import {
   Wallet,
   X,
   ArrowRight,
+  ChevronDown,
 } from "lucide-react";
 import { Button } from "./ui/button";
 import { dateKey, type Entry, type Member } from "@/lib/model";
@@ -61,6 +62,12 @@ export default function ExpensesTab({
   const monthTotal = expenses
     .filter((item) => item.kind === "expense" && item.date.startsWith(month))
     .reduce((sum, item) => sum + item.amount_cents, 0);
+  const formatDate = (value: string) =>
+    new Intl.DateTimeFormat("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    }).format(new Date(`${value}T12:00:00`));
   return (
     <div className={styles.expenses}>
       <div className="page-heading">
@@ -100,8 +107,16 @@ export default function ExpensesTab({
         </div>
       )}
       {!loaded ? (
-        <div className="panel empty">
-          {error ? "Expenses aren’t available yet." : "Loading expenses…"}
+        <div className="panel expense-loading" aria-busy="true">
+          {error ? (
+            <p>{error}</p>
+          ) : (
+            <>
+              <span className="skeleton skeleton-wide" />
+              <span className="skeleton" />
+              <span className="skeleton skeleton-short" />
+            </>
+          )}
         </div>
       ) : (
         <>
@@ -212,7 +227,7 @@ export default function ExpensesTab({
                           "en-US",
                           { month: "long", year: "numeric" },
                         )}
-                        <span>⌄</span>
+                        <ChevronDown size={15} aria-hidden="true" />
                       </Collapsible.Trigger>
                       <Collapsible.Content className="expense-month-content">
                         <AnimatePresence initial={false}>
@@ -261,7 +276,7 @@ export default function ExpensesTab({
                                       : item.title}
                                   </strong>
                                   <small>
-                                    {item.date} ·{" "}
+                                    {formatDate(item.date)} ·{" "}
                                     {item.kind === "expense"
                                       ? `${name(item.paid_by)} paid · Split ${Object.keys(item.shares).length} ${Object.keys(item.shares).length === 1 ? "way" : "ways"}`
                                       : "Repayment"}

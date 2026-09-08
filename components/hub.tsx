@@ -1102,7 +1102,7 @@ export default function Hub() {
       </main>
     );
 
-  const toasts = (
+  const toasts = display ? null : (
     <div className="toast-stack">
       <AnimatePresence initial={false}>
         {notice && (

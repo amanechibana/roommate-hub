@@ -390,6 +390,93 @@ html[data-ambient="off"] .clock-breath {
   }
 }
 
+/* Keep the warm paper language coherent across CSS modules too. */
+.expenses :is(.panel, .row, .payment, .pendingRow) {
+  transition:
+    background-color 160ms ease,
+    border-color 160ms ease,
+    box-shadow 180ms ease,
+    transform 180ms var(--ui-ease);
+}
+.expenses :is(.row, .payment, .pendingRow):hover {
+  background: color-mix(in srgb, var(--sage) 58%, var(--paper));
+}
+.expenses .row:focus-visible,
+.expenses .payment button:focus-visible,
+.expenses .expense-month-heading:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+.expense-loading {
+  display: grid;
+  gap: 12px;
+  padding: 28px 22px;
+}
+.skeleton {
+  display: block;
+  width: 62%;
+  height: 14px;
+  border-radius: 999px;
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--line) 65%, transparent),
+    color-mix(in srgb, var(--paper) 75%, white),
+    color-mix(in srgb, var(--line) 65%, transparent)
+  );
+  background-size: 200% 100%;
+}
+.skeleton-wide {
+  width: 88%;
+  height: 24px;
+}
+.skeleton-short {
+  width: 38%;
+}
+html[data-ambient="on"] .skeleton {
+  animation: skeleton-shimmer 1.4s ease-in-out infinite;
+}
+@keyframes skeleton-shimmer {
+  to {
+    background-position: -200% 0;
+  }
+}
+.expense-month-heading svg {
+  transition: transform 180ms ease;
+}
+.expense-month-heading[data-state="closed"] svg {
+  transform: rotate(-90deg);
+}
+.fullscreen-hint {
+  position: relative;
+}
+.wall-display .fullscreen-hint {
+  color: #e8d6b7;
+}
+.wall-display .toast-stack {
+  display: none;
+}
+
+@media (prefers-color-scheme: dark) {
+  .shell .sidebar {
+    background: #263a2f;
+  }
+  .expenses .balance {
+    background: #354533;
+    border-color: #52634e;
+  }
+  .expenses .row:hover,
+  .expenses .payment:hover,
+  .expenses .pendingRow:hover {
+    background: #394635;
+  }
+  .expenses .rowIcon {
+    background: #4a4031;
+  }
+  .expenses .repaymentIcon {
+    background: #3d4d3b;
+  }
+}
+
 /* Presence owns dialog removal; the portal keeps it above every board surface. */
 .paper-backdrop {
   position: fixed;
