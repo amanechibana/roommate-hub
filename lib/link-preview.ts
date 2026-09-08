@@ -1,3 +1,5 @@
+import { lookup } from "node:dns/promises";
+
 // Best-effort title/price extraction for the shopping list's link autofill.
 // Stores differ wildly, so this reads the common signals (Open Graph, JSON-LD,
 // Amazon's offscreen price) and gives up quietly rather than guessing.
@@ -90,4 +92,58 @@ export function publicHostname(hostname: string): boolean {
     !host.startsWith("[") &&
     !/^\d+(\.\d+){3}$/.test(host)
   );
+}
+export function allowedPort(url: URL): boolean {
+  return url.port === "" || url.port === "80" || url.port === "443";
+}
+// Malformed addresses count as private: refusing to fetch is the safe answer.
+export function privateIPv4(ip: string): boolean {
+  const parts = ip.split(".").map(Number);
+  if (
+    parts.length !== 4 ||
+    parts.some((n) => !Number.isInteger(n) || n < 0 || n > 255)
+  )
+    return true;
+  const [a, b] = parts;
+  return (
+    a === 0 || // 0.0.0.0/8
+    a === 10 ||
+    a === 127 ||
+    (a === 100 && b >= 64 && b <= 127) || // 100.64/10 CGNAT
+    (a === 169 && b === 254) ||
+    (a === 172 && b >= 16 && b <= 31) ||
+    (a === 192 && b === 168)
+  );
+}
+export function privateAddress(address: string): boolean {
+  const ip = address
+    .toLowerCase()
+    .replace(/^\[|\]$/g, "")
+    .split("%")[0];
+  if (!ip.includes(":")) return privateIPv4(ip);
+  const mapped = ip.match(/^::ffff:(\d+(?:\.\d+){3})$/);
+  if (mapped) return privateIPv4(mapped[1]);
+  // A zero leading hextet covers ::, ::1, and hex-form v4-mapped addresses.
+  const first = ip.startsWith("::") ? 0 : parseInt(ip.split(":")[0], 16);
+  return (
+    !Number.isFinite(first) ||
+    first === 0 ||
+    (first >= 0xfc00 && first <= 0xfdff) || // fc00::/7 unique local
+    (first >= 0xfe80 && first <= 0xfebf) // fe80::/10 link local
+  );
+}
+// DNS names like 127.0.0.1.nip.io pass the string checks, so every hop is
+// resolved and all of its addresses must be public. The fetch afterwards
+// re-resolves (DNS-rebinding TOCTOU) — accepted at this app's threat level.
+export async function resolvesPublic(hostname: string): Promise<boolean> {
+  if (!publicHostname(hostname)) return false;
+  try {
+    const addresses = await lookup(hostname, { all: true });
+    return (
+      addresses.length > 0 &&
+      addresses.every((entry) => !privateAddress(entry.address))
+    );
+  } catch {
+    return false;
+  }
 }

@@ -1,8 +1,11 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
+  allowedPort,
   decodeEntities,
   parseProductPage,
+  privateAddress,
+  privateIPv4,
   publicHostname,
 } from "../lib/link-preview";
 
@@ -94,4 +97,65 @@ test("only plain public hostnames pass the fetch guard", () => {
     "",
   ])
     assert.equal(publicHostname(bad), false, bad);
+});
+
+test("only default web ports are fetchable", () => {
+  for (const good of ["https://a.com", "https://a.com:443", "http://a.com:80"])
+    assert.equal(allowedPort(new URL(good)), true, good);
+  for (const bad of [
+    "https://a.com:8443",
+    "http://a.com:81",
+    "http://a.com:6379",
+  ])
+    assert.equal(allowedPort(new URL(bad)), false, bad);
+});
+
+test("private, reserved, and malformed IPv4 addresses are rejected", () => {
+  // Covers names like 127.0.0.1.nip.io: the resolver checks what they resolve to.
+  for (const bad of [
+    "0.0.0.0",
+    "127.0.0.1",
+    "10.0.0.5",
+    "100.64.0.1",
+    "100.127.255.254",
+    "169.254.169.254",
+    "172.16.0.1",
+    "172.31.255.255",
+    "192.168.1.1",
+    "256.1.1.1",
+    "1.2.3",
+    "",
+  ])
+    assert.equal(privateIPv4(bad), true, bad);
+  for (const good of [
+    "1.1.1.1",
+    "8.8.8.8",
+    "100.63.0.1",
+    "172.32.0.1",
+    "23.185.0.4",
+  ])
+    assert.equal(privateIPv4(good), false, good);
+});
+
+test("private and reserved IPv6 addresses are rejected", () => {
+  for (const bad of [
+    "::1",
+    "::",
+    "[::1]",
+    "fc00::1",
+    "fd12:3456::1",
+    "fe80::1%en0",
+    "::ffff:127.0.0.1",
+    "::ffff:192.168.1.1",
+    "not-an-ip:",
+  ])
+    assert.equal(privateAddress(bad), true, bad);
+  for (const good of [
+    "2606:4700::1111",
+    "2001:4860:4860::8888",
+    "::ffff:8.8.8.8",
+  ])
+    assert.equal(privateAddress(good), false, good);
+  assert.equal(privateAddress("8.8.8.8"), false);
+  assert.equal(privateAddress("192.168.1.1"), true);
 });

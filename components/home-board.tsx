@@ -158,9 +158,11 @@ export default function HomeBoard({
   const repayments = suggestedRepayments(expenseBalances(expenses.expenses));
   const balanceSummary = repayments.length
     ? repayments
-        .map(
-          ({ from, to, amount }) =>
-            `${from === viewer?.user_id ? "You owe" : `${person(from)} owes`} ${to === viewer?.user_id ? "you" : person(to)} ${expenseMoney(amount)}`,
+        .map(({ from, to, amount }) =>
+          // The wall display is read by the whole home, so "you" means nothing.
+          display
+            ? `${person(from)} owes ${person(to)} ${expenseMoney(amount)}`
+            : `${from === viewer?.user_id ? "You owe" : `${person(from)} owes`} ${to === viewer?.user_id ? "you" : person(to)} ${expenseMoney(amount)}`,
         )
         .join(" · ")
     : expenses.expenses.length
@@ -471,37 +473,35 @@ export default function HomeBoard({
           <div className="board-rows">
             {/* Capacity changes are immediate; user removals still animate out. */}
             <AnimatePresence key={limit} initial={false} mode="popLayout">
-              {(display ? visible(events) : events.slice(0, limit)).map(
-                (entry) => (
-                  <PresenceRow
-                    initial={false}
-                    className="board-plan"
-                    key={entry.id}
-                  >
-                    <span className="board-date">
-                      <small>
-                        {parseDate(entry.date!).toLocaleDateString("en-US", {
-                          month: "short",
-                        })}
-                      </small>
-                      <b>{parseDate(entry.date!).getDate()}</b>
-                    </span>
-                    <div className="board-entry-copy">
-                      {title(entry)}
-                      <small>
-                        {relative(entry.date!)} · {entry.category}
-                        {entry.series_id ? " · ↻" : ""}
-                        {isBill(entry)
-                          ? ` · ${billPaid(entry) ? "Paid" : `${entry.paid_by?.length || 0}/${entry.payment_members?.length || 0} paid`}`
-                          : ""}
-                        {entry.amount != null
-                          ? ` · ${dollars(entry.amount)}`
-                          : ""}
-                      </small>
-                    </div>
-                  </PresenceRow>
-                ),
-              )}
+              {visible(events).map((entry) => (
+                <PresenceRow
+                  initial={false}
+                  className="board-plan"
+                  key={entry.id}
+                >
+                  <span className="board-date">
+                    <small>
+                      {parseDate(entry.date!).toLocaleDateString("en-US", {
+                        month: "short",
+                      })}
+                    </small>
+                    <b>{parseDate(entry.date!).getDate()}</b>
+                  </span>
+                  <div className="board-entry-copy">
+                    {title(entry)}
+                    <small>
+                      {relative(entry.date!)} · {entry.category}
+                      {entry.series_id ? " · ↻" : ""}
+                      {isBill(entry)
+                        ? ` · ${billPaid(entry) ? "Paid" : `${entry.paid_by?.length || 0}/${entry.payment_members?.length || 0} paid`}`
+                        : ""}
+                      {entry.amount != null
+                        ? ` · ${dollars(entry.amount)}`
+                        : ""}
+                    </small>
+                  </div>
+                </PresenceRow>
+              ))}
             </AnimatePresence>
             {!events.length && (
               <div className="board-empty">

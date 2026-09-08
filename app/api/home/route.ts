@@ -53,7 +53,7 @@ export async function POST(request: Request) {
         : operation === "restore"
           ? ["undo_token"]
           : operation === "payment"
-            ? ["id", "paid", "cover"]
+            ? ["id", "paid", "cover", "expense"]
             : [
                 "undo_token",
                 "rotation_partner",
@@ -88,8 +88,14 @@ export async function POST(request: Request) {
       return json({ error: "Choose who’s using this device first." }, 400);
     const result = await sharedDatabase(operation, { ...values, actor });
     broadcastChange("home", sender);
+    // A covered bill writes to the ledger too, so other screens' expense
+    // views need the ping as well.
+    if (operation === "payment" && values.expense)
+      broadcastChange("expenses", sender);
     return json(result);
-  } catch {
+  } catch (err) {
+    if ((err as { rejected?: boolean }).rejected)
+      return json({ error: (err as Error).message, rejected: true }, 400);
     return json(
       { error: "Could not save this change. Check the fields and try again." },
       400,

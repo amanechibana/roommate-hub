@@ -24,9 +24,11 @@ export default function PushSettings() {
     if (!KEY || !("serviceWorker" in navigator) || !("PushManager" in window)) {
       // iOS Safari only exposes PushManager once the app is installed to the
       // Home Screen, so nudge instead of declaring the device unsupported.
+      // iPadOS reports itself as Macintosh; touch points give it away.
       if (
         KEY &&
-        /iPad|iPhone|iPod/.test(navigator.userAgent) &&
+        (/iPad|iPhone|iPod/.test(navigator.userAgent) ||
+          (navigator.maxTouchPoints > 1 && /Mac/.test(navigator.userAgent))) &&
         !window.matchMedia("(display-mode: standalone)").matches
       )
         setNeedsInstall(true);
@@ -36,7 +38,22 @@ export default function PushSettings() {
     navigator.serviceWorker
       .getRegistration()
       .then((registration) => registration?.pushManager.getSubscription())
-      .then((subscription) => setState(subscription ? "on" : "off"))
+      .then((subscription) => {
+        if (!subscription) return setState("off");
+        setState("on");
+        // Idempotent re-subscribe: refreshes the server's last-seen and
+        // self-heals a lost row. Only an explicit rejection means this device
+        // isn't really on — a network blip or signed-out state must not tear
+        // down a healthy subscription.
+        void homeRequest("/api/push", "POST", {
+          operation: "subscribe",
+          subscription: subscription.toJSON(),
+        }).catch((err: Error & { rejected?: boolean }) => {
+          if (!err.rejected) return;
+          void subscription.unsubscribe().catch(() => {});
+          setState("off");
+        });
+      })
       .catch(() => setState("off"));
   }, []);
 
@@ -52,10 +69,16 @@ export default function PushSettings() {
         userVisibleOnly: true,
         applicationServerKey: serverKey(KEY!) as BufferSource,
       });
-      await homeRequest("/api/push", "POST", {
-        operation: "subscribe",
-        subscription: subscription.toJSON(),
-      });
+      try {
+        await homeRequest("/api/push", "POST", {
+          operation: "subscribe",
+          subscription: subscription.toJSON(),
+        });
+      } catch (err) {
+        // Don't leave the browser subscribed when the server never heard of it.
+        await subscription.unsubscribe().catch(() => {});
+        throw err;
+      }
       setState("on");
       setMessage("This device gets the morning digest now.");
     } catch (err) {

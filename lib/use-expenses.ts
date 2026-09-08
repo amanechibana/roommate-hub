@@ -9,6 +9,7 @@ export function useExpenses(
   memberId: string | null,
   demo: boolean,
   active: boolean,
+  sync?: { drain: () => Promise<void>; resolveId: (id: string) => string },
 ) {
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [loaded, setLoaded] = useState(false);
@@ -84,16 +85,35 @@ export function useExpenses(
     const current = generation.current;
     writes.current = writes.current.then(async () => {
       try {
+        let resolved = payload;
+        // Wait out the home queue and mirror its optimistic-id remaps so a
+        // purchase logged before its entry finishes saving still shares the
+        // entry's final id.
+        if (sync && typeof payload.id === "string") {
+          await sync.drain();
+          const id = sync.resolveId(payload.id);
+          if (id !== payload.id) {
+            const previous = payload.id;
+            resolved = { ...payload, id };
+            setExpenses((current) =>
+              current.map((item) =>
+                item.id === previous ? { ...item, id } : item,
+              ),
+            );
+          }
+        }
         await homeRequest("/api/expenses", "POST", {
           operation,
-          payload,
+          payload: resolved,
           sender: TAB_ID,
         });
-      } catch {
+      } catch (err) {
         if (generation.current === current) {
           recovery.current = true;
           setError(
-            "Couldn’t save that expense. Refreshing the shared records.",
+            (err as Error & { rejected?: boolean }).rejected
+              ? (err as Error).message
+              : "Couldn’t save that expense. Refreshing the shared records.",
           );
         }
       } finally {
@@ -109,30 +129,61 @@ export function useExpenses(
       }
     });
   }
+  // Purchases pass the entry's id so double-logging is caught here and by the
+  // server's idempotent create.
+  function create(values: ExpenseValues, id: string) {
+    if (!memberId || !householdId) return;
+    setError("");
+    setExpenses((current) => [
+      {
+        ...values,
+        id,
+        household_id: householdId,
+        created_by: memberId,
+        created_at: new Date().toISOString(),
+      },
+      ...current,
+    ]);
+    persist("create", { ...values, id });
+  }
   function save(values: ExpenseValues, id?: string) {
     if (!memberId || !householdId) return;
-    const eid = id || crypto.randomUUID();
+    if (!id) return create(values, crypto.randomUUID());
     setError("");
-    if (id)
-      setExpenses((current) =>
-        current.map((item) => (item.id === id ? { ...item, ...values } : item)),
-      );
-    else
-      setExpenses((current) => [
-        {
-          ...values,
-          id: eid,
-          household_id: householdId,
-          created_by: memberId,
-          created_at: new Date().toISOString(),
-        },
-        ...current,
-      ]);
-    persist(id ? "update" : "create", { ...values, id: eid });
+    setExpenses((current) =>
+      current.map((item) => (item.id === id ? { ...item, ...values } : item)),
+    );
+    persist("update", { ...values, id });
+  }
+  // Optimistic insert without an expense write; the caller persists the row
+  // through another channel, so only bump the revision to keep in-flight
+  // reads from clobbering it.
+  function inject(expense: Expense) {
+    revision.current++;
+    setExpenses((current) => [expense, ...current]);
   }
   function remove(id: string) {
     setExpenses((current) => current.filter((item) => item.id !== id));
     persist("delete", { id });
+  }
+  // An expense persisted through another queue (a cover payment on the home
+  // queue) holds that promise here so polls and pings defer exactly like they
+  // do during a native expense write.
+  function hold(promise: Promise<unknown>) {
+    pending.current++;
+    const current = generation.current;
+    const release = () => {
+      pending.current--;
+      if (
+        !pending.current &&
+        recovery.current &&
+        current === generation.current
+      ) {
+        recovery.current = false;
+        void refresh();
+      }
+    };
+    void promise.then(release, release);
   }
   // Realtime change ping from another device. During a local write the ping
   // is deferred to after the queue drains, like failure recovery.
@@ -148,8 +199,16 @@ export function useExpenses(
     refresh,
     ping,
     save,
+    create,
+    inject,
+    hold,
     remove,
     flush: () => writes.current,
+    // Failure hook for a held write: the refresh runs when the hold drains,
+    // mirroring a native write failure.
+    recover: () => {
+      recovery.current = true;
+    },
     dismissError: () => setError(""),
   };
 }

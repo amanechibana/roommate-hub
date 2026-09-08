@@ -29,6 +29,8 @@ export async function POST(request: Request) {
     const { code } = JSON.parse(body);
     if (typeof code !== "string" || code.length > 128)
       return json({ error: "Enter your household code." }, 400);
+    // Forwarded-for headers are platform-controlled on Vercel; on any other
+    // host they're spoofable, so the limiter is best-effort there.
     const ip =
       request.headers.get("x-vercel-forwarded-for")?.split(",")[0]?.trim() ||
       request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
@@ -44,6 +46,9 @@ export async function POST(request: Request) {
       return json({ error: "Too many tries. Please wait 15 minutes." }, 429);
     if (!equalSecret(code, process.env.HOUSEHOLD_ACCESS_CODE!))
       return json({ error: "That code doesn’t match. Try again." }, 401);
+    // Both roommates share a NAT IP; a successful sign-in must not leave
+    // failed-attempt credit behind that could lock the other one out.
+    await sharedDatabase("attempt_clear", { fingerprint }).catch(() => {});
     (await cookies()).set(
       COOKIE_NAME,
       makeSession(

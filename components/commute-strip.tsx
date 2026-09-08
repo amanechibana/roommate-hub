@@ -113,6 +113,9 @@ export default function CommuteStrip({
   const [failed, setFailed] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [updatedAt, setUpdatedAt] = useState<Date | null>(null);
+  // When the server fetched the oldest board's data, as opposed to when this
+  // client last asked; the honest timestamp to show while boards are stale.
+  const [dataAt, setDataAt] = useState<Date | null>(null);
   const [stale, setStale] = useState(false);
   // Unix seconds, stepped every few seconds so the countdowns stay honest
   // between the 30-second polls rather than freezing on the last response.
@@ -146,6 +149,14 @@ export default function CommuteStrip({
   // Depend on the contents of the list, not the array identity, so re-reading
   // storage with the same stations does not retrigger every request.
   const key = JSON.stringify(stations);
+
+  // The list the loaders should still answer for. A slow response that raced
+  // a station-list change is dropped, so a removed station cannot resurrect
+  // on a late reply. This effect runs before the loader effects below.
+  const keyRef = useRef(key);
+  useEffect(() => {
+    keyRef.current = key;
+  }, [key]);
 
   const loadTrains = useCallback(async () => {
     const chosen: CommuteStation[] = JSON.parse(key);
@@ -183,21 +194,32 @@ export default function CommuteStrip({
         };
       }),
     );
+    if (keyRef.current !== key) return;
     const good = results.filter((board): board is Departures => Boolean(board));
     // Keep the previous board on a total failure rather than blanking the wall.
     if (good.length) setBoards(good);
     setFailed(good.length < results.length);
     // Say so when any board is the upstream's last known state rather than live.
     setStale(good.some((board) => board.stale));
-    if (good.length) setUpdatedAt(new Date());
+    if (good.length) {
+      setUpdatedAt(new Date());
+      // The oldest board bounds how current the data actually is.
+      setDataAt(
+        new Date(
+          Math.min(...good.map((board) => board.fetchedAt ?? Date.now())),
+        ),
+      );
+    }
   }, [key]);
 
   const [alerts, setAlerts] = useState<TransitAlert[]>([]);
+  const [alertsStale, setAlertsStale] = useState(false);
   const loadAlerts = useCallback(async () => {
     const chosen: CommuteStation[] = JSON.parse(key);
     const subway = chosen.filter((station) => station.system === "subway");
     if (!subway.length) {
       setAlerts([]);
+      setAlertsStale(false);
       return;
     }
     try {
@@ -207,8 +229,19 @@ export default function CommuteStrip({
           .join(",")}`,
         { cache: "no-store" },
       );
-      if (!response.ok) return;
-      const data = (await response.json()) as { alerts?: TransitAlert[] };
+      if (keyRef.current !== key) return;
+      if (!response.ok) {
+        // Without an answer for the current list, alerts for stations since
+        // removed must not linger on the strip.
+        setAlerts([]);
+        setAlertsStale(false);
+        return;
+      }
+      const data = (await response.json()) as {
+        alerts?: TransitAlert[];
+        stale?: boolean;
+      };
+      if (keyRef.current !== key) return;
       // A route filtered off every board is not worth a banner either.
       const chosenLines = subway.flatMap((station) => station.lines);
       const showAll = subway.some((station) => !station.lines.length);
@@ -219,6 +252,7 @@ export default function CommuteStrip({
             alert.routes.some((route) => chosenLines.includes(route)),
         ),
       );
+      setAlertsStale(Boolean(data.stale));
     } catch {
       // Keep the previous alerts until a load succeeds.
     }
@@ -342,12 +376,18 @@ export default function CommuteStrip({
             <strong>{weather.temperature}°</strong>
             <small>
               {weather.description}
+              {Math.abs(weather.feelsLike - weather.temperature) >= 3
+                ? ` · feels ${weather.feelsLike}°`
+                : ""}
               {weather.high !== null && weather.low !== null
                 ? ` · H ${weather.high}° L ${weather.low}°`
                 : ""}
               {weather.precipitation !== null && weather.precipitation >= 20
-                ? ` · ${weather.precipitation}% rain`
+                ? ` · ${weather.precipitation}% ${
+                    weather.icon === "snow" ? "snow" : "rain"
+                  }`
                 : ""}
+              {weather.stale ? " · not live" : ""}
             </small>
           </div>
         ) : (
@@ -369,9 +409,18 @@ export default function CommuteStrip({
             (departure.walk
               ? leave !== null && leave >= 0 && leave <= 1
               : (minutesUntil(departure, now) ?? 9) <= 1);
+          // Negative leave time means the walk is longer than the countdown:
+          // the train still runs, but not for you.
+          const missed = leave !== null && leave < 0;
           return (
             <div
-              className={due ? "commute-train commute-due" : "commute-train"}
+              className={
+                due
+                  ? "commute-train commute-due"
+                  : missed
+                    ? "commute-train commute-missed"
+                    : "commute-train"
+              }
               key={departure.id}
             >
               <span
@@ -393,8 +442,10 @@ export default function CommuteStrip({
                   {departure.line !== "PATH" && departure.note
                     ? ` · ${departure.note}`
                     : ""}
-                  {leave !== null && leave >= 0
-                    ? ` · leave ${leave <= 1 ? "now" : `in ${leave} min`}`
+                  {leave !== null
+                    ? leave >= 0
+                      ? ` · leave ${leave <= 1 ? "now" : `in ${leave} min`}`
+                      : " · too late to walk it"
                     : ""}
                 </small>
               </div>
@@ -423,13 +474,16 @@ export default function CommuteStrip({
       </div>
 
       <div className="commute-actions">
-        {(stale || failed) && !!departures.length && (
+        {(((stale || failed) && !!departures.length) ||
+          (alertsStale && !!alerts.length)) && (
           <span
             className="commute-stale"
             title={
               failed
                 ? "One of your stations could not be reached; showing what did load."
-                : "The agency feed is unreachable, so these are the last known times."
+                : stale
+                  ? "The agency feed is unreachable, so these are the last known times."
+                  : "The alerts feed is unreachable, so these may be out of date."
             }
           >
             <CloudOff size={14} aria-hidden="true" />
@@ -442,13 +496,20 @@ export default function CommuteStrip({
           disabled={refreshing}
           aria-label="Refresh weather and departures"
           title={
-            updatedAt
-              ? `Updated ${updatedAt.toLocaleTimeString("en-US", {
+            // Stale boards are only as current as the server's last good
+            // fetch, so claiming the client's poll time would be a lie.
+            stale && dataAt
+              ? `As of ${dataAt.toLocaleTimeString("en-US", {
                   hour: "numeric",
                   minute: "2-digit",
-                  second: "2-digit",
                 })}`
-              : "Refresh weather and departures"
+              : updatedAt
+                ? `Updated ${updatedAt.toLocaleTimeString("en-US", {
+                    hour: "numeric",
+                    minute: "2-digit",
+                    second: "2-digit",
+                  })}`
+                : "Refresh weather and departures"
           }
         >
           <RefreshCw size={16} className={refreshing ? "commute-spin" : ""} />
@@ -468,7 +529,15 @@ export default function CommuteStrip({
       {!!alerts.length && (
         <div className="commute-alerts">
           {alerts.slice(0, display ? 3 : 2).map((alert) => (
-            <p className="commute-alert" key={alert.id} title={alert.text}>
+            <p
+              className={
+                alert.planned
+                  ? "commute-alert commute-planned"
+                  : "commute-alert"
+              }
+              key={alert.id}
+              title={alert.text}
+            >
               <TriangleAlert size={13} aria-hidden="true" />
               {alert.routes.slice(0, 4).map((route) => (
                 <span
@@ -479,6 +548,9 @@ export default function CommuteStrip({
                   {route}
                 </span>
               ))}
+              {alert.planned && (
+                <span className="commute-alert-tag">Planned</span>
+              )}
               <span className="commute-alert-text">{alert.text}</span>
             </p>
           ))}

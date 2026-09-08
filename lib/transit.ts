@@ -44,6 +44,8 @@ export type Departures = {
   updated: number | null;
   /** True when the upstream failed and these are the last known times. */
   stale?: boolean;
+  /** Milliseconds when the server actually fetched the upstream payload. */
+  fetchedAt?: number;
 };
 
 export type Weather = {
@@ -55,6 +57,10 @@ export type Weather = {
   /** Matches the icon set in components/commute-strip.tsx. */
   icon: "sun" | "cloud-sun" | "cloud" | "rain" | "snow" | "storm" | "fog";
   precipitation: number | null;
+  /** True when the upstream failed and this is the last cached reading. */
+  stale?: boolean;
+  /** Milliseconds when the server actually fetched the reading. */
+  fetchedAt?: number;
 };
 
 export type SubwayStation = {
@@ -129,11 +135,19 @@ const routeColors: Record<string, string> = {
   SIR: "0039A6",
 };
 
+/**
+ * Folds a realtime route id down to the rider-facing label the station table
+ * uses: GS/FS/H are the three S shuttles, SI is the railway, and a trailing X
+ * marks an express run of the same line.
+ */
+export function normalizeSubwayRoute(route: string): string {
+  if (route === "GS" || route === "FS" || route === "H") return "S";
+  if (route === "SI") return "SIR";
+  return route.replace(/X$/, "");
+}
+
 export function subwayColor(route: string): string {
-  // Realtime feeds use FS/GS/H for the three shuttles and SI for the railway.
-  if (route === "FS" || route === "GS" || route === "H") return routeColors.S;
-  if (route === "SI") return routeColors.SIR;
-  return routeColors[route] ?? "6E6E73";
+  return routeColors[normalizeSubwayRoute(route)] ?? "6E6E73";
 }
 
 /** One stop on the household's departure board. */
@@ -457,10 +471,12 @@ export function buildSubwayDepartures(
     const seconds = arrival.time - now;
     // Drop trains that have already gone; keep a little slack for clock skew.
     if (seconds < -30) continue;
+    // Rider-facing label, so filters and colours match the station table.
+    const line = normalizeSubwayRoute(arrival.route);
     departures.push({
       id: `${arrival.stopId}-${arrival.route}-${arrival.time}`,
-      line: arrival.route,
-      colors: [subwayColor(arrival.route)],
+      line,
+      colors: [subwayColor(line)],
       // The MTA labels platforms by where they lead ("Uptown", "Brooklyn"),
       // which is the useful headline; the station name gives it context.
       headsign: suffix === "N" ? station.north : station.south,
@@ -485,7 +501,9 @@ export function buildSubwayDepartures(
     station: station.name,
     system: "Subway",
     departures: unique,
-    updated: now,
+    // The feed header's generation stamp is not parsed, and claiming the
+    // caller's clock as "updated" would fabricate freshness.
+    updated: null,
   };
 }
 
@@ -525,4 +543,54 @@ export function describeWeather(code: number): {
   icon: Weather["icon"];
 } {
   return weatherCodes[code] ?? { text: "—", icon: "cloud" };
+}
+
+type OpenMeteo = {
+  current?: {
+    temperature_2m?: number;
+    apparent_temperature?: number;
+    weather_code?: number;
+  };
+  daily?: {
+    temperature_2m_max?: number[];
+    temperature_2m_min?: number[];
+    precipitation_probability_max?: number[];
+  };
+};
+
+/**
+ * Normalises an Open-Meteo payload. Throws when the current temperature is
+ * missing or not a number: a 200 with no reading is an outage, not a 0°
+ * morning, and the route should fall back to its stale cache instead.
+ */
+export function parseWeather(data: unknown): Weather {
+  const payload = (data ?? {}) as OpenMeteo;
+  const current = payload.current ?? {};
+  const daily = payload.daily ?? {};
+  if (
+    typeof current.temperature_2m !== "number" ||
+    !Number.isFinite(current.temperature_2m)
+  )
+    throw new Error("Weather upstream sent no current temperature");
+  const { text, icon } = describeWeather(current.weather_code ?? -1);
+  return {
+    temperature: Math.round(current.temperature_2m),
+    feelsLike: Math.round(
+      typeof current.apparent_temperature === "number" &&
+        Number.isFinite(current.apparent_temperature)
+        ? current.apparent_temperature
+        : current.temperature_2m,
+    ),
+    high:
+      daily.temperature_2m_max?.[0] != null
+        ? Math.round(daily.temperature_2m_max[0])
+        : null,
+    low:
+      daily.temperature_2m_min?.[0] != null
+        ? Math.round(daily.temperature_2m_min[0])
+        : null,
+    description: text,
+    icon,
+    precipitation: daily.precipitation_probability_max?.[0] ?? null,
+  };
 }

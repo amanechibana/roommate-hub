@@ -13,6 +13,8 @@ import {
   hasDeparted,
   leaveInMinutes,
   minutesUntil,
+  normalizeSubwayRoute,
+  parseWeather,
   searchPathStations,
   stationKey,
   toggleFilter,
@@ -232,6 +234,51 @@ test("builds subway departures from realtime stop ids", () => {
       ["A", 2, "Uptown", "Test St"],
     ],
   );
+  // No generation stamp is parsed from the feed, so none is claimed.
+  assert.equal(result.updated, null);
+});
+
+test("normalizes realtime route ids to rider-facing labels", () => {
+  assert.equal(normalizeSubwayRoute("GS"), "S");
+  assert.equal(normalizeSubwayRoute("FS"), "S");
+  assert.equal(normalizeSubwayRoute("H"), "S");
+  assert.equal(normalizeSubwayRoute("SI"), "SIR");
+  assert.equal(normalizeSubwayRoute("6X"), "6");
+  assert.equal(normalizeSubwayRoute("7X"), "7");
+  // Labels the station table already uses pass through untouched.
+  assert.equal(normalizeSubwayRoute("A"), "A");
+  assert.equal(normalizeSubwayRoute("SIR"), "SIR");
+});
+
+test("labels departures with the rider-facing route, not the feed id", () => {
+  const now = 1_000_000;
+  const shuttle: SubwayStation = {
+    ...grove,
+    id: "901",
+    routes: ["S", "6"],
+  };
+  const result = buildSubwayDepartures(
+    [
+      { route: "GS", stopId: "901N", time: now + 120 },
+      { route: "6X", stopId: "901S", time: now + 240 },
+    ],
+    shuttle,
+    now,
+  );
+  assert.deepEqual(
+    result.departures.map((d) => [d.line, d.colors[0]]),
+    [
+      ["S", "808183"],
+      ["6", "00933C"],
+    ],
+  );
+  // A chip built from the station table's "S" now matches the GS departure.
+  assert.deepEqual(
+    filterDepartures(result.departures, { lines: ["S"], headsigns: [] }).map(
+      (d) => d.line,
+    ),
+    ["S"],
+  );
 });
 
 test("drops departed trains and de-duplicates shared feeds", () => {
@@ -292,10 +339,13 @@ test("gathers every feed a transfer station needs", () => {
   }
 });
 
-test("gives shuttles and the railway a colour", () => {
+test("gives shuttles, expresses, and the railway a colour", () => {
   assert.equal(subwayColor("FS"), subwayColor("GS"));
   assert.equal(subwayColor("1"), "EE352E");
   assert.equal(subwayColor("SI"), "0039A6");
+  // Express runs share their local's colour rather than falling to gray.
+  assert.equal(subwayColor("6X"), "00933C");
+  assert.equal(subwayColor("7X"), "B933AD");
   // An unrecognised route still renders rather than throwing.
   assert.match(subwayColor("ZZ"), /^[0-9A-F]{6}$/);
 });
@@ -614,4 +664,45 @@ test("describes weather codes and falls back for unknown ones", () => {
   assert.equal(describeWeather(71).icon, "snow");
   assert.equal(describeWeather(-1).icon, "cloud");
   assert.equal(describeWeather(4242).text, "—");
+});
+
+test("parses an Open-Meteo payload into a rounded reading", () => {
+  const weather = parseWeather({
+    current: {
+      temperature_2m: 33.4,
+      apparent_temperature: 25.2,
+      weather_code: 71,
+    },
+    daily: {
+      temperature_2m_max: [36.1],
+      temperature_2m_min: [28.9],
+      precipitation_probability_max: [80],
+    },
+  });
+  assert.equal(weather.temperature, 33);
+  assert.equal(weather.feelsLike, 25);
+  assert.equal(weather.high, 36);
+  assert.equal(weather.low, 29);
+  assert.equal(weather.icon, "snow");
+  assert.equal(weather.precipitation, 80);
+});
+
+test("treats a body with no real temperature as an upstream failure", () => {
+  // A 200 with no current reading must not render as a 0° morning.
+  assert.throws(() => parseWeather({}));
+  assert.throws(() => parseWeather(null));
+  assert.throws(() => parseWeather({ current: {} }));
+  assert.throws(() => parseWeather({ current: { temperature_2m: "33" } }));
+  assert.throws(() => parseWeather({ current: { temperature_2m: NaN } }));
+});
+
+test("weather tolerates missing feels-like and daily blocks", () => {
+  const weather = parseWeather({ current: { temperature_2m: 50.4 } });
+  assert.equal(weather.temperature, 50);
+  // Falls back to the air temperature so the chip never invents a gap.
+  assert.equal(weather.feelsLike, 50);
+  assert.equal(weather.high, null);
+  assert.equal(weather.low, null);
+  assert.equal(weather.precipitation, null);
+  assert.equal(weather.icon, "cloud");
 });

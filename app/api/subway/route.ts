@@ -58,10 +58,13 @@ export async function GET(request: Request) {
   const arrivals: Arrival[] = [];
   let stale = false;
   let ok = 0;
+  // The board is only as fresh as its oldest feed.
+  let fetchedAt = Date.now();
   for (const result of results) {
     if (result.status !== "fulfilled") continue;
     ok += 1;
     stale = stale || !result.value.fresh;
+    fetchedAt = Math.min(fetchedAt, result.value.at);
     arrivals.push(...result.value.value);
   }
   if (!ok)
@@ -75,7 +78,7 @@ export async function GET(request: Request) {
     {
       ...buildSubwayDepartures(arrivals, station, now),
       stale: stale || ok < feeds.length,
-      fetchedAt: Date.now(),
+      fetchedAt,
     },
     { headers: { "Cache-Control": "public, max-age=15, s-maxage=20" } },
   );
