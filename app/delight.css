@@ -514,6 +514,18 @@ html[data-ambient="on"] .skeleton {
 }
 [data-order-row] {
   position: relative;
+  transition:
+    background-color 160ms ease,
+    box-shadow 160ms ease;
+}
+/* Rows are transparent at rest; give the lifted one its own paper so it
+   doesn't read through the neighbors it passes over. */
+[data-order-row][data-dragging] {
+  z-index: 3;
+  background: var(--paper);
+  border-radius: var(--radius-sm);
+  border-top-color: transparent;
+  box-shadow: var(--shadow-md);
 }
 .animated-money {
   font-variant-numeric: tabular-nums;

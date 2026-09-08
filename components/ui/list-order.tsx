@@ -66,20 +66,27 @@ export function DraggableRow({
   const y = useMotionValue(0);
   const { reduced } = useHouseMotion();
   const ref = useRef<HTMLDivElement>(null);
+  const listRef = useRef<Element | null>(null);
   const [message, setMessage] = useState("");
+  const [dragging, setDragging] = useState(false);
   return (
     <PresenceRow
       ref={ref}
       className={className}
       data-order-row="true"
+      data-dragging={dragging || undefined}
       drag="y"
       dragListener={false}
       dragControls={controls}
+      dragConstraints={listRef}
+      dragElastic={0.08}
       style={{ y }}
       dragSnapToOrigin={!reduced}
       dragMomentum={false}
       whileDrag={reduced ? undefined : { scale: 1.015, zIndex: 3 }}
+      onDragStart={() => setDragging(true)}
       onDragEnd={(_, info) => {
+        setDragging(false);
         const rows = [
           ...(ref.current?.parentElement?.querySelectorAll<HTMLElement>(
             '[data-order-row="true"]',
@@ -100,7 +107,10 @@ export function DraggableRow({
         aria-label={`Reorder ${title}`}
         title="Drag to reorder, or use arrow keys"
         aria-description="Use Up and Down arrow keys to move this item. Order is saved on this device."
-        onPointerDown={(event) => controls.start(event)}
+        onPointerDown={(event) => {
+          listRef.current = ref.current?.parentElement ?? null;
+          controls.start(event);
+        }}
         onKeyDown={(event) => {
           if (!["ArrowUp", "ArrowDown", "Home", "End"].includes(event.key))
             return;
