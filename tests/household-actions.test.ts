@@ -9,6 +9,7 @@ import {
   editEntries,
   remoteActivity,
   collapseSeries,
+  dayOrder,
 } from "../lib/household-actions";
 
 test("chores alternate from the selected first person", () => {
@@ -144,5 +145,24 @@ test("a recurring series shows overdue occurrences and only its next one", () =>
   assert.deepEqual(
     collapseSeries(other, "2026-09-08").map((e) => e.id),
     ["oct", "dinner"],
+  );
+});
+
+test("a calendar day gives its one visible slot to what still needs doing", () => {
+  const rent = demoData().entries.find((e) => e.category === "Rent")!;
+  const chore = demoData().entries.find((e) => e.category === "Chore")!;
+  const finished = { ...chore, id: "finished", done: true };
+  assert.deepEqual(
+    dayOrder([finished, rent]).map((e) => e.id),
+    [rent.id, "finished"],
+  );
+  // A paid bill asks nothing of anyone either, so an open chore goes first.
+  assert.deepEqual(
+    dayOrder([markAllPaid(rent), chore]).map((e) => e.id),
+    [chore.id, rent.id],
+  );
+  assert.deepEqual(
+    dayOrder([chore, rent]).map((e) => e.id),
+    [chore.id, rent.id],
   );
 });

@@ -3,7 +3,7 @@ import { Empty } from "./house-dialogs";
 
 import { Button } from "@/components/ui/button";
 
-import { billPaid, isBill } from "@/lib/household-actions";
+import { billPaid, dayOrder, isBill } from "@/lib/household-actions";
 import { dateKey, parseDate } from "@/lib/model";
 import { ArrowDownToLine, ChevronLeft, ChevronRight } from "lucide-react";
 import { type CSSProperties } from "react";
@@ -192,8 +192,10 @@ export default function CalendarTab({
                   i,
               );
               const key = dateKey(date);
-              const dayEntries = entries.filter(
-                (e) => e.date === key && ["task", "event"].includes(e.kind),
+              const dayEntries = dayOrder(
+                entries.filter(
+                  (e) => e.date === key && ["task", "event"].includes(e.kind),
+                ),
               );
               return (
                 <div

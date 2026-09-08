@@ -18,6 +18,7 @@ import HomeBoard from "@/components/home-board";
 import HubSkeleton from "@/components/hub-skeleton";
 import { DisplayButton } from "@/components/ui/display-button";
 import { SegmentedControl } from "@/components/ui/segmented-control";
+import { dayOrder } from "@/lib/household-actions";
 import { safeUrl, type Entry, type Kind, type Member } from "@/lib/model";
 import {
   ArrowRight,
@@ -867,9 +868,11 @@ export default function Hub() {
           <DayDialog
             key="day"
             date={selectedDay}
-            entries={entries.filter(
-              (e) =>
-                e.date === selectedDay && ["task", "event"].includes(e.kind),
+            entries={dayOrder(
+              entries.filter(
+                (e) =>
+                  e.date === selectedDay && ["task", "event"].includes(e.kind),
+              ),
             )}
             person={person}
             onClose={() => setSelectedDay(null)}
