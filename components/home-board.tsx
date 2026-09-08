@@ -128,6 +128,10 @@ export default function HomeBoard({
   );
   const person = (id: string | null) =>
     members.find((m) => m.user_id === id)?.name || "Everyone";
+  // One person reads the overview, so their own name there is just "you". The
+  // wall is read by the whole house and keeps names, like the balance line.
+  const isViewer = (id: string | null) =>
+    !display && !!id && id === viewer?.user_id;
   const relative = (date: string) => {
     const days = Math.round(
       (parseDate(date).getTime() - parseDate(today).getTime()) / 86400000,
@@ -601,7 +605,9 @@ export default function HomeBoard({
                         entry.date && entry.date < today ? "board-overdue" : ""
                       }
                     >
-                      {entry.assignee ? `${person(entry.assignee)} · ` : ""}
+                      {entry.assignee
+                        ? `${isViewer(entry.assignee) ? "You" : person(entry.assignee)} · `
+                        : ""}
                       {friendly(entry.date)}
                       {entry.series_id ? " · ↻" : ""}
                     </small>
@@ -654,7 +660,7 @@ export default function HomeBoard({
                     {title(entry)}
                     <small>
                       {entry.assignee
-                        ? `${person(entry.assignee)} is getting it · `
+                        ? `${isViewer(entry.assignee) ? "You’re" : `${person(entry.assignee)} is`} getting it · `
                         : ""}
                       {entry.category}
                       {entry.amount != null
