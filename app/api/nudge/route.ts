@@ -65,6 +65,9 @@ export async function POST(request: Request) {
         { error: `${target.name} was nudged about that a moment ago.` },
         429,
       );
+    // Claimed before the sends so an overlapping double tap sees it; a nudge
+    // that reached nobody gives the slot back so a retry can go through.
+    recent.set(entry.id, Date.now());
     const devices = (push.subscriptions as Subscription[]).filter(
       (sub) => sub.member === target.user_id,
     );
@@ -82,8 +85,8 @@ export async function POST(request: Request) {
         )
           sent++;
     }
-    if (sent) recent.set(entry.id, Date.now());
-    return json({ sent, name: target.name });
+    if (!sent) recent.delete(entry.id);
+    return json({ sent, devices: devices.length });
   } catch (err) {
     console.error("POST /api/nudge", err);
     return json({ error: "Couldn’t send the nudge. Try again." }, 503);

@@ -647,12 +647,20 @@ export function useHousehold() {
   // so nothing here is optimistic: the toast waits for the server's word.
   async function nudge(entry: Entry) {
     const name = person(entry.assignee);
+    setError("");
     try {
-      const result = await homeRequest("/api/nudge", "POST", { id: entry.id });
+      // A hand-off or a fresh to-do may still be in the queue; the server
+      // reads the database, so let it catch up before asking who to poke.
+      await writes.current;
+      const result = await homeRequest("/api/nudge", "POST", {
+        id: savedIds.current.get(entry.id) || entry.id,
+      });
       setNotice(
         result.sent
           ? `Nudged ${name}`
-          : `${name} hasn’t turned on reminders on any device`,
+          : result.devices
+            ? `Couldn’t reach ${name}’s phone right now`
+            : `${name} hasn’t turned on reminders on any device`,
       );
     } catch (err) {
       setError((err as Error).message);
