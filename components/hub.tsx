@@ -4,6 +4,7 @@ import { EntryMenu, MemberCard, NoteComposer } from "./ui/house-controls";
 import { DraggableRow } from "./ui/list-order";
 import { PresenceRow, memberPaper } from "./ui/presence";
 
+import { activityWhen } from "@/lib/activity";
 import { HouseCompanion } from "@/components/ui/house-companion";
 import { expenseBalances } from "@/lib/expenses";
 import ExpensesTab from "./expenses-tab";
@@ -392,6 +393,7 @@ export default function Hub() {
   );
 
   const PageIcon = tabs.find((item) => item.name === tab)?.icon || Settings;
+  const now = new Date();
   const openTasks = tasks.filter((entry) => !entry.done);
   const doneCount = tasks.length - openTasks.length;
   const neededItems = shopping.filter((entry) => !entry.done);
@@ -819,7 +821,8 @@ export default function Hub() {
                         <h3>{entry.title}</h3>
                         <p>{entry.description}</p>
                         <span>
-                          — {person(entry.assignee || entry.created_by)}
+                          — {person(entry.assignee || entry.created_by)} ·{" "}
+                          {activityWhen(Date.parse(entry.created_at), now)}
                         </span>
                       </Button>
                     </PresenceRow>
