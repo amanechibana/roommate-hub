@@ -234,3 +234,16 @@
     display: block;
   }
 }
+.companion[data-night="true"] .eyes {
+  transform: scaleY(0.5);
+  transform-origin: center;
+}
+.companion[data-night="true"] .cloud {
+  opacity: 0.3;
+}
+.companion[data-night="true"] .sun {
+  animation: none;
+}
+html[data-ambient="on"] .companion[data-night="true"] .cat {
+  animation-duration: 9s;
+}

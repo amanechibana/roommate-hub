@@ -11,14 +11,16 @@ export function HouseCompanion({
   variant?: "sill" | "compact" | "wall";
 }) {
   const skyId = useId();
-  const { celebration, celebrate, reduced } = useHouseMotion();
+  const { celebration, celebrate, reduced, hour, weather } = useHouseMotion();
   return (
     <button
       type="button"
       className={`${styles.companion} ${styles[variant]}`}
       aria-label="Pet the house cat"
       title="Pet the house cat"
-      onClick={celebrate}
+      onClick={() => celebrate()}
+      data-night={hour < 6 || hour >= 20}
+      data-weather={weather?.icon || "clear"}
       data-reaction={celebration}
     >
       <svg
@@ -34,14 +36,54 @@ export function HouseCompanion({
         <g className={styles.room}>
           <rect x="22" y="2" width="172" height="131" rx="13" fill="#d4dcca" />
           <g clipPath={`url(#${skyId})`}>
-            <path fill="#b8d2cb" d="M29 9h158v116H29z" />
+            <path
+              fill={
+                hour < 6 || hour >= 20
+                  ? "#3d4c61"
+                  : weather &&
+                      ["rain", "storm", "cloud", "fog"].includes(weather.icon)
+                    ? "#a8b6b8"
+                    : "#b8d2cb"
+              }
+              d="M29 9h158v116H29z"
+            />
             <circle
               className={styles.sun}
-              cx="151"
-              cy="34"
+              cx={
+                hour < 6 || hour >= 20
+                  ? 150
+                  : 40 + Math.max(0, Math.min(1, (hour - 6) / 14)) * 132
+              }
+              cy={
+                hour < 6 || hour >= 20
+                  ? 32
+                  : 72 -
+                    Math.sin(
+                      Math.max(0, Math.min(1, (hour - 6) / 14)) * Math.PI,
+                    ) *
+                      48
+              }
               r="15"
-              fill="#f8d68f"
+              fill={hour < 6 || hour >= 20 ? "#eee8c9" : "#f8d68f"}
             />
+            {(hour < 6 || hour >= 20) && (
+              <g fill="#f6ecd0">
+                {[45, 73, 98, 125, 170].map((x, i) => (
+                  <circle key={x} cx={x} cy={22 + (i % 3) * 13} r="1.2" />
+                ))}
+                <circle cx="156" cy="27" r="12" fill="#3d4c61" />
+              </g>
+            )}
+            {weather && ["rain", "storm", "snow"].includes(weather.icon) && (
+              <g className="window-weather" stroke="#e2edf0" opacity=".65">
+                {Array.from({ length: 9 }, (_, i) => (
+                  <path
+                    key={i}
+                    d={`M${38 + i * 16} ${25 + (i % 3) * 15}l-3 9`}
+                  />
+                ))}
+              </g>
+            )}
             <g className={styles.cloud} fill="#f1f5e8" opacity=".8">
               <path d="M35 40c0-5 4-8 9-8 1-7 6-11 12-11 8 0 13 5 14 12 6-1 11 3 11 8H35Z" />
               <path d="M133 65c1-5 5-7 9-6 2-8 13-10 18-3 8-2 12 3 12 9h-39Z" />

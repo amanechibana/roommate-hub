@@ -1,11 +1,12 @@
 "use client";
 
-import { m } from "motion/react";
+import { AnimatePresence, m } from "motion/react";
+import { PresenceRow } from "./ui/presence";
 import { HouseCompanion } from "@/components/ui/house-companion";
 import { Button } from "@/components/ui/button";
 import { useHouseMotion } from "@/components/ui/motion-provider";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type CSSProperties } from "react";
 import {
   ArrowRight,
   CalendarDays,
@@ -81,7 +82,32 @@ export default function HomeBoard({
   onNavigate,
   onToggle,
 }: Props) {
-  const { reduced } = useHouseMotion();
+  const {
+    reduced,
+    active,
+    hour,
+    month: seasonMonth,
+    weather,
+    celebration,
+  } = useHouseMotion();
+  const tone =
+    hour >= 22 || hour < 6
+      ? "night"
+      : hour >= 17
+        ? "evening"
+        : hour < 11
+          ? "morning"
+          : "day";
+  const particles =
+    weather?.icon === "snow"
+      ? "snow"
+      : weather && ["rain", "storm"].includes(weather.icon)
+        ? "rain"
+        : seasonMonth >= 8 && seasonMonth <= 10
+          ? "leaves"
+          : seasonMonth === 11 || seasonMonth <= 1
+            ? "snow"
+            : "none";
   const [now, setNow] = useState(new Date());
   const board = useRef<HTMLElement>(null);
   const [page, setPage] = useState(0);
@@ -272,10 +298,10 @@ export default function HomeBoard({
     };
   }, [display, entries]);
   useEffect(() => {
-    if (!display || paused || pages < 2) return;
+    if (!display || paused || !active || pages < 2) return;
     const timer = setInterval(() => setPage((p) => (p + 1) % pages), 20000);
     return () => clearInterval(timer);
-  }, [display, paused, pages]);
+  }, [display, paused, pages, active]);
   async function fullscreen() {
     try {
       if (document.fullscreenElement) await document.exitFullscreen();
@@ -315,6 +341,12 @@ export default function HomeBoard({
   return (
     <section
       ref={board}
+      data-tone={tone}
+      data-all-done={
+        celebration > 0 &&
+        !tasks.length &&
+        entries.some((entry) => entry.kind === "task")
+      }
       className={display ? "home-board wall-display" : "home-board"}
       aria-label={display ? "Household display" : "Household noticeboard"}
     >
@@ -323,6 +355,21 @@ export default function HomeBoard({
           <i />
           <i />
           <i />
+          <div className="wall-particles" data-weather={particles}>
+            {particles !== "none" &&
+              Array.from({ length: 12 }, (_, i) => (
+                <span
+                  key={i}
+                  style={
+                    {
+                      "--left": `${(i * 37) % 100}%`,
+                      "--delay": `${-i * 2.7}s`,
+                      "--duration": `${particles === "rain" ? 2 + (i % 3) : 14 + (i % 6)}s`,
+                    } as CSSProperties
+                  }
+                />
+              ))}
+          </div>
         </div>
       )}
       <header className="board-welcome">
@@ -339,9 +386,11 @@ export default function HomeBoard({
                 : "Welcome home."}
           </h1>
           <p className="board-summary">
-            {due
-              ? `${due} ${due === 1 ? "thing needs" : "things need"} a little love today.`
-              : "Nothing urgent. Make yourself a cup of something."}
+            {!tasks.length && entries.some((entry) => entry.kind === "task")
+              ? "All done. The cat approves."
+              : due
+                ? `${due} ${due === 1 ? "thing needs" : "things need"} a little love today.`
+                : "Nothing urgent. Make yourself a cup of something."}
           </p>
           {display ? (
             <p className="wall-expenses" aria-label="Expense balance">
@@ -405,7 +454,7 @@ export default function HomeBoard({
         <m.section
           initial={reduced ? false : { opacity: 0.65 }}
           animate={{ opacity: 1 }}
-          transition={{ duration: 0.3 }}
+          transition={{ duration: reduced ? 0 : 0.3, delay: reduced ? 0 : 0.0 }}
           className="board-card plans-card"
         >
           <div className="board-card-heading">
@@ -418,39 +467,40 @@ export default function HomeBoard({
             </span>
           </div>
           <div className="board-rows">
-            {(display ? visible(events) : events.slice(0, limit)).map(
-              (entry) => (
-                <m.div
-                  initial={reduced ? false : { opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ duration: 0.22 }}
-                  className="board-plan"
-                  key={entry.id}
-                >
-                  <span className="board-date">
-                    <small>
-                      {parseDate(entry.date!).toLocaleDateString("en-US", {
-                        month: "short",
-                      })}
-                    </small>
-                    <b>{parseDate(entry.date!).getDate()}</b>
-                  </span>
-                  <div className="board-entry-copy">
-                    {title(entry)}
-                    <small>
-                      {relative(entry.date!)} · {entry.category}
-                      {entry.series_id ? " · ↻" : ""}
-                      {isBill(entry)
-                        ? ` · ${billPaid(entry) ? "Paid" : `${entry.paid_by?.length || 0}/${entry.payment_members?.length || 0} paid`}`
-                        : ""}
-                      {entry.amount != null
-                        ? ` · ${dollars(entry.amount)}`
-                        : ""}
-                    </small>
-                  </div>
-                </m.div>
-              ),
-            )}
+            {/* Capacity changes are immediate; user removals still animate out. */}
+            <AnimatePresence key={limit} initial={false} mode="popLayout">
+              {(display ? visible(events) : events.slice(0, limit)).map(
+                (entry) => (
+                  <PresenceRow
+                    initial={false}
+                    className="board-plan"
+                    key={entry.id}
+                  >
+                    <span className="board-date">
+                      <small>
+                        {parseDate(entry.date!).toLocaleDateString("en-US", {
+                          month: "short",
+                        })}
+                      </small>
+                      <b>{parseDate(entry.date!).getDate()}</b>
+                    </span>
+                    <div className="board-entry-copy">
+                      {title(entry)}
+                      <small>
+                        {relative(entry.date!)} · {entry.category}
+                        {entry.series_id ? " · ↻" : ""}
+                        {isBill(entry)
+                          ? ` · ${billPaid(entry) ? "Paid" : `${entry.paid_by?.length || 0}/${entry.payment_members?.length || 0} paid`}`
+                          : ""}
+                        {entry.amount != null
+                          ? ` · ${dollars(entry.amount)}`
+                          : ""}
+                      </small>
+                    </div>
+                  </PresenceRow>
+                ),
+              )}
+            </AnimatePresence>
             {!events.length && (
               <div className="board-empty">
                 <Coffee size={24} />
@@ -467,7 +517,10 @@ export default function HomeBoard({
         <m.section
           initial={reduced ? false : { opacity: 0.65 }}
           animate={{ opacity: 1 }}
-          transition={{ duration: 0.3 }}
+          transition={{
+            duration: reduced ? 0 : 0.3,
+            delay: reduced ? 0 : 0.04,
+          }}
           className="board-card chores-card"
         >
           <div className="board-card-heading">
@@ -479,39 +532,40 @@ export default function HomeBoard({
             </span>
           </div>
           <div className="board-rows">
-            {visible(tasks).map((entry) => (
-              <m.div
-                initial={reduced ? false : { opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ duration: 0.22 }}
-                className="board-task"
-                key={entry.id}
-              >
-                {display ? (
-                  <span className="wall-task-dot" />
-                ) : (
-                  <Button
-                    className="board-check"
-                    onClick={() => onToggle(entry)}
-                    aria-label={`Complete ${entry.title}`}
-                  >
-                    <Check size={18} />
-                  </Button>
-                )}
-                <div className="board-entry-copy">
-                  {title(entry)}
-                  <small
-                    className={
-                      entry.date && entry.date < today ? "board-overdue" : ""
-                    }
-                  >
-                    {entry.assignee ? `${person(entry.assignee)} · ` : ""}
-                    {friendly(entry.date)}
-                    {entry.series_id ? " · ↻" : ""}
-                  </small>
-                </div>
-              </m.div>
-            ))}
+            {/* Capacity changes are immediate; user removals still animate out. */}
+            <AnimatePresence key={limit} initial={false} mode="popLayout">
+              {visible(tasks).map((entry) => (
+                <PresenceRow
+                  initial={false}
+                  className="board-task"
+                  key={entry.id}
+                >
+                  {display ? (
+                    <span className="wall-task-dot" />
+                  ) : (
+                    <Button
+                      className="board-check"
+                      onClick={() => onToggle(entry)}
+                      aria-label={`Complete ${entry.title}`}
+                    >
+                      <Check size={18} />
+                    </Button>
+                  )}
+                  <div className="board-entry-copy">
+                    {title(entry)}
+                    <small
+                      className={
+                        entry.date && entry.date < today ? "board-overdue" : ""
+                      }
+                    >
+                      {entry.assignee ? `${person(entry.assignee)} · ` : ""}
+                      {friendly(entry.date)}
+                      {entry.series_id ? " · ↻" : ""}
+                    </small>
+                  </div>
+                </PresenceRow>
+              ))}
+            </AnimatePresence>
             {!tasks.length && (
               <div className="board-empty">
                 <CheckCheck size={24} />
@@ -528,7 +582,10 @@ export default function HomeBoard({
         <m.section
           initial={reduced ? false : { opacity: 0.65 }}
           animate={{ opacity: 1 }}
-          transition={{ duration: 0.3 }}
+          transition={{
+            duration: reduced ? 0 : 0.3,
+            delay: reduced ? 0 : 0.08,
+          }}
           className="board-card groceries-card"
         >
           <div className="board-card-heading">
@@ -541,35 +598,36 @@ export default function HomeBoard({
             </span>
           </div>
           <div className="board-rows">
-            {visible(shopping).map((entry) => (
-              <m.div
-                initial={reduced ? false : { opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ duration: 0.22 }}
-                className="board-shopping"
-                key={entry.id}
-              >
-                <span className="grocery-bullet" aria-hidden="true" />
-                <div className="board-entry-copy">
-                  {title(entry)}
-                  <small>
-                    {entry.category}
-                    {entry.amount != null
-                      ? ` · about ${dollars(entry.amount)}`
-                      : ""}
-                  </small>
-                </div>
-                {!display && (
-                  <Button
-                    className="board-buy"
-                    aria-label={`Mark ${entry.title} as bought`}
-                    onClick={() => onToggle(entry)}
-                  >
-                    <Check size={17} />
-                  </Button>
-                )}
-              </m.div>
-            ))}
+            {/* Capacity changes are immediate; user removals still animate out. */}
+            <AnimatePresence key={limit} initial={false} mode="popLayout">
+              {visible(shopping).map((entry) => (
+                <PresenceRow
+                  initial={false}
+                  className="board-shopping"
+                  key={entry.id}
+                >
+                  <span className="grocery-bullet" aria-hidden="true" />
+                  <div className="board-entry-copy">
+                    {title(entry)}
+                    <small>
+                      {entry.category}
+                      {entry.amount != null
+                        ? ` · about ${dollars(entry.amount)}`
+                        : ""}
+                    </small>
+                  </div>
+                  {!display && (
+                    <Button
+                      className="board-buy"
+                      aria-label={`Mark ${entry.title} as bought`}
+                      onClick={() => onToggle(entry)}
+                    >
+                      <Check size={17} />
+                    </Button>
+                  )}
+                </PresenceRow>
+              ))}
+            </AnimatePresence>
             {!shopping.length && (
               <div className="board-empty">
                 <ShoppingBasket size={24} />
@@ -586,7 +644,10 @@ export default function HomeBoard({
         <m.section
           initial={reduced ? false : { opacity: 0.65 }}
           animate={{ opacity: 1 }}
-          transition={{ duration: 0.3 }}
+          transition={{
+            duration: reduced ? 0 : 0.3,
+            delay: reduced ? 0 : 0.12,
+          }}
           className="board-card fridge-card"
         >
           <span className="board-tape" aria-hidden="true" />

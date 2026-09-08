@@ -308,3 +308,9 @@
     min-height: 30px;
   }
 }
+
+.summary strong :global(.animated-money),
+.summary strong :global(.animated-money) span {
+  font: inherit;
+  color: inherit;
+}

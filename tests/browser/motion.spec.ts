@@ -86,6 +86,7 @@ test("Radix filters support arrow keys and retain the selected value", async ({
   await expect(
     group.getByRole("button", { name: "Mine", exact: true }),
   ).toHaveAttribute("aria-pressed", "true");
+  await expect(page.locator(".task-row")).toHaveCount(1);
   await expect(page.locator(".task-row")).toHaveCSS("transform", "none");
   await page.screenshot({ path: "test-results/motion-todos.png" });
 });

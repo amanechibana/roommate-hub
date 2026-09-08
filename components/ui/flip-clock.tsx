@@ -28,13 +28,14 @@ export default function FlipClock() {
     // flip happens the moment the wall time actually changes.
     let timer: ReturnType<typeof setTimeout>;
     const tick = () => {
+      if (document.visibilityState !== "visible") return;
       setNow(new Date());
       timer = setTimeout(tick, 1030 - (Date.now() % 1000));
     };
     timer = setTimeout(tick, 1030 - (Date.now() % 1000));
     const resume = () => {
+      clearTimeout(timer);
       if (document.visibilityState === "visible") {
-        clearTimeout(timer);
         tick();
       }
     };

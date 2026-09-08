@@ -1,5 +1,7 @@
 "use client";
 
+import { AnimatePresence, m } from "motion/react";
+import { useHouseMotion } from "./ui/motion-provider";
 import { Button } from "@/components/ui/button";
 import { AnimatedCheck } from "@/components/ui/animated-check";
 
@@ -19,6 +21,7 @@ export default function BillChecks({
   onPayment: (entry: Entry) => void;
   onCover: (entry: Entry) => void;
 }) {
+  const { active } = useHouseMotion();
   if (!isBill(entry) || !entry.payment_members?.length) return null;
   const canCover =
     !!entry.amount &&
@@ -27,6 +30,25 @@ export default function BillChecks({
     entry.payment_members.includes(uid);
   return (
     <section className="bill-checks" aria-label={`Payments for ${entry.title}`}>
+      <AnimatePresence initial={false}>
+        {billPaid(entry) && (
+          <m.span
+            key="paid"
+            className="paid-stamp"
+            aria-hidden="true"
+            initial={active ? { opacity: 0, scale: 3, rotate: -18 } : false}
+            animate={{ opacity: 1, scale: 1, rotate: -8 }}
+            exit={{ opacity: 0 }}
+            transition={
+              active
+                ? { type: "spring", stiffness: 500, damping: 24 }
+                : { duration: 0 }
+            }
+          >
+            PAID
+          </m.span>
+        )}
+      </AnimatePresence>
       <div className="bill-heading">
         <strong>{billPaid(entry) ? "Everyone’s paid" : "Who’s paid?"}</strong>
         <small>For this occurrence</small>
