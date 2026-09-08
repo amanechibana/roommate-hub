@@ -643,6 +643,16 @@ export function useHousehold() {
     );
     persist("update", { id: entry.id, assignee: member.user_id });
   }
+  // "I'll grab it" is the shopping list's assignee: a claim says who is
+  // picking it up so two people don't both come home with olive oil.
+  function claim(entry: Entry) {
+    if (!uid) return;
+    const assignee = entry.assignee === uid ? null : uid;
+    setEntries((current) =>
+      current.map((e) => (e.id === entry.id ? { ...e, assignee } : e)),
+    );
+    persist("update", { id: entry.id, assignee });
+  }
   // Priced items are pre-set expenses: buying one logs it without a dialog.
   // The expense reuses the entry id so re-buying can't double-log.
   function logPurchase(entry: Entry) {
@@ -932,6 +942,7 @@ export function useHousehold() {
     toggle,
     pushToTomorrow,
     handOff,
+    claim,
     toggleBought,
     togglePayment,
     coverBill,

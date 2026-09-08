@@ -666,6 +666,9 @@ export default function HomeBoard({
                   <div className="board-entry-copy">
                     {title(entry)}
                     <small>
+                      {entry.assignee
+                        ? `${person(entry.assignee)} is getting it · `
+                        : ""}
                       {entry.category}
                       {entry.amount != null
                         ? ` · about ${dollars(entry.amount)}`

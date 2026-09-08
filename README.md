@@ -192,7 +192,7 @@ Open the localhost address printed by Next.js. Without Supabase environment vari
 - Overview with upcoming plans, chores, rent amounts, shopping requests, and a fridge note.
 - Monthly calendar for all-day events and dated chores, including rent reminders.
 - Assigned to-dos with completion, overdue indicators, and All / Mine / Open / Done filters.
-- Shopping requests separated into needs and wants, estimated USD prices, store links, and bought status.
+- Shopping requests separated into needs and wants, estimated USD prices, store links, and bought status. Tap the hand on a row to say **I’ll grab it**; the row, the overview, and the wall display then name who is getting it, and tapping again lets it go.
 - Weather and live train departures for PATH and the NYC subway, shown above the
   noticeboard on both the home screen and the wall display, with subway service
   alerts and per-station "leave in …" hints.

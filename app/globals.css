@@ -1953,6 +1953,10 @@ textarea {
   flex-shrink: 0;
   font-size: 13px;
 }
+.claim-button[aria-pressed="true"] {
+  color: #6d8060;
+  background: #f0f2e9;
+}
 .person-picker {
   display: grid;
   gap: 12px;
