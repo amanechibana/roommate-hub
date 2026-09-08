@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { AnimatePresence, m } from "motion/react";
 
 import HomeBoard from "@/components/home-board";
+import HubSkeleton from "@/components/hub-skeleton";
 import { DisplayButton } from "@/components/ui/display-button";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import { safeUrl, type Entry, type Kind, type Member } from "@/lib/model";
@@ -225,19 +226,23 @@ export default function Hub() {
   );
 
   if (!ready)
-    return (
+    return display ? (
       <main className="auth-wrap">
         <Leaf size={36} />
         <p>Making room for you…</p>
       </main>
+    ) : (
+      <HubSkeleton />
     );
   if (!demo && !session) return <Auth onSuccess={() => setSession(true)} />;
   if (!demo && !loaded)
-    return (
+    return display ? (
       <main className="auth-wrap">
         <Leaf size={36} />
         <p>Opening your home…</p>
       </main>
+    ) : (
+      <HubSkeleton />
     );
   if (!household)
     return (

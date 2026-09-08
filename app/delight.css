@@ -432,6 +432,27 @@ html[data-ambient="off"] .clock-breath {
 .skeleton-short {
   width: 38%;
 }
+/* Ghost text sits on the baseline inside the real element, so the line box —
+   and therefore the layout — is exactly what the loaded copy will occupy. */
+.skeleton-line {
+  display: inline-block;
+  vertical-align: baseline;
+  width: 8em;
+  max-width: 90%;
+  height: 0.7em;
+}
+.skeleton-avatar {
+  width: 32px;
+  height: 32px;
+}
+.skeleton-badge {
+  width: 25px;
+  height: 25px;
+}
+/* The shimmer gradient is tuned for paper; the dark sidebar needs its own. */
+.sidebar .skeleton {
+  background: #ffffff21;
+}
 html[data-ambient="on"] .skeleton {
   animation: skeleton-shimmer 1.4s ease-in-out infinite;
 }

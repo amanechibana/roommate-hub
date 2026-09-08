@@ -101,6 +101,31 @@ function badgeStyle(colors: string[]) {
   };
 }
 
+/* Shared with the app-shell skeleton so the pre-data strip and the loading
+   shell show the same ghosts in the same footprint. */
+export function CommuteTrainGhosts() {
+  return (
+    <>
+      {[0, 1].map((i) => (
+        <div className="commute-train" key={i} aria-hidden="true">
+          <span className="commute-badge skeleton skeleton-badge" />
+          <div className="commute-train-copy">
+            <strong>
+              <span className="skeleton skeleton-line" />
+            </strong>
+            <small>
+              <span className="skeleton skeleton-line" style={{ width: "6em" }} />
+            </small>
+          </div>
+          <span className="commute-when">
+            <span className="skeleton skeleton-line" style={{ width: "2.4em" }} />
+          </span>
+        </div>
+      ))}
+    </>
+  );
+}
+
 export default function CommuteStrip({
   display = false,
 }: {
@@ -393,11 +418,18 @@ export default function CommuteStrip({
               {weather.stale || weatherFailed ? " · last reading" : ""}
             </small>
           </div>
-        ) : (
+        ) : weatherFailed ? (
           <div className="commute-weather-copy">
             <strong>—</strong>
+            <small>Weather unavailable</small>
+          </div>
+        ) : (
+          <div className="commute-weather-copy" aria-label="Weather loading">
+            <strong>
+              <span className="skeleton skeleton-line" style={{ width: "1.4em" }} />
+            </strong>
             <small>
-              {weatherFailed ? "Weather unavailable" : "Weather loading"}
+              <span className="skeleton skeleton-line" style={{ width: "7em" }} />
             </small>
           </div>
         )}
@@ -475,16 +507,19 @@ export default function CommuteStrip({
             </div>
           );
         })}
-        {!departures.length && (
-          <p className="commute-empty">
-            <TrainFront size={16} aria-hidden="true" />
-            {configured
-              ? failed
-                ? "Departures are unavailable right now."
-                : "No trains listed at the moment."
-              : "Pick your stations to see departures."}
-          </p>
-        )}
+        {!departures.length &&
+          (configured && !failed && !updatedAt ? (
+            <CommuteTrainGhosts />
+          ) : (
+            <p className="commute-empty">
+              <TrainFront size={16} aria-hidden="true" />
+              {configured
+                ? failed
+                  ? "Departures are unavailable right now."
+                  : "No trains listed at the moment."
+                : "Pick your stations to see departures."}
+            </p>
+          ))}
       </div>
 
       <div className="commute-actions">

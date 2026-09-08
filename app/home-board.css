@@ -479,7 +479,8 @@ body {
   display: flex;
   justify-content: flex-end;
 }
-.flip-clock .flip-sr {
+/* Used well beyond the clock: any screen-reader-only copy rides this class. */
+.flip-sr {
   position: absolute;
   width: 1px;
   height: 1px;
