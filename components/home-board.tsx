@@ -37,7 +37,7 @@ import {
   type Kind,
   type Member,
 } from "@/lib/model";
-import { billPaid, isBill } from "@/lib/household-actions";
+import { billPaid, collapseSeries, isBill } from "@/lib/household-actions";
 import { AmbientToggle } from "@/components/ui/display-button";
 import CommuteStrip from "@/components/commute-strip";
 import FlipClock from "@/components/ui/flip-clock";
@@ -173,15 +173,18 @@ export default function HomeBoard({
     : expenses.expenses.length
       ? "You’re all settled up"
       : "No shared expenses yet";
-  const events = entries
-    .filter(
-      (e) =>
-        e.kind === "event" &&
-        !e.done &&
-        e.date &&
-        (e.date >= today || (isBill(e) && !billPaid(e))),
-    )
-    .sort((a, b) => a.date!.localeCompare(b.date!));
+  const events = collapseSeries(
+    entries
+      .filter(
+        (e) =>
+          e.kind === "event" &&
+          !e.done &&
+          e.date &&
+          (e.date >= today || (isBill(e) && !billPaid(e))),
+      )
+      .sort((a, b) => a.date!.localeCompare(b.date!)),
+    today,
+  );
   const shopping = entries
     .filter((e) => e.kind === "request" && !e.done)
     .sort(

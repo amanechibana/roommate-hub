@@ -8,6 +8,7 @@ import {
   billPaid,
   editEntries,
   remoteActivity,
+  collapseSeries,
 } from "../lib/household-actions";
 
 test("chores alternate from the selected first person", () => {
@@ -113,4 +114,35 @@ test("a bill reaching fully paid reports one settled line", () => {
   assert.deepEqual(remoteActivity([one], [markAllPaid(bill)], members), [
     { line: `“${bill.title}” is all paid`, member: null },
   ]);
+});
+test("a recurring series shows overdue occurrences and only its next one", () => {
+  const base = demoData().entries.find((e) => e.category === "Rent")!;
+  const rent = (id: string, date: string) => ({
+    ...base,
+    id,
+    date,
+    series_id: "rent",
+  });
+  const single = { ...base, id: "solo", date: "2026-10-05", series_id: null };
+  const sorted = [
+    rent("aug", "2026-08-01"),
+    rent("sep", "2026-09-01"),
+    rent("oct", "2026-10-01"),
+    rent("nov", "2026-11-01"),
+    rent("dec", "2026-12-01"),
+    single,
+  ].sort((a, b) => a.date!.localeCompare(b.date!));
+  assert.deepEqual(
+    collapseSeries(sorted, "2026-09-08").map((e) => e.id),
+    ["aug", "sep", "oct", "solo"],
+  );
+  // A different series keeps its own next occurrence.
+  const other = [
+    rent("oct", "2026-10-01"),
+    { ...rent("dinner", "2026-10-02"), series_id: "dinner" },
+  ];
+  assert.deepEqual(
+    collapseSeries(other, "2026-09-08").map((e) => e.id),
+    ["oct", "dinner"],
+  );
 });
