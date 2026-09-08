@@ -719,7 +719,8 @@ export default function HomeBoard({
                   </h3>
                   <p title={note.description}>{note.description}</p>
                   <span>
-                    With love, {person(note.assignee || note.created_by)}
+                    With love, {person(note.assignee || note.created_by)} ·{" "}
+                    {activityWhen(Date.parse(note.created_at), now)}
                   </span>
                 </div>
               ))}
