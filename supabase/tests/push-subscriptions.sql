@@ -1,7 +1,7 @@
 begin;
 do $$
 declare a uuid; b uuid; hid uuid; stranger uuid:=gen_random_uuid(); foreign_home uuid:=gen_random_uuid();
-  ep text:='https://push.example/device-1'; keys jsonb:=jsonb_build_object('p256dh','key','auth','secret'); result jsonb;
+  ep text:='https://push.example/device-1'; keys jsonb:=jsonb_build_object('p256dh','B' || repeat('A',86),'auth',repeat('A',22)); result jsonb;
 begin
  select household_id into hid from public.shared_home_config;
  select user_id into a from public.members where household_id=hid and name='Amane';

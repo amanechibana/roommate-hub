@@ -18,11 +18,11 @@ Lists and undo notices animate out while writes continue in the background. Surv
 
 To-dos and shopping rows have drag handles: use a pointer or focus the handle and press Up/Down (Home/End also work). Order is remembered **on this device, per household**, including across reloads. It does not change the household's due dates or synchronize a new order to other devices. Row menus offer edit and delete; the usual undo still works. House notes have a quick composer, member-colored paper, individual tilts, and crumpling exits. In household settings, hover or focus a member magnet for their open chore count and balance.
 
-The home greeting keeps a quiet “lately” line — a chore, purchase, or bill
-payment the other person checked off, noticed when this device refreshes.
-It names whoever the entry names, stays for two days, and is remembered on
-this device only; your own check-offs don’t appear, since you watched them
-happen.
+The home greeting highlights a recent action by another housemate. “Lately at
+home” below the cards shows the latest 20 completed chores, purchases, bill
+payments, reopened items, and notes. Actions are saved with the person who
+performed them and the actual time, and appear across devices. Activity starts
+after migration 012; older entries are not given invented completion times.
 
 Completing items releases paper scraps; finishing the last chore gets an all-done message. Paid bills receive a stamp, repayments get a short transfer illustration, and expense totals count to their new values. Activity is grouped by month, with older months collapsed. Repayment feedback indicates a ledger entry, not a money transfer.
 
@@ -217,9 +217,14 @@ creator, including the legacy shared Housemates identity.
 For a fresh database, apply migrations in order: `001_household.sql`,
 `002_shared_code.sql` (using psql with `-v gateway_hash=<SHA-256 of your gateway token>`),
 `003_recurring_entries.sql`, `004_device_identity.sql`, `005_chores_bills_undo.sql`,
-`006_expenses.sql`, `007_covered_bills_note_conversion.sql`, and
-`008_push_subscriptions.sql`.
+`006_expenses.sql`, `007_covered_bills_note_conversion.sql`,
+`008_push_subscriptions.sql`, `009_cover_expense_and_attempt_clear.sql`,
+`010_push_subscribe_hardening.sql`, `011_revoke_legacy_multi_user.sql`, and
+`012_house_activity.sql`.
 For an existing installation, apply only the migrations newer than the last installed migration.
+Migration 012 adds the private “Lately at home” feed and records the actual actor
+and completion time from successful changes. Apply it before deploying this
+frontend. Existing entries are untouched; activity starts with new actions.
 Migration 004 adds Amane and Barnatt if absent, validates the selected household
 member on writes, and returns saved entry IDs with create responses. **Apply it
 before deploying this frontend.** It preserves existing entries and members.

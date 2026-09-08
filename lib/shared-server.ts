@@ -48,11 +48,16 @@ export async function sharedDatabase(
     payload,
   });
   if (error) {
+    // Log operation and database code only: never tokens, entry text, or payloads.
+    console.error("Household database request failed", {
+      gateway,
+      operation,
+      code: error.code,
+    });
     // P0001 marks a deliberate `raise exception` in the gateway functions;
     // those messages are written for the person, so pass them through.
     if (error.code === "P0001")
       throw Object.assign(new Error(error.message), { rejected: true });
-    console.error(`gateway ${gateway} ${operation}`, error);
     throw new Error(
       "The household could not be loaded or updated. Please try again.",
     );

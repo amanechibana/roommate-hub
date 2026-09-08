@@ -1,4 +1,6 @@
 "use client";
+import { activityVerb, type HouseActivity } from "@/lib/activity";
+import ActivityFeed from "./activity-feed";
 
 import { AnimatePresence, m } from "motion/react";
 import { PresenceRow } from "./ui/presence";
@@ -48,6 +50,7 @@ import type { ExpensesController } from "@/lib/use-expenses";
 
 type Props = {
   household: Household;
+  activity: HouseActivity[];
   entries: Entry[];
   members: Member[];
   memberId: string | null;
@@ -55,7 +58,6 @@ type Props = {
   display?: boolean;
   demo: boolean;
   live?: boolean;
-  lately?: { line: string; member: string | null; at: number }[];
   error: string;
   onExit: () => void;
   onOpen: (kind: Kind, entry?: Entry) => void;
@@ -73,6 +75,7 @@ const dollars = (amount: number) =>
 
 export default function HomeBoard({
   household,
+  activity,
   entries,
   members,
   memberId,
@@ -80,7 +83,6 @@ export default function HomeBoard({
   display = false,
   demo,
   live = false,
-  lately = [],
   error,
   onExit,
   onOpen,
@@ -186,6 +188,11 @@ export default function HomeBoard({
       (a, b) => Number(b.category === "Need") - Number(a.category === "Need"),
     );
   const notes = entries.filter((e) => e.kind === "note");
+  const lately = activity.map((item) => ({
+    member: person(item.actor),
+    line: `${person(item.actor)} ${activityVerb(item.action)} ${item.title}`,
+    at: Date.parse(item.created_at),
+  }));
   // The other member's doings; your own check-offs already burst on screen.
   // The wall has no "you", so it shows everything.
   const lastActivity = lately.find(
@@ -215,24 +222,16 @@ export default function HomeBoard({
   );
   const activePage = page % pages;
   const visible = (items: Entry[]) =>
-    items.slice(
-      (activePage % Math.max(1, Math.ceil(items.length / limit))) * limit,
-      ((activePage % Math.max(1, Math.ceil(items.length / limit))) + 1) * limit,
-    );
+    !display
+      ? items
+      : items.slice(
+          (activePage % Math.max(1, Math.ceil(items.length / limit))) * limit,
+          ((activePage % Math.max(1, Math.ceil(items.length / limit))) + 1) *
+            limit,
+        );
 
   const due = tasks.filter((e) => e.date && e.date <= today).length;
 
-  useEffect(() => {
-    if (display || !board.current) return;
-    const rows = board.current.querySelector(".board-rows");
-    if (!rows) return;
-    const resize = () =>
-      setLimit(Math.max(1, Math.min(3, Math.floor(rows.clientHeight / 64))));
-    const observer = new ResizeObserver(resize);
-    observer.observe(rows);
-    resize();
-    return () => observer.disconnect();
-  }, [display]);
   useEffect(() => {
     // Refresh due dates and plan labels at local midnight, including DST days.
     let timer: ReturnType<typeof setTimeout>;
@@ -345,15 +344,6 @@ export default function HomeBoard({
       );
     }
   }
-  const more = (
-    count: number,
-    tab: "Calendar" | "To-dos" | "Shopping list" | "House notes",
-  ) =>
-    !display && count > limit ? (
-      <Button className="board-more" onClick={() => onNavigate(tab)}>
-        See all {count} <ArrowRight size={14} />
-      </Button>
-    ) : null;
   const title = (entry: Entry) =>
     display ? (
       <strong title={entry.title}>{entry.title}</strong>
@@ -375,7 +365,9 @@ export default function HomeBoard({
         !tasks.length &&
         entries.some((entry) => entry.kind === "task")
       }
-      className={display ? "home-board wall-display" : "home-board"}
+      className={
+        display ? "home-board wall-display" : "home-board everyday-board"
+      }
       aria-label={display ? "Household display" : "Household noticeboard"}
     >
       {display && (
@@ -546,7 +538,6 @@ export default function HomeBoard({
               </div>
             )}
           </div>
-          {more(events.length, "Calendar")}
         </m.section>
         <m.section
           initial={reduced ? false : { opacity: 0.65 }}
@@ -611,7 +602,6 @@ export default function HomeBoard({
               </div>
             )}
           </div>
-          {more(tasks.length, "To-dos")}
         </m.section>
         <m.section
           initial={reduced ? false : { opacity: 0.65 }}
@@ -673,7 +663,6 @@ export default function HomeBoard({
               </div>
             )}
           </div>
-          {more(shopping.length, "Shopping list")}
         </m.section>
         <m.section
           initial={reduced ? false : { opacity: 0.65 }}
@@ -742,34 +731,7 @@ export default function HomeBoard({
           )}
         </m.section>
       </div>
-      {!display && (
-        <div className="home-pager">
-          <span>
-            {pages > 1
-              ? "A little more on the next page"
-              : "Everything in one place"}
-          </span>
-          <div>
-            <Button
-              aria-label="Previous home page"
-              disabled={pages === 1}
-              onClick={() => setPage((activePage + pages - 1) % pages)}
-            >
-              <ChevronLeft size={18} />
-            </Button>
-            <span>
-              {activePage + 1} / {pages}
-            </span>
-            <Button
-              aria-label="Next home page"
-              disabled={pages === 1}
-              onClick={() => setPage((activePage + 1) % pages)}
-            >
-              <ChevronRight size={18} />
-            </Button>
-          </div>
-        </div>
-      )}
+      {!display && <ActivityFeed activity={activity} members={members} />}
       {display && (
         <footer className="wall-controls">
           <span className="wall-status">

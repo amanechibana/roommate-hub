@@ -4,6 +4,7 @@ import "./globals.css";
 import "./home-board.css";
 import "./fitted-pages.css";
 import "./delight.css";
+import "./everyday.css";
 
 export const metadata: Metadata = {
   title: "Common Ground · A little more together",

@@ -1,0 +1,92 @@
+/* The personal home has room to scroll; only the wall display has pages. */
+.everyday-board .noticeboard-grid {
+  align-items: start;
+}
+.everyday-board .board-card {
+  height: auto;
+  min-height: 240px;
+}
+.everyday-board .board-rows,
+.everyday-board .fridge-stack {
+  overflow: visible;
+  flex: none;
+}
+.everyday-board .fridge-message p {
+  -webkit-line-clamp: unset;
+}
+.save-status {
+  display: block;
+  min-height: 0;
+  color: var(--green);
+  font-size: 12px;
+}
+.save-status:not(:empty) {
+  margin-bottom: 12px;
+}
+.save-status[data-error] {
+  color: #985139;
+}
+.app-shell .commute-weather[data-error] .commute-weather-copy small {
+  position: static;
+  width: auto;
+  height: auto;
+  clip-path: none;
+  white-space: normal;
+}
+.activity-feed {
+  margin-top: 22px;
+  padding: 22px;
+}
+.activity-feed h2 {
+  margin: 0 0 14px;
+  font-size: 20px;
+}
+.activity-feed ol {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.activity-feed li {
+  display: flex;
+  gap: 12px;
+  align-items: baseline;
+  padding: 10px 0;
+  border-top: 1px solid var(--line);
+}
+.activity-feed li > span {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.activity-feed time {
+  color: var(--muted);
+  font-size: 12px;
+  white-space: nowrap;
+}
+.repeat-summary {
+  padding: 12px;
+  border-radius: 8px;
+  background: var(--sage);
+  color: var(--green);
+  font-size: 13px;
+}
+.assignment-actions {
+  margin: 0 0 14px;
+}
+@media (pointer: coarse), (max-width: 700px) {
+  .drag-handle {
+    flex-basis: 44px;
+    min-width: 44px;
+    min-height: 44px;
+  }
+  .everyday-board .board-card {
+    min-height: 0;
+  }
+  .everyday-board .noticeboard-grid {
+    grid-template-columns: 1fr;
+  }
+  .activity-feed li {
+    flex-wrap: wrap;
+    gap: 4px 10px;
+  }
+}

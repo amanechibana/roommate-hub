@@ -1,7 +1,6 @@
 "use client";
 import * as Menu from "@radix-ui/react-dropdown-menu";
 import * as Popover from "@radix-ui/react-popover";
-import * as HoverCard from "@radix-ui/react-hover-card";
 import * as Avatar from "@radix-ui/react-avatar";
 import { MoreHorizontal, Plus } from "lucide-react";
 import { useState, type ReactNode } from "react";
@@ -116,8 +115,8 @@ export function MemberCard({
   children: ReactNode;
 }) {
   return (
-    <HoverCard.Root openDelay={350}>
-      <HoverCard.Trigger asChild>
+    <Popover.Root>
+      <Popover.Trigger asChild>
         <button
           type="button"
           className="member-trigger"
@@ -125,9 +124,13 @@ export function MemberCard({
         >
           {children}
         </button>
-      </HoverCard.Trigger>
-      <HoverCard.Portal>
-        <HoverCard.Content className="paper-popover member-card" sideOffset={8}>
+      </Popover.Trigger>
+      <Popover.Portal>
+        <Popover.Content
+          className="paper-popover member-card"
+          sideOffset={8}
+          aria-label={`About ${name}`}
+        >
           <Avatar.Root className="avatar">
             <Avatar.Fallback>{name.slice(0, 1).toUpperCase()}</Avatar.Fallback>
           </Avatar.Root>
@@ -142,8 +145,8 @@ export function MemberCard({
                 ? "Settled up"
                 : `${expenseMoney(Math.abs(balance))} ${balance > 0 ? "owed to them" : "to repay"}`}
           </p>
-        </HoverCard.Content>
-      </HoverCard.Portal>
-    </HoverCard.Root>
+        </Popover.Content>
+      </Popover.Portal>
+    </Popover.Root>
   );
 }

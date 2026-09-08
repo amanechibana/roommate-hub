@@ -46,7 +46,21 @@ async function household(page: Page, member = "you") {
     route.fulfill({ json: { expenses: [] } }),
   );
   await page.route("**/api/home", (route) =>
-    route.fulfill({ json: { ...data, member_id: member } }),
+    route.fulfill({
+      json: {
+        ...data,
+        member_id: member,
+        activity: [
+          {
+            id: "completed-earlier",
+            actor: "alex",
+            action: "completed",
+            title: "Watered the kitchen plants",
+            created_at: "2026-09-08T14:30:00Z",
+          },
+        ],
+      },
+    }),
   );
 }
 
@@ -64,6 +78,9 @@ test("noticeboard greets the selected person and moves their chores first after 
     "Barnatt chore",
     "Shared chore",
   ]);
+  await expect(page.locator(".activity-feed")).toContainText(
+    "Barnatt completed Watered the kitchen plants",
+  );
   await page.getByRole("button", { name: "Switch person" }).click();
   await page.getByRole("button", { name: "Barnatt", exact: true }).click();
   await expect(
@@ -75,6 +92,9 @@ test("noticeboard greets the selected person and moves their chores first after 
     "Amane chore",
   ]);
   await page.reload();
+  await expect(page.locator(".activity-feed")).toContainText(
+    "Barnatt completed Watered the kitchen plants",
+  );
   await expect(
     page.getByRole("heading", { name: "Welcome home, Barnatt." }),
   ).toBeVisible();

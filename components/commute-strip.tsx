@@ -108,12 +108,10 @@ export default function CommuteStrip({
 }) {
   const [stations, setStations] = useState<CommuteStation[]>(defaultStations);
   const { weather, setWeather } = useHouseMotion();
+  const [weatherFailed, setWeatherFailed] = useState(false);
   const [boards, setBoards] = useState<Departures[]>([]);
   const [open, setOpen] = useState(false);
   const [failed, setFailed] = useState(false);
-  // Only read before the first successful load; after that the last reading
-  // stays up, which the strip's staleness marker already covers.
-  const [weatherMissed, setWeatherMissed] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [updatedAt, setUpdatedAt] = useState<Date | null>(null);
   // When the server fetched the oldest board's data, as opposed to when this
@@ -282,13 +280,11 @@ export default function CommuteStrip({
       const response = await fetch(`/api/weather${query}`, {
         cache: "no-store",
       });
-      if (response.ok) {
-        setWeather((await response.json()) as Weather);
-        setWeatherMissed(false);
-      } else setWeatherMissed(true);
+      if (!response.ok) throw new Error("Weather unavailable");
+      setWeather((await response.json()) as Weather);
+      setWeatherFailed(false);
     } catch {
-      // Leave the last reading in place; the flag only matters before one.
-      setWeatherMissed(true);
+      setWeatherFailed(true);
     }
   }, [homeAt]);
 
@@ -376,7 +372,7 @@ export default function CommuteStrip({
       className={display ? "commute-strip commute-wall" : "commute-strip"}
       aria-label="Weather and departures"
     >
-      <div className="commute-weather">
+      <div className="commute-weather" data-error={weatherFailed || undefined}>
         <WeatherIcon aria-hidden="true" />
         {weather ? (
           <div className="commute-weather-copy">
@@ -394,14 +390,25 @@ export default function CommuteStrip({
                     weather.icon === "snow" ? "snow" : "rain"
                   }`
                 : ""}
-              {weather.stale ? " · not live" : ""}
+              {weather.stale || weatherFailed ? " · last reading" : ""}
             </small>
           </div>
         ) : (
           <div className="commute-weather-copy">
             <strong>—</strong>
-            <small>{weatherMissed ? "Weather unavailable" : "Weather loading"}</small>
+            <small>
+              {weatherFailed ? "Weather unavailable" : "Weather loading"}
+            </small>
           </div>
+        )}
+        {weatherFailed && !display && (
+          <button
+            className="icon-button"
+            aria-label="Retry weather"
+            onClick={() => void loadWeather()}
+          >
+            <RefreshCw size={16} />
+          </button>
         )}
       </div>
 

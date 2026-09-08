@@ -173,8 +173,10 @@ test("three rapid checkboxes update before the first POST completes, with no ref
     ).toHaveAttribute("aria-pressed", "true");
   }
   expect(mock.posts).toHaveLength(1);
+  await expect(page.locator(".save-status")).toHaveText("Saving…");
   release();
   await expect.poll(() => mock.posts.length).toBe(3);
+  await expect(page.locator(".save-status")).toHaveText("All changes saved");
   expect(mock.gets()).toBe(1);
 });
 
@@ -195,7 +197,9 @@ test("failed save refreshes quietly and restores server state", async ({
     }),
   ).toBeVisible();
   release();
-  await expect(page.getByRole("status")).toContainText("Couldn’t save");
+  await expect(page.locator(".save-status")).toHaveText(
+    "Couldn’t save — try your change again",
+  );
   await expect(
     page.getByRole("button", {
       name: "Complete Take out recycling",
@@ -391,7 +395,9 @@ test("alternating series keeps turns through edits and whole-series undo", async
   await page.getByLabel("Apply to every occurrence of this plan").check();
   await page.getByRole("button", { name: "Delete entry" }).click();
   await expect(changed).toHaveCount(0);
-  await expect(page.getByRole("status")).toContainText("3 occurrences deleted");
+  await expect(page.locator(".toast-stack").getByRole("status")).toContainText(
+    "3 occurrences deleted",
+  );
   await page.getByRole("button", { name: "Undo", exact: true }).click();
   await expect(changed.locator(".person-tag")).toHaveText([
     "Amane",
