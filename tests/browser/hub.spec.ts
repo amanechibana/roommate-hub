@@ -62,6 +62,10 @@ test("shopping filters, event export, and dialog keyboard support", async ({
   await page
     .getByRole("button", { name: "Mark as bought: A softer living room" })
     .click();
+  await expect(page.getByLabel("What was it for?")).toHaveValue(
+    "A softer living room",
+  );
+  await page.keyboard.press("Escape");
   await page.getByRole("button", { name: "Bought", exact: true }).click();
   await expect(
     page.getByRole("heading", { name: "A softer living room" }),

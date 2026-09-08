@@ -1,7 +1,7 @@
 "use client";
 
 import styles from "./hub.module.css";
-import ExpensesTab from "./expenses-tab";
+import ExpensesTab, { ExpenseDialog, estimateCents } from "./expenses-tab";
 import { useExpenses } from "@/lib/use-expenses";
 import { HouseCompanion } from "@/components/ui/house-companion";
 
@@ -127,6 +127,7 @@ export default function Hub() {
     entry?: Entry;
     date?: string;
   } | null>(null);
+  const [logPurchase, setLogPurchase] = useState<Entry | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
@@ -208,6 +209,7 @@ export default function Hub() {
     setMembers([]);
     setLoaded(false);
     setEditing(null);
+    setLogPurchase(null);
     setSelectedDay(null);
     setError("");
     setReady(true);
@@ -1030,6 +1032,7 @@ export default function Hub() {
               controller={expenseController}
               members={members.filter((member) => member.name !== "Housemates")}
               memberId={uid!}
+              pending={shopping.filter((e) => !e.done && e.amount != null)}
             />
           )}
 
@@ -1350,7 +1353,11 @@ export default function Hub() {
                         className="checkbox"
                         aria-label={`${entry.done ? "Reopen" : "Mark as bought"}: ${entry.title}`}
                         aria-pressed={entry.done}
-                        onClick={() => void toggle(entry)}
+                        onClick={() => {
+                          void toggle(entry);
+                          if (!entry.done && entry.amount != null)
+                            setLogPurchase(entry);
+                        }}
                       >
                         {entry.done && <AnimatedCheck size={14} />}
                       </Button>
@@ -1544,6 +1551,22 @@ export default function Hub() {
           }}
           onSave={save}
           onDelete={remove}
+        />
+      )}
+      {logPurchase && uid && (
+        <ExpenseDialog
+          draft={{
+            kind: "expense",
+            title: logPurchase.title,
+            amount: estimateCents(logPurchase),
+          }}
+          members={members.filter((m) => m.name !== "Housemates")}
+          memberId={uid}
+          onClose={() => setLogPurchase(null)}
+          onSave={(values) => {
+            expenseController.save(values);
+            setLogPurchase(null);
+          }}
         />
       )}
     </div>

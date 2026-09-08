@@ -10,7 +10,7 @@ import {
   ArrowRight,
 } from "lucide-react";
 import { Button } from "./ui/button";
-import { dateKey, type Member } from "@/lib/model";
+import { dateKey, type Entry, type Member } from "@/lib/model";
 import {
   expenseBalances,
   expenseMoney,
@@ -26,18 +26,24 @@ import styles from "./expenses-tab.module.css";
 type Draft = {
   kind: "expense" | "settlement";
   entry?: Expense;
+  title?: string;
   from?: string;
   to?: string;
   amount?: number;
 };
+// Entry amounts are whole dollars typed by hand; expenses store integer cents.
+export const estimateCents = (entry: Entry) =>
+  Math.round((entry.amount || 0) * 100);
 export default function ExpensesTab({
   controller,
   members,
   memberId,
+  pending,
 }: {
   controller: ExpensesController;
   members: Member[];
   memberId: string;
+  pending: Entry[];
 }) {
   const [draft, setDraft] = useState<Draft | null>(null);
   const { expenses, loaded, error } = controller;
@@ -144,6 +150,32 @@ export default function ExpensesTab({
               <p className={styles.settled}>No outstanding balances.</p>
             )}
           </section>
+          {!!pending.length && (
+            <section className="panel">
+              <div className={styles.sectionHeading}>
+                <h2>Pending from the shopping list</h2>
+                <span>
+                  {expenseMoney(
+                    pending.reduce(
+                      (sum, entry) => sum + estimateCents(entry),
+                      0,
+                    ),
+                  )}{" "}
+                  estimated
+                </span>
+              </div>
+              {pending.map((entry) => (
+                <div className={styles.pendingRow} key={entry.id}>
+                  <span>{entry.title}</span>
+                  <strong>{expenseMoney(estimateCents(entry))}</strong>
+                </div>
+              ))}
+              <p className={styles.pendingNote}>
+                Estimates from the shopping list. Each becomes a real expense
+                when it’s marked bought.
+              </p>
+            </section>
+          )}
           <section className={`${styles.activity} panel`}>
             <div className={styles.sectionHeading}>
               <h2>Activity</h2>
@@ -235,7 +267,7 @@ export default function ExpensesTab({
     </div>
   );
 }
-function ExpenseDialog({
+export function ExpenseDialog({
   draft,
   members,
   memberId,
@@ -331,7 +363,7 @@ function ExpenseDialog({
               name="title"
               required
               maxLength={160}
-              defaultValue={draft.entry?.title}
+              defaultValue={draft.entry?.title ?? draft.title}
               placeholder="Groceries, electricity, dinner…"
               autoFocus
             />

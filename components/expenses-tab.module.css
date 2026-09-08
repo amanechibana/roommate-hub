@@ -89,6 +89,29 @@
   color: #75836a;
   font-size: 13px;
 }
+.pendingRow {
+  border-top: 1px solid #e6ecdc;
+  padding: 15px 22px;
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+.pendingRow > span {
+  flex: 1;
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+.pendingRow > strong {
+  font-size: 15px;
+  color: #74806b;
+  font-variant-numeric: tabular-nums;
+}
+.pendingNote {
+  padding: 0 22px 20px;
+  margin: 0;
+  color: #75836a;
+  font-size: 12px;
+}
 .row {
   display: flex;
   align-items: center;
@@ -259,6 +282,12 @@
     flex-wrap: wrap;
     padding: 14px;
     gap: 10px;
+  }
+  .pendingRow {
+    padding: 14px;
+  }
+  .pendingNote {
+    padding: 0 14px 16px;
   }
   .payment > span {
     min-width: 150px;

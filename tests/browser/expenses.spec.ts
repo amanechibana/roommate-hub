@@ -61,6 +61,41 @@ test("expenses calculate, survive tab changes, edit and record repayments", asyn
   }
 });
 
+test("a bought shopping item turns its estimate into a real expense", async ({
+  page,
+}) => {
+  test.skip(!!process.env.PW_SHARED_API);
+  await page.goto("/");
+  await page
+    .getByRole("navigation")
+    .getByRole("button", { name: "Expenses", exact: true })
+    .click();
+  await expect(page.getByText("Pending from the shopping list")).toBeVisible();
+  await expect(
+    page.getByText("$60.00 estimated", { exact: true }),
+  ).toBeVisible();
+  await page
+    .getByRole("navigation")
+    .getByRole("button", { name: "Shopping list" })
+    .click();
+  await page.getByRole("button", { name: "Mark as bought: Olive oil" }).click();
+  await expect(page.getByLabel("What was it for?")).toHaveValue("Olive oil");
+  await expect(page.getByLabel("Amount ($)", { exact: true })).toHaveValue(
+    "12.00",
+  );
+  await page.getByLabel("Amount ($)", { exact: true }).fill("11.50");
+  await page.getByRole("button", { name: "Save expense", exact: true }).click();
+  await page
+    .getByRole("navigation")
+    .getByRole("button", { name: "Expenses", exact: true })
+    .click();
+  await expect(page.getByRole("button", { name: /Olive oil/ })).toBeVisible();
+  await expect(page.getByText("$11.50", { exact: true })).toHaveCount(2);
+  await expect(
+    page.getByText("$48.00 estimated", { exact: true }),
+  ).toBeVisible();
+});
+
 test("shared expenses save optimistically without refetch and recover failed deletion", async ({
   page,
 }) => {
