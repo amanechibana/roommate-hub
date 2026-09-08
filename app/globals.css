@@ -1061,6 +1061,11 @@ footer svg {
   font-size: 12px;
   line-height: 1.8;
 }
+.list-tools {
+  display: inline-flex;
+  align-items: center;
+  gap: 16px;
+}
 .list-toolbar {
   display: flex;
   align-items: center;

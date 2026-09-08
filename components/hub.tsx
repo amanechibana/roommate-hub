@@ -10,6 +10,7 @@ import { expenseBalances } from "@/lib/expenses";
 import ExpensesTab from "./expenses-tab";
 import styles from "./hub.module.css";
 
+import { shoppingListText } from "@/lib/household-actions";
 import { AnimatedCheck } from "@/components/ui/animated-check";
 import { Button } from "@/components/ui/button";
 import { AnimatePresence, m } from "motion/react";
@@ -29,6 +30,7 @@ import {
   LogOut,
   Plus,
   Settings,
+  Share2,
   ShieldCheck,
   Sparkles,
   X,
@@ -64,6 +66,7 @@ export default function Hub() {
     error,
     setError,
     notice,
+    setNotice,
     noticeAction,
     setNoticeAction,
     undoDeletes,
@@ -184,6 +187,26 @@ export default function Hub() {
     members.some(
       (m) => m.user_id === entry.assignee && m.name !== "Housemates",
     );
+  // Phones hand the list to Messages; a laptop just copies it.
+  const shareList = async () => {
+    const text = shoppingListText(shopping, members, household!.name);
+    if (!text) return;
+    try {
+      if (navigator.share && navigator.canShare?.({ text })) {
+        await navigator.share({
+          title: `Shopping for ${household!.name}`,
+          text,
+        });
+      } else {
+        await navigator.clipboard.writeText(text);
+        setNotice("List copied");
+      }
+    } catch (err) {
+      // Closing the share sheet is not a failure.
+      if ((err as Error).name !== "AbortError")
+        setError("Couldn’t share the list.");
+    }
+  };
   const taskRow = (entry: Entry, index: number) => (
     <DraggableRow
       title={entry.title}
@@ -689,20 +712,31 @@ export default function Hub() {
                   value={filter}
                   onChange={setFilter}
                 />
-                {filter !== "Bought" &&
-                  filteredShopping.some((e) => e.amount != null) && (
-                    <span className="subtle">
-                      Estimated total ·{" "}
-                      <strong>
-                        {money(
-                          filteredShopping.reduce(
-                            (sum, e) => sum + Number(e.amount || 0),
-                            0,
-                          ),
-                        )}
-                      </strong>
-                    </span>
+                <span className="list-tools">
+                  {filter !== "Bought" &&
+                    filteredShopping.some((e) => e.amount != null) && (
+                      <span className="subtle">
+                        Estimated total ·{" "}
+                        <strong>
+                          {money(
+                            filteredShopping.reduce(
+                              (sum, e) => sum + Number(e.amount || 0),
+                              0,
+                            ),
+                          )}
+                        </strong>
+                      </span>
+                    )}
+                  {shopping.some((e) => !e.done) && (
+                    <Button
+                      className="text-button"
+                      onClick={() => void shareList()}
+                    >
+                      <Share2 size={14} />
+                      Share list
+                    </Button>
                   )}
+                </span>
               </div>
               {quickAdd("request")}
               <div className="shopping-list">
