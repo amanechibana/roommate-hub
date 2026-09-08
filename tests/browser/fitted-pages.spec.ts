@@ -13,7 +13,7 @@ for (const [width, height] of [
     await page.setViewportSize({ width, height });
     await page.goto("/");
     await expect(
-      page.getByRole("heading", { name: "Home sweet home." }),
+      page.getByRole("heading", { name: "Welcome home." }),
     ).toBeVisible();
     for (const screen of ["home", "calendar"]) {
       if (screen === "calendar")

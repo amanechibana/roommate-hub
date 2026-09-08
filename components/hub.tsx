@@ -149,7 +149,7 @@ export default function Hub() {
     household?.id,
     uid,
     demo,
-    tab === "Expenses",
+    tab === "Expenses" || display,
   );
   const pending = useRef(0);
   const writes = useRef(Promise.resolve());
@@ -886,6 +886,8 @@ export default function Hub() {
     household,
     entries,
     members,
+    memberId: uid,
+    expenses: expenseController,
     demo,
     error,
     onExit: () => changeDisplay(false),

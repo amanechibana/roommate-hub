@@ -7,7 +7,7 @@ test("shared task creation, completion, editing, and deletion", async ({
   page.on("pageerror", (error) => errors.push(error.message));
   await page.goto("/");
   await expect(
-    page.getByRole("heading", { name: "Home sweet home." }),
+    page.getByRole("heading", { name: "Welcome home." }),
   ).toBeVisible();
   await page.getByRole("button", { name: "To-do", exact: true }).click();
   await page.getByLabel("What’s on your mind?").fill("Test our household flow");
@@ -85,7 +85,7 @@ test("keyboard shortcuts switch tabs, add entries, and stay out of inputs", asyn
 }) => {
   await page.goto("/");
   await expect(
-    page.getByRole("heading", { name: "Home sweet home." }),
+    page.getByRole("heading", { name: "Welcome home." }),
   ).toBeVisible();
   await expect
     .poll(async () => {
@@ -132,7 +132,7 @@ test("mobile navigation and layout fit the screen", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/");
   await expect(
-    page.getByRole("heading", { name: "Home sweet home." }),
+    page.getByRole("heading", { name: "Welcome home." }),
   ).toBeVisible();
   await page.screenshot({
     path: "test-results/mobile-overview.png",
@@ -173,7 +173,7 @@ test("desktop overview", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto("/");
   await expect(
-    page.getByRole("heading", { name: "Home sweet home." }),
+    page.getByRole("heading", { name: "Welcome home." }),
   ).toBeVisible();
   await page.evaluate(() => document.fonts.ready);
   await page.screenshot({
