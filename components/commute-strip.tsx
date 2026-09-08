@@ -16,6 +16,7 @@ import {
   Settings,
   Sun,
   TrainFront,
+  TriangleAlert,
   X,
 } from "lucide-react";
 import {
@@ -23,10 +24,12 @@ import {
   defaultStations,
   filterDepartures,
   hasDeparted,
+  leaveInMinutes,
   minutesUntil,
   parseStoredStations,
   sameStation,
   searchPathStations,
+  subwayColor,
   toggleFilter,
   type CommuteStation,
   type Departure,
@@ -34,11 +37,14 @@ import {
   type SubwayStation,
   type Weather,
 } from "@/lib/transit";
+import type { TransitAlert } from "@/lib/subway-alerts";
 
 const STORAGE_KEY = "common-ground:commute";
 // Trains move; the weather does not. Poll them accordingly.
 const TRAIN_REFRESH = 30_000;
 const WEATHER_REFRESH = 10 * 60_000;
+// Alerts also change slowly, and the server caches the feed for five minutes.
+const ALERT_REFRESH = 5 * 60_000;
 
 function readStations(): CommuteStation[] {
   if (typeof window === "undefined") return defaultStations();
@@ -162,9 +168,15 @@ export default function CommuteStrip({
         if (!board) return null;
         // Filtering happens here rather than server-side so every household
         // shares one cached upstream response regardless of their preferences.
+        // The walk time rides along so departures can carry leave-by hints.
         return {
           ...board,
-          departures: filterDepartures(board.departures, station),
+          departures: filterDepartures(board.departures, station).map(
+            (departure) =>
+              station.walkMinutes
+                ? { ...departure, walk: station.walkMinutes }
+                : departure,
+          ),
         };
       }),
     );
@@ -176,6 +188,47 @@ export default function CommuteStrip({
     setStale(good.some((board) => board.stale));
     if (good.length) setUpdatedAt(new Date());
   }, [key]);
+
+  const [alerts, setAlerts] = useState<TransitAlert[]>([]);
+  const loadAlerts = useCallback(async () => {
+    const chosen: CommuteStation[] = JSON.parse(key);
+    const subway = chosen.filter((station) => station.system === "subway");
+    if (!subway.length) {
+      setAlerts([]);
+      return;
+    }
+    try {
+      const response = await fetch(
+        `/api/subway/alerts?stations=${subway
+          .map((station) => encodeURIComponent(station.id))
+          .join(",")}`,
+        { cache: "no-store" },
+      );
+      if (!response.ok) return;
+      const data = (await response.json()) as { alerts?: TransitAlert[] };
+      // A route filtered off every board is not worth a banner either.
+      const chosenLines = subway.flatMap((station) => station.lines);
+      const showAll = subway.some((station) => !station.lines.length);
+      setAlerts(
+        (data.alerts ?? []).filter(
+          (alert) =>
+            showAll ||
+            alert.routes.some((route) => chosenLines.includes(route)),
+        ),
+      );
+    } catch {
+      // Keep the previous alerts until a load succeeds.
+    }
+  }, [key]);
+
+  useEffect(() => {
+    if (!hydrated) return;
+    void loadAlerts();
+    const timer = setInterval(() => {
+      if (document.visibilityState === "visible") void loadAlerts();
+    }, ALERT_REFRESH);
+    return () => clearInterval(timer);
+  }, [hydrated, loadAlerts]);
 
   const home = stations.find((station) => station.lat && station.lon) ?? null;
   const homeAt = home ? `${home.lat},${home.lon}` : "";
@@ -245,7 +298,7 @@ export default function CommuteStrip({
     if (refreshing) return;
     setRefreshing(true);
     try {
-      await Promise.all([loadTrains(), loadWeather()]);
+      await Promise.all([loadTrains(), loadWeather(), loadAlerts()]);
     } finally {
       setRefreshing(false);
     }
@@ -303,45 +356,57 @@ export default function CommuteStrip({
       </div>
 
       <div className="commute-trains" ref={trains}>
-        {departures.map((departure) => (
-          <div
-            className={
-              (minutesUntil(departure, now) ?? 9) <= 1 && !departure.status
-                ? "commute-train commute-due"
-                : "commute-train"
-            }
-            key={departure.id}
-          >
-            <span
-              className="commute-badge"
-              style={badgeStyle(departure.colors)}
-              aria-hidden="true"
+        {departures.map((departure) => {
+          const leave = leaveInMinutes(departure, now);
+          // With a walk time set, urgency means "time to leave", not
+          // "train arriving": a train two minutes out that you cannot reach
+          // is not the one to run for.
+          const due =
+            !departure.status &&
+            (departure.walk
+              ? leave !== null && leave >= 0 && leave <= 1
+              : (minutesUntil(departure, now) ?? 9) <= 1);
+          return (
+            <div
+              className={due ? "commute-train commute-due" : "commute-train"}
+              key={departure.id}
             >
-              {departure.line}
-            </span>
-            <div className="commute-train-copy">
-              <strong title={departure.headsign}>
-                {departure.headsign
-                  .replace(/World Trade Cent(?:er|re)/gi, "WTC")
-                  .replace(/33rd (?:Street|St)(?: via Hoboken)?/gi, "33rd St")
-                  .replace(/^To /i, "")}
-              </strong>
-              <small>
-                <span className="commute-origin">{departure.origin}</span>
-                {departure.line !== "PATH" && departure.note
-                  ? ` · ${departure.note}`
-                  : ""}
-              </small>
+              <span
+                className="commute-badge"
+                style={badgeStyle(departure.colors)}
+                aria-hidden="true"
+              >
+                {departure.line}
+              </span>
+              <div className="commute-train-copy">
+                <strong title={departure.headsign}>
+                  {departure.headsign
+                    .replace(/World Trade Cent(?:er|re)/gi, "WTC")
+                    .replace(/33rd (?:Street|St)(?: via Hoboken)?/gi, "33rd St")
+                    .replace(/^To /i, "")}
+                </strong>
+                <small>
+                  <span className="commute-origin">{departure.origin}</span>
+                  {departure.line !== "PATH" && departure.note
+                    ? ` · ${departure.note}`
+                    : ""}
+                  {leave !== null && leave >= 0
+                    ? ` · leave ${leave <= 1 ? "now" : `in ${leave} min`}`
+                    : ""}
+                </small>
+              </div>
+              <span
+                className={
+                  departure.status
+                    ? "commute-when commute-late"
+                    : "commute-when"
+                }
+              >
+                {when(departure, now)}
+              </span>
             </div>
-            <span
-              className={
-                departure.status ? "commute-when commute-late" : "commute-when"
-              }
-            >
-              {when(departure, now)}
-            </span>
-          </div>
-        ))}
+          );
+        })}
         {!departures.length && (
           <p className="commute-empty">
             <TrainFront size={16} aria-hidden="true" />
@@ -396,6 +461,26 @@ export default function CommuteStrip({
           </button>
         )}
       </div>
+
+      {!!alerts.length && (
+        <div className="commute-alerts">
+          {alerts.slice(0, display ? 3 : 2).map((alert) => (
+            <p className="commute-alert" key={alert.id} title={alert.text}>
+              <TriangleAlert size={13} aria-hidden="true" />
+              {alert.routes.slice(0, 4).map((route) => (
+                <span
+                  key={route}
+                  className="commute-badge"
+                  style={badgeStyle([subwayColor(route)])}
+                >
+                  {route}
+                </span>
+              ))}
+              <span className="commute-alert-text">{alert.text}</span>
+            </p>
+          ))}
+        </div>
+      )}
 
       {open && (
         <StationDialog
@@ -498,6 +583,7 @@ function StationDialog({
               lon: station.lon,
               lines: [],
               headsigns: [],
+              walkMinutes: 0,
             })),
           ]);
         })
@@ -583,6 +669,15 @@ function StationDialog({
         i === index
           ? { ...station, [axis]: toggleFilter(station[axis], all, value) }
           : station,
+      ),
+    );
+  }
+
+  function setWalk(index: number, value: string) {
+    const minutes = Math.max(0, Math.min(60, Math.floor(Number(value)) || 0));
+    setDraft((current) =>
+      current.map((station, i) =>
+        i === index ? { ...station, walkMinutes: minutes } : station,
       ),
     );
   }
@@ -743,6 +838,23 @@ function StationDialog({
 
               {open && (
                 <div className="commute-filters">
+                  <div className="commute-chiprow commute-walkrow">
+                    <span className="commute-legend">Walk time</span>
+                    <input
+                      type="number"
+                      min={0}
+                      max={60}
+                      inputMode="numeric"
+                      value={station.walkMinutes || ""}
+                      placeholder="—"
+                      aria-label={`Minutes to walk to ${label}`}
+                      onChange={(event) => setWalk(index, event.target.value)}
+                    />
+                    <small>
+                      minutes to this station — departures gain a “leave in …”
+                      hint
+                    </small>
+                  </div>
                   {!choices && (
                     <p className="commute-loading">Loading trains…</p>
                   )}
