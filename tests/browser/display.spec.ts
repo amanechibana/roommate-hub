@@ -32,6 +32,17 @@ for (const [width, height] of [
         .map((el) => el.className || el.tagName);
     });
     expect(overflow).toEqual([]);
+    const looseDateBadges = await page.evaluate(
+      () =>
+        [...document.querySelectorAll(".board-date")].filter((badge) => {
+          const box = badge.getBoundingClientRect();
+          return [...badge.children].some((child) => {
+            const r = child.getBoundingClientRect();
+            return r.top < box.top - 1 || r.bottom > box.bottom + 1;
+          });
+        }).length,
+    );
+    expect(looseDateBadges).toBe(0);
     await expect(
       page.getByRole("button", { name: "Exit display" }),
     ).toBeInViewport();
