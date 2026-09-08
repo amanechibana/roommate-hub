@@ -3,6 +3,7 @@ import { PaperDialog } from "./ui/dialog";
 
 import { Button } from "@/components/ui/button";
 
+import { billPaid, isBill } from "@/lib/household-actions";
 import { parseDate, type Entry } from "@/lib/model";
 import { ChevronRight, Leaf, Plus, X } from "lucide-react";
 
@@ -43,12 +44,14 @@ export function ShortcutsDialog({ onClose }: { onClose: () => void }) {
 export function DayDialog({
   date,
   entries,
+  person,
   onClose,
   onOpen,
   onAdd,
 }: {
   date: string;
   entries: Entry[];
+  person: (id: string | null) => string;
   onClose: () => void;
   onOpen: (entry: Entry) => void;
   onAdd: () => void;
@@ -62,6 +65,7 @@ export function DayDialog({
       <div className="dialog-heading">
         <h2 id="day-title">
           {parseDate(date).toLocaleDateString("en-US", {
+            weekday: "long",
             month: "long",
             day: "numeric",
           })}
@@ -80,7 +84,21 @@ export function DayDialog({
           key={entry.id}
           onClick={() => onOpen(entry)}
         >
-          {entry.title}
+          <span>
+            <strong>
+              {entry.series_id ? "↻ " : ""}
+              {entry.done ? "✓ " : ""}
+              {entry.title}
+            </strong>
+            <small>
+              {entry.category} · {person(entry.assignee)}
+              {isBill(entry)
+                ? billPaid(entry)
+                  ? " · Paid"
+                  : " · Payment due"
+                : ""}
+            </small>
+          </span>
           <ChevronRight size={16} />
         </Button>
       ))}

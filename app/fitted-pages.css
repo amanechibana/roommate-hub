@@ -266,6 +266,20 @@ body:has(.fitted-app) {
   text-align: left;
   background: transparent;
 }
+.entry-dialog .agenda-entry > span {
+  min-width: 0;
+}
+.entry-dialog .agenda-entry strong {
+  display: block;
+  font-weight: 500;
+  overflow-wrap: anywhere;
+}
+.entry-dialog .agenda-entry small {
+  display: block;
+  margin-top: 4px;
+  font-size: 11px;
+  color: #84735d;
+}
 @media (max-height: 650px) and (min-width: 651px) {
   .fitted-app .topbar {
     height: 48px;

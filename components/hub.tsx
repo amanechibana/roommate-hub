@@ -800,6 +800,7 @@ export default function Hub() {
               (e) =>
                 e.date === selectedDay && ["task", "event"].includes(e.kind),
             )}
+            person={person}
             onClose={() => setSelectedDay(null)}
             onOpen={(entry) => {
               setSelectedDay(null);
