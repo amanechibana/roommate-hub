@@ -85,6 +85,8 @@ export default function Hub() {
     signOut,
     save,
     toggle,
+    pushToTomorrow,
+    handOff,
     toggleBought,
     togglePayment,
     coverBill,
@@ -222,6 +224,28 @@ export default function Hub() {
         title={entry.title}
         onEdit={() => setEditing({ kind: entry.kind, entry })}
         onDelete={() => void remove(entry)}
+        actions={
+          entry.done
+            ? []
+            : [
+                {
+                  label:
+                    entry.date && entry.date > today
+                      ? "Push back a day"
+                      : "Push to tomorrow",
+                  onSelect: () => pushToTomorrow(entry),
+                },
+                ...members
+                  .filter(
+                    (m) =>
+                      m.name !== "Housemates" && m.user_id !== entry.assignee,
+                  )
+                  .map((m) => ({
+                    label: `Hand to ${m.name}`,
+                    onSelect: () => handOff(entry, m),
+                  })),
+              ]
+        }
       />
     </DraggableRow>
   );

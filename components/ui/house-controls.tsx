@@ -12,11 +12,13 @@ export function EntryMenu({
   onEdit,
   onDelete,
   onConvert,
+  actions = [],
 }: {
   title: string;
   onEdit: () => void;
   onDelete: () => void;
   onConvert?: () => void;
+  actions?: { label: string; onSelect: () => void }[];
 }) {
   return (
     <Menu.Root>
@@ -31,6 +33,11 @@ export function EntryMenu({
       <Menu.Portal>
         <Menu.Content className="paper-menu" sideOffset={5} align="end">
           <Menu.Item onSelect={onEdit}>Edit</Menu.Item>
+          {actions.map((action) => (
+            <Menu.Item key={action.label} onSelect={action.onSelect}>
+              {action.label}
+            </Menu.Item>
+          ))}
           {onConvert && (
             <Menu.Item onSelect={onConvert}>
               Convert to to-do, plan, or item
