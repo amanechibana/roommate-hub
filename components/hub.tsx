@@ -33,6 +33,7 @@ import {
 
 import { categories, labels, money, tabs } from "@/lib/household-config";
 import { useHousehold } from "@/lib/use-household";
+import ActivityFeed from "./activity-feed";
 import CalendarTab from "./calendar-tab";
 import EntryDialog from "./entry-dialog";
 import Auth from "./house-auth";
@@ -389,7 +390,7 @@ export default function Hub() {
 
   return (
     <div
-      className={`${styles.shell} app-shell ${tab === "Calendar" ? "fitted-app" : ""}`}
+      className={`${styles.shell} app-shell ${tab === "Overview" || tab === "Calendar" ? "fitted-app" : ""}`}
     >
       <aside className="sidebar">
         <a className="brand" href="/" aria-label="Common Ground home">
@@ -782,7 +783,10 @@ export default function Hub() {
           )}
 
           {tab === "Our household" && (
-            <HouseholdSettings {...house} avatar={avatar} />
+            <>
+              <HouseholdSettings {...house} avatar={avatar} />
+              <ActivityFeed activity={house.activity} members={members} />
+            </>
           )}
         </main>
       </div>

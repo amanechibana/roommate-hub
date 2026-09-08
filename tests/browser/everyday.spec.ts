@@ -9,11 +9,25 @@ test("phone users can switch person, tap member details, and reach every home it
 }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/");
-  await expect(page.locator(".board-task")).toHaveCount(3);
-  await expect(page.locator(".board-shopping")).toHaveCount(3);
+  await expect(page.locator(".board-task")).toHaveCount(2);
+  await expect(page.locator(".board-shopping")).toHaveCount(2);
   await expect(
     page.getByRole("button", { name: "Next home page" }),
   ).toHaveCount(0);
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollHeight <= innerHeight,
+    ),
+  ).toBe(true);
+  await page
+    .locator(".chores-card")
+    .getByRole("button", { name: "See all 3" })
+    .click();
+  await expect(page.locator(".task-row")).toHaveCount(3);
+  await page
+    .getByRole("navigation")
+    .getByRole("button", { name: "Overview", exact: true })
+    .click();
   await page.getByRole("button", { name: "Open household settings" }).click();
   await page
     .getByRole("button", { name: "Change person on this device" })
@@ -53,6 +67,7 @@ test("weekly shortcut supplies dates and completion appears in home activity", a
   await page
     .getByRole("button", { name: "Complete Weekly plant care", exact: true })
     .click();
+  await page.getByRole("button", { name: "Our household" }).click();
   await expect(page.locator(".activity-feed")).toContainText(
     "completed Weekly plant care",
   );

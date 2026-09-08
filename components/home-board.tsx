@@ -1,6 +1,5 @@
 "use client";
 import { activityVerb, type HouseActivity } from "@/lib/activity";
-import ActivityFeed from "./activity-feed";
 
 import { AnimatePresence, m } from "motion/react";
 import { PresenceRow } from "./ui/presence";
@@ -226,7 +225,7 @@ export default function HomeBoard({
   const activePage = page % pages;
   const visible = (items: Entry[]) =>
     !display
-      ? items
+      ? items.slice(0, limit)
       : items.slice(
           (activePage % Math.max(1, Math.ceil(items.length / limit))) * limit,
           ((activePage % Math.max(1, Math.ceil(items.length / limit))) + 1) *
@@ -235,6 +234,17 @@ export default function HomeBoard({
 
   const due = tasks.filter((e) => e.date && e.date <= today).length;
 
+  useEffect(() => {
+    if (display || !board.current) return;
+    const rows = board.current.querySelector(".board-rows");
+    if (!rows) return;
+    const resize = () =>
+      setLimit(Math.max(1, Math.min(3, Math.floor(rows.clientHeight / 64))));
+    const observer = new ResizeObserver(resize);
+    observer.observe(rows);
+    resize();
+    return () => observer.disconnect();
+  }, [display]);
   useEffect(() => {
     // Refresh due dates and plan labels at local midnight, including DST days.
     let timer: ReturnType<typeof setTimeout>;
@@ -347,6 +357,15 @@ export default function HomeBoard({
       );
     }
   }
+  const more = (
+    count: number,
+    tab: "Calendar" | "To-dos" | "Shopping list" | "House notes",
+  ) =>
+    !display && count > limit ? (
+      <Button className="board-more" onClick={() => onNavigate(tab)}>
+        See all {count} <ArrowRight size={14} />
+      </Button>
+    ) : null;
   const title = (entry: Entry) =>
     display ? (
       <strong title={entry.title}>{entry.title}</strong>
@@ -546,6 +565,7 @@ export default function HomeBoard({
               </div>
             )}
           </div>
+          {more(events.length, "Calendar")}
         </m.section>
         <m.section
           initial={reduced ? false : { opacity: 0.65 }}
@@ -610,6 +630,7 @@ export default function HomeBoard({
               </div>
             )}
           </div>
+          {more(tasks.length, "To-dos")}
         </m.section>
         <m.section
           initial={reduced ? false : { opacity: 0.65 }}
@@ -671,6 +692,7 @@ export default function HomeBoard({
               </div>
             )}
           </div>
+          {more(shopping.length, "Shopping list")}
         </m.section>
         <m.section
           initial={reduced ? false : { opacity: 0.65 }}
@@ -739,7 +761,6 @@ export default function HomeBoard({
           )}
         </m.section>
       </div>
-      {!display && <ActivityFeed activity={activity} members={members} />}
       {display && (
         <footer className="wall-controls">
           <span className="wall-status">
