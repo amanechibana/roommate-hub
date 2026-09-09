@@ -335,7 +335,9 @@ body:has(.fitted-app) {
     margin-bottom: 10px;
   }
   .fitted-app .board-welcome h1 {
-    font-size: 27px;
+    /* The headline shares a phone screen with the trains and four cards. */
+    font-size: 23px;
+    line-height: 1.22;
   }
   .fitted-app .board-kicker {
     display: none;
@@ -504,4 +506,11 @@ body:has(.fitted-app) {
 .fridge-stack .fridge-message p {
   font-size: 14px;
   margin: 0 0 8px;
+}
+
+/* Shorter phones: the balance line gives its row to the cards. */
+@media (max-width: 650px) and (max-height: 800px) {
+  .fitted-app .board-balance {
+    display: none;
+  }
 }

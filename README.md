@@ -92,7 +92,9 @@ own between the 30-second polls instead of freezing on whatever the last
 response said, and a train that has gone drops off without waiting for a
 refresh. Anything a minute out is highlighted, since that is the one you might
 still catch. How many departures appear is measured from the space available,
-and never falls below one per station you added.
+and never falls below one per station you added. On a phone the departures
+stack under the weather instead, three deep (two on shorter phones), and
+the band is dropped on screens under 700px tall.
 
 When an agency feed cannot be reached the board keeps its last known times but
 marks itself **Not live** rather than passing them off as current; the same
