@@ -396,8 +396,13 @@ function ExpenseDialog({
   const settlement = draft.kind === "settlement";
   const cents = toCents(amount);
   const split = splitEvenly(cents || 0, people);
+  // A field left blank reads as its placeholder, 0, so the hint and the
+  // save rule agree; only text that isn't money is refused.
   const customShares = Object.fromEntries(
-    people.map((id) => [id, shareCents(custom[id] ?? "")]),
+    people.map((id) => {
+      const raw = (custom[id] ?? "").trim();
+      return [id, raw === "" ? 0 : shareCents(raw)];
+    }),
   );
   const assigned = Object.values(customShares).reduce<number>(
     (sum, share) => sum + (share ?? 0),
@@ -427,7 +432,7 @@ function ExpenseDialog({
           }
           if (!settlement && uneven) {
             if (Object.values(customShares).some((share) => share === null)) {
-              setError("Give everyone in the split an amount, even if it’s 0.");
+              setError("Check the shares: amounts like 12.50, or blank for 0.");
               return;
             }
             if (assigned !== cents) {
@@ -549,19 +554,21 @@ function ExpenseDialog({
           <fieldset className={styles.split}>
             <legend>{uneven ? "Split between" : "Split evenly between"}</legend>
             {members.map((member) => (
-              <label key={member.user_id}>
-                <input
-                  type="checkbox"
-                  checked={people.includes(member.user_id)}
-                  onChange={(event) =>
-                    setPeople((current) =>
-                      event.target.checked
-                        ? [...current, member.user_id]
-                        : current.filter((id) => id !== member.user_id),
-                    )
-                  }
-                />
-                <span>{member.name}</span>
+              <div key={member.user_id} className={styles.person}>
+                <label>
+                  <input
+                    type="checkbox"
+                    checked={people.includes(member.user_id)}
+                    onChange={(event) =>
+                      setPeople((current) =>
+                        event.target.checked
+                          ? [...current, member.user_id]
+                          : current.filter((id) => id !== member.user_id),
+                      )
+                    }
+                  />
+                  <span>{member.name}</span>
+                </label>
                 {uneven && people.includes(member.user_id) ? (
                   <input
                     className={styles.share}
@@ -579,7 +586,7 @@ function ExpenseDialog({
                 ) : (
                   <b>{expenseMoney(shares[member.user_id] || 0)}</b>
                 )}
-              </label>
+              </div>
             ))}
             <div className={styles.splitFooter}>
               <p className={styles.hint}>
