@@ -498,7 +498,7 @@ export default function Hub() {
           <span className="brand-icon">
             <Leaf size={24} />
           </span>
-          <span>
+          <span className="brand-text">
             common
             <br />
             ground<span className="brand-dot">.</span>
@@ -543,7 +543,9 @@ export default function Hub() {
           ))}
         </nav>
         <div className="sidebar-bottom">
-          <HouseCompanion />
+          <div className="rail-companion">
+            <HouseCompanion />
+          </div>
           <Button
             className={`settings-link ${tab === "Our household" ? "selected" : ""}`}
             onClick={() => setTab("Our household")}
@@ -551,26 +553,26 @@ export default function Hub() {
             <Settings size={18} /> Our household
           </Button>
           <div className="sidebar-profile">
-            <span
-              className={`avatar tone-${
-                Math.max(
-                  0,
-                  members.findIndex((m) => m.user_id === uid),
-                ) % 3
-              }`}
+            <Button
+              className="text-button profile-switch"
+              onClick={() => setChoosingPerson(true)}
+              aria-label={`Switch person (now ${person(uid || null)})`}
             >
-              {person(uid || null).slice(0, 1)}
-            </span>
-            <div>
-              <Button
-                className="text-button"
-                onClick={() => setChoosingPerson(true)}
-                aria-label="Switch person"
+              <span
+                className={`avatar tone-${
+                  Math.max(
+                    0,
+                    members.findIndex((m) => m.user_id === uid),
+                  ) % 3
+                }`}
               >
-                {person(uid || null)}
-              </Button>
-              <small>{demo ? "Exploring the demo" : "Right at home"}</small>
-            </div>
+                {person(uid || null).slice(0, 1)}
+              </span>
+              <span className="profile-copy">
+                <strong>{person(uid || null)}</strong>
+                <small>{demo ? "Exploring the demo" : "Right at home"}</small>
+              </span>
+            </Button>
             {!demo && (
               <Button
                 aria-label="Sign out"
@@ -587,7 +589,7 @@ export default function Hub() {
         <header className="topbar">
           <HouseCompanion variant="compact" />
           <span>
-            <Home size={15} /> Our home <span className="slash">/</span>{" "}
+            <Home size={15} /> {household.name} <span className="slash">/</span>{" "}
             <strong>{tab}</strong>
           </span>
           <div>

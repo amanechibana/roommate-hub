@@ -745,3 +745,92 @@
     display: none;
   }
 }
+
+/* Above the phone breakpoint the sidebar is a rail: the marks and the cat,
+   with names under the icons. The wide column was six links and a lot of
+   green; the width goes to the noticeboard instead. */
+@media (min-width: 651px) {
+  .shell :global(.sidebar) {
+    width: 96px;
+    padding: 20px 10px 14px;
+    align-items: center;
+  }
+  .shell :global(.main-shell) {
+    margin-left: 96px;
+  }
+  .shell :global(.brand) {
+    margin: 0 0 22px;
+  }
+  .shell :global(.brand-text),
+  .shell :global(.nav-label) {
+    display: none;
+  }
+  .shell :global(.sidebar nav) {
+    width: 100%;
+    gap: 4px;
+  }
+  .shell :global(.sidebar nav button) {
+    position: relative;
+    flex-direction: column;
+    justify-content: center;
+    gap: 5px;
+    padding: 9px 4px 8px;
+    min-height: 0;
+    font-size: 10px;
+    text-align: center;
+    line-height: 1.15;
+  }
+  .shell :global(.sidebar nav button > span:not(.nav-count)) {
+    display: inline;
+    overflow-wrap: anywhere;
+  }
+  .shell :global(.settings-link),
+  .shell :global(.sidebar-profile) {
+    display: flex;
+  }
+  .shell :global(.nav-count) {
+    position: absolute;
+    top: 4px;
+    right: 6px;
+    margin: 0;
+    min-width: 18px;
+    padding: 1px 5px;
+    font-size: 9px;
+  }
+  .shell :global(.sidebar-bottom) {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    width: 100%;
+    padding-top: 14px;
+  }
+  .shell :global(.rail-companion) {
+    width: 78px;
+    margin-bottom: 4px;
+  }
+  .shell :global(.settings-link) {
+    flex-direction: column;
+    gap: 5px;
+    padding: 9px 4px 8px;
+    font-size: 10px;
+    text-align: center;
+  }
+  .shell :global(.sidebar-profile) {
+    flex-direction: column;
+    gap: 6px;
+    width: 100%;
+    margin-top: 6px;
+    padding-top: 12px;
+  }
+  .shell :global(.profile-switch) {
+    display: inline-flex;
+    padding: 0;
+  }
+  .shell :global(.profile-copy) {
+    display: none;
+  }
+  .shell :global(.sidebar-profile .icon-button) {
+    margin-left: 0;
+  }
+}

@@ -224,6 +224,15 @@ nav button.active {
   padding-top: 19px;
   margin-top: 14px;
 }
+.profile-switch {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-align: left;
+}
+.profile-copy {
+  display: block;
+}
 .sidebar-profile strong {
   font-size: 12px;
   display: block;
