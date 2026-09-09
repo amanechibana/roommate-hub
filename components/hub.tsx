@@ -955,6 +955,11 @@ export default function Hub() {
             uid={uid}
             onPayment={togglePayment}
             onCover={coverBill}
+            onNudge={
+              !demo && process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY
+                ? (entry, member) => void nudge(entry, member)
+                : undefined
+            }
             members={members.filter((m) => m.name !== "Housemates")}
             busy={busy}
             error={error}

@@ -1,6 +1,7 @@
 "use client";
 
 import { AnimatePresence, m } from "motion/react";
+import { BellRing } from "lucide-react";
 import { useHouseMotion } from "./ui/motion-provider";
 import { Button } from "@/components/ui/button";
 import { AnimatedCheck } from "@/components/ui/animated-check";
@@ -14,12 +15,14 @@ export default function BillChecks({
   uid,
   onPayment,
   onCover,
+  onNudge,
 }: {
   entry: Entry;
   members: Member[];
   uid: string | null;
   onPayment: (entry: Entry) => void;
   onCover: (entry: Entry) => void;
+  onNudge?: (entry: Entry, member: Member) => void;
 }) {
   const { active } = useHouseMotion();
   if (!isBill(entry) || !entry.payment_members?.length) return null;
@@ -58,34 +61,47 @@ export default function BillChecks({
           const member = members.find((m) => m.user_id === id);
           const name = member?.name || "Housemate";
           const paid = entry.paid_by?.includes(id) ?? false;
+          const nudgeable =
+            !!onNudge && !paid && !!member && id !== uid && !!uid;
           return (
-            <Button
-              key={id}
-              type="button"
-              className={`bill-person ${paid ? "paid" : ""}`}
-              disabled={id !== uid}
-              aria-pressed={paid}
-              aria-label={`${paid ? "Mark unpaid" : "Mark paid"}: ${name}`}
-              onClick={() => onPayment(entry)}
-            >
-              <span
-                className={`avatar tone-${
-                  Math.max(
-                    0,
-                    members.findIndex((m) => m.user_id === id),
-                  ) % 3
-                }`}
+            <span key={id} className="bill-slot">
+              <Button
+                type="button"
+                className={`bill-person ${paid ? "paid" : ""}`}
+                disabled={id !== uid}
+                aria-pressed={paid}
+                aria-label={`${paid ? "Mark unpaid" : "Mark paid"}: ${name}`}
+                onClick={() => onPayment(entry)}
               >
-                {name[0]}
-              </span>
-              <span>
-                <strong>{name}</strong>
-                <small>{paid ? "Paid" : "Not paid yet"}</small>
-              </span>
-              <span className="bill-tick">
-                {paid && <AnimatedCheck size={16} />}
-              </span>
-            </Button>
+                <span
+                  className={`avatar tone-${
+                    Math.max(
+                      0,
+                      members.findIndex((m) => m.user_id === id),
+                    ) % 3
+                  }`}
+                >
+                  {name[0]}
+                </span>
+                <span>
+                  <strong>{name}</strong>
+                  <small>{paid ? "Paid" : "Not paid yet"}</small>
+                </span>
+                <span className="bill-tick">
+                  {paid && <AnimatedCheck size={16} />}
+                </span>
+              </Button>
+              {nudgeable && (
+                <Button
+                  type="button"
+                  className="text-button muted bill-nudge"
+                  onClick={() => onNudge(entry, member)}
+                >
+                  <BellRing size={12} />
+                  Nudge {name}
+                </Button>
+              )}
+            </span>
           );
         })}
       </div>

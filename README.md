@@ -256,7 +256,10 @@ shopping pages also support typing a title and pressing Enter to add it.
   someone else. It sends one push notification to that person's subscribed
   devices ("Alex gave you a nudge — “Dishes” was due yesterday"), and says
   so if they haven't turned reminders on anywhere. A to-do can be nudged once
-  every fifteen minutes. Needs the push setup below.
+  every fifteen minutes. Needs the push setup below. Open a rent or bill
+  event and each unpaid housemate's check gets a **Nudge <name>** link that
+  does the same for their share ("“Rent” ($2,400) is due today — your share
+  isn't checked off").
 - **Rent and bills:** use an event with category **Rent** or **Bill**. Choose
   **Monthly** for a recurring bill. Open the saved event to see each person’s
   paid check; the current device identity can change only its own check. Each

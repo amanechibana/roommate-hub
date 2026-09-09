@@ -2133,6 +2133,20 @@ textarea {
 .bill-person.paid {
   background: #e6edda;
 }
+.bill-slot {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+.bill-slot > .bill-person {
+  width: 100%;
+}
+.bill-nudge {
+  align-self: flex-start;
+  gap: 5px;
+  padding: 2px 0 0 4px;
+}
 .bill-tick {
   display: flex;
   align-items: center;

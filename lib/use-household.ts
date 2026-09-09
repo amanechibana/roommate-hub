@@ -645,8 +645,8 @@ export function useHousehold() {
   }
   // A nudge is a push to the assignee's phones, not a change to the entry,
   // so nothing here is optimistic: the toast waits for the server's word.
-  async function nudge(entry: Entry) {
-    const name = person(entry.assignee);
+  async function nudge(entry: Entry, member?: Member) {
+    const name = member ? member.name : person(entry.assignee);
     setError("");
     try {
       // A hand-off or a fresh to-do may still be in the queue; the server
@@ -654,6 +654,7 @@ export function useHousehold() {
       await writes.current;
       const result = await homeRequest("/api/nudge", "POST", {
         id: savedIds.current.get(entry.id) || entry.id,
+        member: member?.user_id,
       });
       setNotice(
         result.sent

@@ -42,10 +42,12 @@ export default function EntryDialog({
   uid,
   onPayment,
   onCover,
+  onNudge,
 }: {
   uid: string | null;
   onPayment: (entry: Entry) => void;
   onCover: (entry: Entry) => void;
+  onNudge?: (entry: Entry, member: Member) => void;
   editing: { kind: Kind; entry?: Entry; date?: string };
   members: Member[];
   busy: boolean;
@@ -186,6 +188,7 @@ export default function EntryDialog({
           uid={uid}
           onPayment={onPayment}
           onCover={onCover}
+          onNudge={onNudge}
         />
       )}
       <form onSubmit={submit}>

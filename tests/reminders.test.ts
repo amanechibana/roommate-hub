@@ -164,3 +164,31 @@ test("only an open, assigned to-do can be nudged", () => {
     null,
   );
 });
+
+test("a bill nudge chases one person's unpaid share", () => {
+  const today = "2026-09-08";
+  const rent = entry({
+    kind: "event",
+    category: "Rent",
+    title: "Rent",
+    amount: 2400,
+    date: today,
+    payment_members: ["a", "b"],
+    paid_by: ["a"],
+  });
+  assert.deepEqual(nudgeMessage(rent, amane, today, barnatt)!.lines, [
+    "“Rent” ($2,400) is due today — your share isn’t checked off",
+  ]);
+  // Already paid, not on the bill, or no target named: nothing to chase.
+  assert.equal(nudgeMessage(rent, barnatt, today, amane), null);
+  assert.equal(
+    nudgeMessage(
+      entry({ ...rent, payment_members: ["a"] }),
+      amane,
+      today,
+      barnatt,
+    ),
+    null,
+  );
+  assert.equal(nudgeMessage(rent, amane, today), null);
+});
