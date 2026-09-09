@@ -21,6 +21,8 @@ import { dateKey, type Entry, type Member } from "@/lib/model";
 import {
   expenseBalances,
   expenseMoney,
+  isEvenSplit,
+  shareCents,
   splitEvenly,
   suggestedRepayments,
   toCents,
@@ -375,10 +377,38 @@ function ExpenseDialog({
       ? Object.keys(draft.entry.shares)
       : members.map((member) => member.user_id),
   );
+  // An expense saved with hand-set shares reopens that way, so editing the
+  // title doesn't quietly even the split back out.
+  const [uneven, setUneven] = useState(
+    !!draft.entry &&
+      draft.entry.kind === "expense" &&
+      !isEvenSplit(draft.entry.shares, draft.entry.amount_cents),
+  );
+  const [custom, setCustom] = useState<Record<string, string>>(() =>
+    Object.fromEntries(
+      Object.entries(draft.entry?.shares ?? {}).map(([id, share]) => [
+        id,
+        (share / 100).toFixed(2),
+      ]),
+    ),
+  );
   const [error, setError] = useState("");
   const settlement = draft.kind === "settlement";
   const cents = toCents(amount);
   const split = splitEvenly(cents || 0, people);
+  // A field left blank reads as its placeholder, 0, so the hint and the
+  // save rule agree; only text that isn't money is refused.
+  const customShares = Object.fromEntries(
+    people.map((id) => {
+      const raw = (custom[id] ?? "").trim();
+      return [id, raw === "" ? 0 : shareCents(raw)];
+    }),
+  );
+  const assigned = Object.values(customShares).reduce<number>(
+    (sum, share) => sum + (share ?? 0),
+    0,
+  );
+  const shares = uneven ? (customShares as Record<string, number>) : split;
   return (
     <PaperDialog
       onClose={onClose}
@@ -400,6 +430,18 @@ function ExpenseDialog({
             setError("Choose at least one person for the split.");
             return;
           }
+          if (!settlement && uneven) {
+            if (Object.values(customShares).some((share) => share === null)) {
+              setError("Check the shares: amounts like 12.50, or blank for 0.");
+              return;
+            }
+            if (assigned !== cents) {
+              setError(
+                `Shares add up to ${expenseMoney(assigned)}, not ${expenseMoney(cents)}.`,
+              );
+              return;
+            }
+          }
           const recipient = settlement ? String(data.get("recipient")) : null;
           if (settlement && (!recipient || recipient === payer)) {
             setError("Choose two different people for a repayment.");
@@ -411,7 +453,7 @@ function ExpenseDialog({
             date: String(data.get("date")),
             amount_cents: cents,
             paid_by: payer,
-            shares: settlement ? {} : split,
+            shares: settlement ? {} : shares,
             recipient,
           });
         }}
@@ -510,27 +552,74 @@ function ExpenseDialog({
           </>
         ) : (
           <fieldset className={styles.split}>
-            <legend>Split evenly between</legend>
+            <legend>{uneven ? "Split between" : "Split evenly between"}</legend>
             {members.map((member) => (
-              <label key={member.user_id}>
-                <input
-                  type="checkbox"
-                  checked={people.includes(member.user_id)}
-                  onChange={(event) =>
-                    setPeople((current) =>
-                      event.target.checked
-                        ? [...current, member.user_id]
-                        : current.filter((id) => id !== member.user_id),
-                    )
-                  }
-                />
-                <span>{member.name}</span>
-                <b>{expenseMoney(split[member.user_id] || 0)}</b>
-              </label>
+              <div key={member.user_id} className={styles.person}>
+                <label>
+                  <input
+                    type="checkbox"
+                    checked={people.includes(member.user_id)}
+                    onChange={(event) =>
+                      setPeople((current) =>
+                        event.target.checked
+                          ? [...current, member.user_id]
+                          : current.filter((id) => id !== member.user_id),
+                      )
+                    }
+                  />
+                  <span>{member.name}</span>
+                </label>
+                {uneven && people.includes(member.user_id) ? (
+                  <input
+                    className={styles.share}
+                    inputMode="decimal"
+                    aria-label={`${member.name}’s share ($)`}
+                    placeholder="0.00"
+                    value={custom[member.user_id] ?? ""}
+                    onChange={(event) =>
+                      setCustom((current) => ({
+                        ...current,
+                        [member.user_id]: event.target.value,
+                      }))
+                    }
+                  />
+                ) : (
+                  <b>{expenseMoney(shares[member.user_id] || 0)}</b>
+                )}
+              </div>
             ))}
-            <p className={styles.hint}>
-              An extra cent is assigned automatically when needed.
-            </p>
+            <div className={styles.splitFooter}>
+              <p className={styles.hint}>
+                {uneven
+                  ? cents && assigned !== cents
+                    ? assigned < cents
+                      ? `${expenseMoney(cents - assigned)} left to assign.`
+                      : `${expenseMoney(assigned - cents)} over the total.`
+                    : cents
+                      ? "These add up."
+                      : "Shares must add up to the total."
+                  : "An extra cent is assigned automatically when needed."}
+              </p>
+              <Button
+                type="button"
+                className="text-button muted"
+                onClick={() => {
+                  // Start from the even split so there is something to nudge.
+                  if (!uneven)
+                    setCustom(
+                      Object.fromEntries(
+                        people.map((id) => [
+                          id,
+                          ((split[id] || 0) / 100).toFixed(2),
+                        ]),
+                      ),
+                    );
+                  setUneven((current) => !current);
+                }}
+              >
+                {uneven ? "Split evenly" : "Adjust shares"}
+              </Button>
+            </div>
           </fieldset>
         )}
         {error && (

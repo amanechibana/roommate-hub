@@ -220,6 +220,38 @@
 .split b {
   font-size: 13px;
 }
+.person {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 0;
+}
+.split .person label {
+  flex: 1;
+  padding: 0;
+}
+.split input.share {
+  width: 86px;
+  height: auto;
+  padding: 6px 8px;
+  font-size: 13px;
+  text-align: right;
+}
+@media (max-width: 650px) {
+  /* Same guard as the other dialog fields: under 16px iOS zooms on focus. */
+  .split input.share {
+    font-size: 16px;
+  }
+}
+.splitFooter {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+}
+.splitFooter > p {
+  flex: 1;
+}
 .hint {
   color: #78816e;
   line-height: 1.5;

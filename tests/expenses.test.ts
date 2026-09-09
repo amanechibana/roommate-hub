@@ -2,6 +2,8 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
   expenseBalances,
+  isEvenSplit,
+  shareCents,
   splitEvenly,
   suggestedRepayments,
   toCents,
@@ -81,4 +83,20 @@ test("suggested repayments settle a multi-person home exactly", () => {
     balances[payment.to as keyof typeof balances] -= payment.amount;
   }
   assert.deepEqual(balances, { a: 0, b: 0, c: 0 });
+});
+
+test("hand-typed shares allow zero but nothing else toCents rejects", () => {
+  assert.equal(shareCents("0"), 0);
+  assert.equal(shareCents("0.00"), 0);
+  assert.equal(shareCents("12.5"), 1250);
+  assert.equal(shareCents(""), null);
+  assert.equal(shareCents("1.234"), null);
+  assert.equal(shareCents("-1"), null);
+});
+
+test("an uneven split is recognised so the editor reopens it as typed", () => {
+  assert.equal(isEvenSplit({ a: 2501, b: 2500 }, 5001), true);
+  assert.equal(isEvenSplit({ a: 2500, b: 2501 }, 5001), false);
+  assert.equal(isEvenSplit({ a: 4000, b: 1001 }, 5001), false);
+  assert.equal(isEvenSplit({ a: 5001 }, 5001), true);
 });

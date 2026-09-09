@@ -29,6 +29,20 @@ export function toCents(value: string): number | null {
     ? cents
     : null;
 }
+// A hand-typed share: like toCents, but zero is allowed, since "nothing
+// for me" is a legitimate share of an uneven split.
+export function shareCents(value: string): number | null {
+  const trimmed = value.trim();
+  if (trimmed === "") return null;
+  return toCents(trimmed) ?? (/^0+(\.0{1,2})?$/.test(trimmed) ? 0 : null);
+}
+export function isEvenSplit(
+  shares: Record<string, number>,
+  cents: number,
+): boolean {
+  const even = splitEvenly(cents, Object.keys(shares));
+  return Object.entries(shares).every(([id, share]) => even[id] === share);
+}
 export function splitEvenly(
   cents: number,
   ids: string[],
