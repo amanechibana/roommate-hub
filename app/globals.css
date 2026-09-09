@@ -1061,6 +1061,20 @@ footer svg {
   font-size: 12px;
   line-height: 1.8;
 }
+.feed-link {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.feed-link input {
+  flex: 1 1 220px;
+  min-width: 0;
+  font-size: 12px;
+}
+.feed-link a.button {
+  text-decoration: none;
+}
 .list-tools {
   display: inline-flex;
   align-items: center;

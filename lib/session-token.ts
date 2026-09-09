@@ -41,3 +41,11 @@ export function validSession(
       .digest("base64url"),
   );
 }
+// The calendar feed's secret path segment. Derived, not stored, so changing
+// the household code is what revokes every subscribed phone at once.
+export function calendarFeedToken(secret: string, code: string): string {
+  return createHmac("sha256", secret)
+    .update(`calendar-feed:${code}`)
+    .digest("base64url")
+    .slice(0, 32);
+}

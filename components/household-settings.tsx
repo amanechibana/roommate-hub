@@ -3,6 +3,7 @@
 import { Button } from "@/components/ui/button";
 
 import PushSettings from "@/components/push-settings";
+import CalendarFeed from "@/components/calendar-feed";
 import { AmbientToggle } from "@/components/ui/display-button";
 import { type Member } from "@/lib/model";
 import { ArrowDownToLine, Plus, ShieldCheck, Users } from "lucide-react";
@@ -124,6 +125,7 @@ export default function HouseholdSettings({
         <Button className="button secondary" onClick={exportCalendar}>
           <ArrowDownToLine size={16} /> Export calendar
         </Button>
+        {!demo && <CalendarFeed />}
         <h3>Shopping, with fewer tabs</h3>
         <p className="subtle">
           Paste an Amazon or other store’s product link when adding an item and
