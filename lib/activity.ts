@@ -36,5 +36,13 @@ export function activityWhen(at: number, now: Date): string {
   if (dateKey(then) === dateKey(yesterday)) return "yesterday";
   return now.getTime() - at < 6 * 86400000
     ? then.toLocaleDateString("en-US", { weekday: "long" })
-    : then.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+    : then.toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
+        // A note stays on the fridge past New Year, and "Oct 12" on its own
+        // reads as this year's.
+        ...(then.getFullYear() === now.getFullYear()
+          ? {}
+          : { year: "numeric" }),
+      });
 }

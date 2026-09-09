@@ -26,3 +26,8 @@ test("this week keeps a weekday; older activity falls back to the date", () => {
   assert.equal(activityWhen(at(2026, 9, 5, 12), now), "Saturday");
   assert.equal(activityWhen(at(2026, 8, 20, 12), now), "Aug 20");
 });
+test("a moment from another year says which year", () => {
+  const now = new Date(2026, 8, 8, 12);
+  assert.equal(activityWhen(at(2025, 10, 12, 9), now), "Oct 12, 2025");
+  assert.equal(activityWhen(at(2025, 12, 31, 23), now), "Dec 31, 2025");
+});
