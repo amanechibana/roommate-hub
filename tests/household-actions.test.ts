@@ -6,6 +6,7 @@ import {
   markPaid,
   markAllPaid,
   billPaid,
+  billShare,
   editEntries,
   remoteActivity,
   collapseSeries,
@@ -208,5 +209,28 @@ test("bought items and the legacy identity stay off the shared list", () => {
   assert.match(
     shoppingListText(claimedByHouse, legacy, "The Maple House"),
     /• Olive oil — \$12\.00\n/,
+  );
+});
+
+test("a bill share is the amount divided among its payers, to the cent", () => {
+  const rent = demoData().entries.find((e) => e.category === "Rent")!;
+  assert.equal(billShare(rent), 1200);
+  const thirds = { ...rent, amount: 1000, payment_members: ["a", "b", "c"] };
+  assert.equal(billShare(thirds), 333.33);
+  // Named, the share is what covering the bill would book: the odd cent
+  // lands on the first sorted payer, same as splitEvenly.
+  assert.equal(billShare(thirds, "a"), 333.34);
+  assert.equal(billShare(thirds, "b"), 333.33);
+  assert.equal(billShare(thirds, "zed"), null);
+  assert.equal(
+    billShare({ ...rent, amount: 2, payment_members: ["a", "b", "c"] }),
+    0.67,
+  );
+  assert.equal(billShare({ ...rent, payment_members: [] }), null);
+  assert.equal(billShare({ ...rent, amount: null }), null);
+  const chore = demoData().entries.find((e) => e.category === "Chore")!;
+  assert.equal(
+    billShare({ ...chore, amount: 50, payment_members: ["a"] }),
+    null,
   );
 });

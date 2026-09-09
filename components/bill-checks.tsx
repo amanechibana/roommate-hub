@@ -7,7 +7,12 @@ import { Button } from "@/components/ui/button";
 import { AnimatedCheck } from "@/components/ui/animated-check";
 
 import type { Entry, Member } from "@/lib/model";
-import { billPaid, isBill } from "@/lib/household-actions";
+import {
+  billPaid,
+  billShare,
+  isBill,
+  shareMoney,
+} from "@/lib/household-actions";
 
 export default function BillChecks({
   entry,
@@ -85,7 +90,12 @@ export default function BillChecks({
                 </span>
                 <span>
                   <strong>{name}</strong>
-                  <small>{paid ? "Paid" : "Not paid yet"}</small>
+                  <small>
+                    {paid ? "Paid" : "Not paid yet"}
+                    {billShare(entry, id) != null
+                      ? ` · ${shareMoney(billShare(entry, id)!)}`
+                      : ""}
+                  </small>
                 </span>
                 <span className="bill-tick">
                   {paid && <AnimatedCheck size={16} />}
