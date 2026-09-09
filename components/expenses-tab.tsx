@@ -588,7 +588,9 @@ function ExpenseDialog({
                     ? assigned < cents
                       ? `${expenseMoney(cents - assigned)} left to assign.`
                       : `${expenseMoney(assigned - cents)} over the total.`
-                    : "Shares must add up to the total."
+                    : cents
+                      ? "These add up."
+                      : "Shares must add up to the total."
                   : "An extra cent is assigned automatically when needed."}
               </p>
               <Button
