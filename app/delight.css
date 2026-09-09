@@ -563,7 +563,9 @@ html[data-ambient="on"] .skeleton {
   box-shadow: 2px 5px 8px #5c452619;
 }
 .notes-grid .note-preview p {
-  font-family: "Segoe Print", "Bradley Hand", cursive;
+  font-family: var(--font-display), Georgia, serif;
+  font-style: italic;
+  font-variation-settings: "SOFT" 100, "WONK" 1;
   line-height: 1.75;
 }
 .tape,
