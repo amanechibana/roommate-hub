@@ -91,11 +91,11 @@ export function DayDialog({
               {entry.title}
             </strong>
             <small>
-              {entry.category} · {person(entry.assignee)}
+              {entry.category}, {person(entry.assignee)}
               {isBill(entry)
                 ? billPaid(entry)
-                  ? " · Paid"
-                  : " · Payment due"
+                  ? ", paid"
+                  : ", payment due"
                 : ""}
             </small>
           </span>

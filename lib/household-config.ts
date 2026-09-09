@@ -39,6 +39,12 @@ export const tabs = [
   { name: "House notes", icon: StickyNote },
   { name: "Expenses", icon: Wallet },
 ] as const;
+// Day words start sentences capitalised but sit inside them lowercase:
+// "Today" on its own, "You, today" in a phrase.
+export const asPhrase = (words: string) =>
+  /^(Today|Tomorrow|Yesterday|Anytime)$/.test(words)
+    ? words.toLowerCase()
+    : words;
 export const money = (value: number) =>
   new Intl.NumberFormat("en-US", {
     style: "currency",

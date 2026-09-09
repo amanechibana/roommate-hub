@@ -142,7 +142,7 @@ export default function ExpensesTab({
                 <strong>
                   <AnimatedMoney cents={monthTotal} />
                 </strong>
-                <p>Purchases only · Repayments excluded</p>
+                <p>Purchases only, repayments excluded</p>
               </section>
             </div>
           )}
@@ -278,10 +278,10 @@ export default function ExpensesTab({
                                       : item.title}
                                   </strong>
                                   <small>
-                                    {formatDate(item.date)} ·{" "}
+                                    {formatDate(item.date)},{" "}
                                     {item.kind === "expense"
-                                      ? `${name(item.paid_by)} paid · Split ${Object.keys(item.shares).length} ${Object.keys(item.shares).length === 1 ? "way" : "ways"}`
-                                      : "Repayment"}
+                                      ? `${name(item.paid_by)} paid, split ${Object.keys(item.shares).length} ${Object.keys(item.shares).length === 1 ? "way" : "ways"}`
+                                      : "repayment"}
                                   </small>
                                 </span>
                                 <strong className={styles.amount}>

@@ -120,7 +120,7 @@ body {
   font-weight: 500;
 }
 .board-welcome h1 {
-  font-family: Georgia, "Times New Roman", serif;
+  font-family: var(--font-display), Georgia, serif;
   font-size: 38px;
   font-weight: 400;
   letter-spacing: -1px;
@@ -208,7 +208,7 @@ body {
   display: flex;
   align-items: center;
   gap: 9px;
-  font-family: Georgia, serif;
+  font-family: var(--font-display), Georgia, serif;
   font-weight: 400;
   font-size: 21px;
   color: #5d4939;
@@ -250,7 +250,7 @@ body {
 .board-entry-title,
 .board-entry-copy > strong {
   display: block;
-  font-family: "DM Sans", sans-serif;
+  font-family: var(--font-body), sans-serif;
   border: 0;
   background: transparent;
   padding: 0;
@@ -292,7 +292,7 @@ body {
   line-height: 1;
 }
 .board-date b {
-  font-family: Georgia, serif;
+  font-family: var(--font-display), Georgia, serif;
   font-size: 24px;
   font-weight: 400;
   line-height: 1.2;
@@ -397,7 +397,7 @@ body {
 }
 .fridge-message h3,
 .fridge-message h3 button {
-  font-family: Georgia, serif;
+  font-family: var(--font-display), Georgia, serif;
   font-size: 23px;
   font-style: italic;
   font-weight: 400;
@@ -413,7 +413,7 @@ body {
   text-align: left;
 }
 .fridge-message > p {
-  font-family: Georgia, serif;
+  font-family: var(--font-display), Georgia, serif;
   color: #846648;
   font-size: 16px;
   line-height: 1.55;
@@ -524,7 +524,7 @@ body {
 .flip-clock .flip-card {
   position: absolute;
   inset: 0;
-  font-family: Georgia, "Times New Roman", serif;
+  font-family: var(--font-display), Georgia, serif;
   font-size: calc(var(--flip-h) * 0.66);
   font-variant-numeric: tabular-nums lining-nums;
   color: var(--ink);
@@ -628,7 +628,7 @@ body {
   }
 }
 .flip-clock .flip-colon {
-  font-family: Georgia, "Times New Roman", serif;
+  font-family: var(--font-display), Georgia, serif;
   font-size: calc(var(--flip-h) * 0.44);
   line-height: 1;
   color: #a08a68;
@@ -1143,7 +1143,7 @@ body {
   line-height: 1.25;
 }
 .commute-weather-copy strong {
-  font-family: Georgia, "Times New Roman", serif;
+  font-family: var(--font-display), Georgia, serif;
   font-weight: 400;
   font-size: 25px;
   color: #5d4939;

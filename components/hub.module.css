@@ -131,7 +131,7 @@
   border-radius: 16px;
 }
 .shell :global(.content > .page-heading h1) {
-  font-family: Georgia, serif;
+  font-family: var(--font-display), Georgia, serif;
   font-weight: 400;
   font-size: 34px;
   letter-spacing: -1px;
@@ -260,7 +260,7 @@
 }
 .shell :global(.entry-label > span),
 .shell :global(.shopping-row .entry-label h2) {
-  font-family: "DM Sans", sans-serif;
+  font-family: var(--font-body), sans-serif;
   font-size: 15px;
   font-weight: 550;
   line-height: 1.4;
