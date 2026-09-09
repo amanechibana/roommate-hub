@@ -448,6 +448,8 @@ export default function Hub() {
   const openTasks = tasks.filter((entry) => !entry.done);
   const doneCount = tasks.length - openTasks.length;
   const neededItems = shopping.filter((entry) => !entry.done);
+  // The legacy shared identity is a row in members, not a person in the house.
+  const housemates = members.filter((member) => member.name !== "Housemates");
   // What the nav badge counts: to-dos that have come due, the same set the
   // board's greeting counts. Every future occurrence of a repeating chore is
   // open too, and a badge reading 52 would say nothing about today.
@@ -590,15 +592,17 @@ export default function Hub() {
               aria-label="Open household settings"
               onClick={() => setTab("Our household")}
             >
-              {members.map((member, i) => (
-                <span
-                  key={member.user_id}
-                  title={member.name}
-                  className={`avatar tone-${i % 3}`}
-                >
-                  {member.name.slice(0, 1).toUpperCase()}
-                </span>
-              ))}
+              {members.map((member, i) =>
+                member.name === "Housemates" ? null : (
+                  <span
+                    key={member.user_id}
+                    title={member.name}
+                    className={`avatar tone-${i % 3}`}
+                  >
+                    {member.name.slice(0, 1).toUpperCase()}
+                  </span>
+                ),
+              )}
             </Button>
             {!demo && (
               <Button
@@ -661,7 +665,7 @@ export default function Hub() {
                         "To-dos": `${openTasks.length} open · ${openTasks.filter((entry) => entry.assignee === uid).length} assigned to you`,
                         "Shopping list": `${neededItems.length} ${neededItems.length === 1 ? "item" : "items"} to pick up`,
                         "House notes": `${notes.length} ${notes.length === 1 ? "note" : "notes"} shared with your home`,
-                        "Our household": `${household.name} · ${members.length} ${members.length === 1 ? "housemate" : "housemates"}`,
+                        "Our household": `${household.name} · ${housemates.length} ${housemates.length === 1 ? "housemate" : "housemates"}`,
                         Overview: "",
                         Expenses: "",
                       }[tab]
