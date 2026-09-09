@@ -96,6 +96,7 @@ export default function Hub() {
     nudge,
     claim,
     toggleBought,
+    needAgain,
     togglePayment,
     coverBill,
     remove,
@@ -839,6 +840,16 @@ export default function Hub() {
                         title={entry.title}
                         onEdit={() => setEditing({ kind: entry.kind, entry })}
                         onDelete={() => void remove(entry)}
+                        actions={
+                          entry.done
+                            ? [
+                                {
+                                  label: "Need again",
+                                  onSelect: () => needAgain(entry),
+                                },
+                              ]
+                            : []
+                        }
                       />
                     </DraggableRow>
                   ))}

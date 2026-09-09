@@ -724,6 +724,36 @@ export function useHousehold() {
         });
     }
   }
+  // Rebuying a staple is a fresh request, not a reopen: the bought row and
+  // its logged expense stay put, and a new open item carries the details.
+  function needAgain(entry: Entry) {
+    if (!household || !uid) return;
+    const values: SaveValues = {
+      kind: entry.kind,
+      title: entry.title,
+      category: entry.category,
+      description: entry.description,
+      date: null,
+      assignee: null,
+      amount: entry.amount,
+      url: entry.url,
+    };
+    const copy = {
+      ...values,
+      household_id: household.id,
+      created_by: uid,
+      created_at: new Date().toISOString(),
+      done: false,
+      id: crypto.randomUUID(),
+      series_id: null,
+      rotation_members: [],
+      payment_members: [],
+      paid_by: [],
+    } as Entry;
+    setEntries((current) => [copy, ...current]);
+    persist("create", values, [copy]);
+    setNotice(`Added “${entry.title}” back to the list`);
+  }
   function togglePayment(entry: Entry) {
     if (!uid) return;
     const paid = !entry.paid_by?.includes(uid);
@@ -970,6 +1000,7 @@ export function useHousehold() {
     nudge,
     claim,
     toggleBought,
+    needAgain,
     togglePayment,
     coverBill,
     remove,
