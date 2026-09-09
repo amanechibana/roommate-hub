@@ -35,7 +35,9 @@ test("sessions validate, expire, and reject tampering", () => {
 
 test("the calendar feed token is stable, URL-safe, and changes with the code", () => {
   const token = calendarFeedToken("test-secret", "test-code");
-  assert.equal(token, calendarFeedToken("test-secret", "test-code"));
+  // Pinned: changing the derivation would silently revoke every subscribed
+  // phone, so that has to be a deliberate edit here too.
+  assert.equal(token, "pd5TKsny0Zk2tK0yjxLft9frmNIWMTHF");
   assert.match(token, /^[A-Za-z0-9_-]{32}$/);
   assert.notEqual(token, calendarFeedToken("test-secret", "new-code"));
   assert.notEqual(token, calendarFeedToken("other-secret", "test-code"));

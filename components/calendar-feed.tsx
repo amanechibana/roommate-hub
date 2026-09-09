@@ -39,7 +39,9 @@ export default function CalendarFeed() {
       <p className="subtle">
         A private link your calendar app checks on its own, so new plans and
         chores show up without another export. Anyone with the link can read the
-        household calendar; changing the household code revokes it.
+        household calendar; changing the household code revokes it. On Android,
+        paste it into Google Calendar on the web under Other calendars → From
+        URL.
       </p>
       {url ? (
         <div className="feed-link">
