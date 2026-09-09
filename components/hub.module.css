@@ -169,7 +169,7 @@
   padding: 18px 20px 12px;
   min-width: 0;
 }
-.shell :global(.entry-panel .panel-heading > .subtle) {
+.shell :global(.entry-panel .panel-heading .subtle) {
   font-size: 12px;
   color: #6c7667;
   text-align: right;

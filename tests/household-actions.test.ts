@@ -10,6 +10,7 @@ import {
   remoteActivity,
   collapseSeries,
   dayOrder,
+  shoppingListText,
 } from "../lib/household-actions";
 
 test("chores alternate from the selected first person", () => {
@@ -164,5 +165,48 @@ test("a calendar day gives its one visible slot to what still needs doing", () =
   assert.deepEqual(
     dayOrder([chore, rent]).map((e) => e.id),
     [chore.id, rent.id],
+  );
+});
+
+test("the shareable shopping list reads needs first with prices and claims", () => {
+  const { entries, members } = demoData();
+  const text = shoppingListText(
+    entries.map((e) =>
+      e.title === "Olive oil" ? { ...e, assignee: "alex" } : e,
+    ),
+    members,
+    "The Maple House",
+  );
+  assert.equal(
+    text,
+    [
+      "Shopping for The Maple House",
+      "",
+      "Need",
+      "• Olive oil — $12.00 — Alex is getting it",
+      "• Dishwasher tablets — $16.00",
+      "",
+      "Want",
+      "• A softer living room — $32.00",
+    ].join("\n"),
+  );
+});
+
+test("bought items and the legacy identity stay off the shared list", () => {
+  const { entries, members } = demoData();
+  const bought = entries.map((e) =>
+    e.kind === "request" ? { ...e, done: true } : e,
+  );
+  assert.equal(shoppingListText(bought, members, "The Maple House"), "");
+  const legacy = [
+    ...members,
+    { user_id: "all", name: "Housemates", household_id: "demo" },
+  ];
+  const claimedByHouse = entries.map((e) =>
+    e.title === "Olive oil" ? { ...e, assignee: "all" } : e,
+  );
+  assert.match(
+    shoppingListText(claimedByHouse, legacy, "The Maple House"),
+    /• Olive oil — \$12\.00\n/,
   );
 });

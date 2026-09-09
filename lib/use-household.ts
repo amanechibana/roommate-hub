@@ -932,6 +932,7 @@ export function useHousehold() {
     error,
     setError,
     notice,
+    setNotice,
     noticeAction,
     setNoticeAction,
     undoDeletes,

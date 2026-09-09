@@ -20,6 +20,44 @@ export function markAllPaid(entry: Entry): Entry {
   if (!isBill(entry) || !entry.payment_members?.length) return entry;
   return { ...entry, paid_by: [...entry.payment_members] };
 }
+// The open shopping list as a message: what a housemate texts to whoever is
+// already at the store. Needs first, then wants, each with its price and
+// whoever has claimed it. Empty when there is nothing to buy.
+export function shoppingListText(
+  entries: Entry[],
+  members: { user_id: string; name: string }[],
+  household: string,
+): string {
+  const open = entries.filter((e) => e.kind === "request" && !e.done);
+  if (!open.length) return "";
+  const money = (value: number) =>
+    new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: "USD",
+      maximumFractionDigits: 2,
+    }).format(value);
+  const lines = [`Shopping for ${household}`];
+  for (const category of ["Need", "Want"]) {
+    const items = open.filter((e) => e.category === category);
+    if (!items.length) continue;
+    lines.push("", category);
+    for (const item of items) {
+      const who = members.find(
+        (m) => m.user_id === item.assignee && m.name !== "Housemates",
+      );
+      lines.push(
+        [
+          `• ${item.title}`,
+          item.amount != null ? money(Number(item.amount)) : "",
+          who ? `${who.name} is getting it` : "",
+        ]
+          .filter(Boolean)
+          .join(" — "),
+      );
+    }
+  }
+  return lines.join("\n");
+}
 export type ActivityEvent = { line: string; member: string | null };
 /**
  * Fridge-ticker lines for changes another device made, read off a refresh's
