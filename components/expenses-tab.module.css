@@ -220,6 +220,22 @@
 .split b {
   font-size: 13px;
 }
+.split input.share {
+  width: 86px;
+  height: auto;
+  padding: 6px 8px;
+  font-size: 13px;
+  text-align: right;
+}
+.splitFooter {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+}
+.splitFooter > p {
+  flex: 1;
+}
 .hint {
   color: #78816e;
   line-height: 1.5;
