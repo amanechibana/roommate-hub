@@ -691,6 +691,78 @@ nav button.active {
   padding: 22px 23px 17px;
   gap: 14px;
 }
+/* Paper. A surface on the noticeboard is a particular thing pinned there,
+   not a generic panel: a calendar leaf, an index card, a receipt, a ledger
+   page. --paper-head is where the writing starts, below whatever heading
+   or toolbar the surface carries. */
+.paper-leaf,
+.paper-index,
+.paper-receipt,
+.paper-ledger {
+  --paper-head: 60px;
+  position: relative;
+}
+.paper-leaf {
+  border-top: 2px dashed #d3c5ae;
+  background:
+    repeating-linear-gradient(transparent 0 27px, #d9cfbe45 27px 28px) 0
+      var(--paper-head) / 100% calc(100% - var(--paper-head)) no-repeat,
+    #fffdf7;
+}
+.paper-index {
+  background:
+    linear-gradient(#d9a094 0 0) 0 calc(var(--paper-head) - 6px) / 100% 1.5px
+      no-repeat,
+    repeating-linear-gradient(transparent 0 25px, #b7c6d83a 25px 26px) 0
+      var(--paper-head) / 100% calc(100% - var(--paper-head)) no-repeat,
+    #f6f7ee;
+}
+.paper-receipt {
+  background: linear-gradient(#fffefb, #fbf6ea);
+  border-bottom-color: transparent;
+  border-radius: 12px 12px 0 0;
+  box-shadow: 1px 3px 0 #8f73550b;
+  overflow: visible;
+}
+.paper-receipt::after {
+  content: "";
+  position: absolute;
+  left: -1px;
+  right: -1px;
+  bottom: -7px;
+  height: 7px;
+  background:
+    linear-gradient(135deg, #fbf6ea 50%, transparent 50%) 0 0 / 14px 14px,
+    linear-gradient(45deg, #fbf6ea 50%, transparent 50%) 0 0 / 14px 14px;
+  filter: drop-shadow(0 1px 0 #e0d5c4);
+}
+.paper-ledger {
+  /* Ledger paper: green feint and the double rule that walls off the
+     amount column. */
+  background:
+    linear-gradient(
+        90deg,
+        transparent calc(100% - 134px),
+        #c2a98a66 0,
+        #c2a98a66 calc(100% - 133px),
+        transparent 0,
+        transparent calc(100% - 128px),
+        #c2a98a66 0,
+        #c2a98a66 calc(100% - 127px),
+        transparent 0
+      )
+      0 var(--paper-head) / 100% calc(100% - var(--paper-head)) no-repeat,
+    repeating-linear-gradient(transparent 0 27px, #a9c0a84a 27px 28px) 0
+      var(--paper-head) / 100% calc(100% - var(--paper-head)) no-repeat,
+    #fbfcf4;
+}
+.entry-panel.paper-index,
+.entry-panel.paper-receipt {
+  --paper-head: 134px;
+}
+.entry-panel.paper-index .task-row {
+  border-top-color: transparent;
+}
 .panel-heading h2 {
   display: flex;
   align-items: center;

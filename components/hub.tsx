@@ -709,7 +709,7 @@ export default function Hub() {
 
           {tab === "Calendar" && <CalendarTab {...house} />}
           {tab === "To-dos" && (
-            <section className="panel entry-panel">
+            <section className="panel entry-panel paper-index">
               <div className="panel-heading">
                 <SegmentedControl
                   label="To-do filters"
@@ -745,7 +745,7 @@ export default function Hub() {
           )}
 
           {tab === "Shopping list" && (
-            <section className="panel entry-panel">
+            <section className="panel entry-panel paper-receipt">
               <div className="panel-heading">
                 <SegmentedControl
                   label="Shopping filters"

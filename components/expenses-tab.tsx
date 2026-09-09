@@ -207,7 +207,7 @@ export default function ExpensesTab({
               </p>
             </section>
           )}
-          <section className={`${styles.activity} panel`}>
+          <section className={`${styles.activity} panel paper-ledger`}>
             <div className={styles.sectionHeading}>
               <h2>Activity</h2>
               <span>

@@ -8,6 +8,7 @@ import {
   billPaid,
   billShare,
   editEntries,
+  houseHeadline,
   remoteActivity,
   collapseSeries,
   dayOrder,
@@ -257,4 +258,33 @@ test("an ordinary title stays one thing", () => {
   assert.equal(titleGroup("Olive oil"), null);
   assert.equal(titleGroup(": soap, wipes"), null);
   assert.equal(titleGroup("Milk, eggs, bread"), null);
+});
+
+test("the headline says what the house needs today, in one sentence", () => {
+  const { entries } = demoData();
+  const today = entries.find((e) =>
+    e.title.startsWith("Give the kitchen"),
+  )!.date!;
+  // Demo: one chore due today (Alex's), rent in 5 days, two needs.
+  assert.equal(
+    houseHeadline(entries, today, "you"),
+    "One thing to do, rent in 5 days, and olive oil and dishwasher tablets to grab.",
+  );
+  assert.equal(
+    houseHeadline(entries, today, "alex"),
+    "One thing to do, and it’s yours, rent in 5 days, and olive oil and dishwasher tablets to grab.",
+  );
+  // Nothing waiting says nothing, so the board can choose its own words.
+  assert.equal(houseHeadline([], today, "you"), "");
+  // Many needs fold into a count; a paid bill and a far-off one stay quiet.
+  const busy = [
+    ...entries.map((e) =>
+      e.category === "Rent" ? { ...e, paid_by: e.payment_members } : e,
+    ),
+    { ...entries[5], id: "n1", title: "Milk" },
+  ];
+  assert.equal(
+    houseHeadline(busy, today, null),
+    "One thing to do and 3 things to grab.",
+  );
 });

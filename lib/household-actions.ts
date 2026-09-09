@@ -83,6 +83,76 @@ export function shoppingListText(
   }
   return lines.join("\n");
 }
+// The overview's first line: what the house needs today, said in one
+// sentence. Chores that have come due (the badge's count), the nearest
+// unpaid bill within the week, and what's on the shopping list. Empty when
+// nothing is waiting, so the board can say something kinder than "0 things".
+export function houseHeadline(
+  entries: Entry[],
+  today: string,
+  viewer: string | null,
+): string {
+  const due = entries.filter(
+    (e) => e.kind === "task" && !e.done && e.date && e.date <= today,
+  );
+  const mine = viewer ? due.filter((e) => e.assignee === viewer).length : 0;
+  const bill = entries
+    .filter(
+      (e) =>
+        isBill(e) &&
+        e.date &&
+        e.payment_members?.length &&
+        !billPaid(e) &&
+        daysBetween(today, e.date) <= 7,
+    )
+    .sort((a, b) => a.date!.localeCompare(b.date!))[0];
+  const needs = entries.filter(
+    (e) => e.kind === "request" && !e.done && e.category === "Need",
+  );
+  const parts: string[] = [];
+  if (due.length === 1)
+    parts.push(mine ? "one thing to do, and it’s yours" : "one thing to do");
+  else if (due.length)
+    parts.push(
+      `${due.length} things to do${mine ? `, ${mine === 1 ? "one" : mine} yours` : ""}`,
+    );
+  if (bill) {
+    const days = daysBetween(today, bill.date!);
+    const what = bill.category === "Rent" ? "rent" : "a bill";
+    parts.push(
+      days < 0
+        ? `${what} overdue`
+        : days === 0
+          ? `${what} due today`
+          : days === 1
+            ? `${what} due tomorrow`
+            : `${what} in ${days} days`,
+    );
+  }
+  if (needs.length && needs.length <= 2)
+    parts.push(`${needs.map((e) => casual(e.title)).join(" and ")} to grab`);
+  else if (needs.length) parts.push(`${needs.length} things to grab`);
+  if (!parts.length) return "";
+  const sentence =
+    parts.length === 1
+      ? parts[0]
+      : parts.length === 2
+        ? `${parts[0]} and ${parts[1]}`
+        : `${parts.slice(0, -1).join(", ")}, and ${parts.at(-1)}`;
+  return `${sentence.charAt(0).toUpperCase()}${sentence.slice(1)}.`;
+}
+// "Olive oil" reads as "olive oil" mid-sentence; "TV remote" keeps its caps.
+const casual = (title: string) =>
+  /^[A-Z][a-z]/.test(title)
+    ? title.charAt(0).toLowerCase() + title.slice(1)
+    : title;
+function daysBetween(from: string, to: string) {
+  return Math.round(
+    (new Date(`${to}T12:00:00`).getTime() -
+      new Date(`${from}T12:00:00`).getTime()) /
+      86400000,
+  );
+}
 export type ActivityEvent = { line: string; member: string | null };
 /**
  * Fridge-ticker lines for changes another device made, read off a refresh's
