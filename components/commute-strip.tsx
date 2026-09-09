@@ -114,11 +114,17 @@ export function CommuteTrainGhosts() {
               <span className="skeleton skeleton-line" />
             </strong>
             <small>
-              <span className="skeleton skeleton-line" style={{ width: "6em" }} />
+              <span
+                className="skeleton skeleton-line"
+                style={{ width: "6em" }}
+              />
             </small>
           </div>
           <span className="commute-when">
-            <span className="skeleton skeleton-line" style={{ width: "2.4em" }} />
+            <span
+              className="skeleton skeleton-line"
+              style={{ width: "2.4em" }}
+            />
           </span>
         </div>
       ))}
@@ -349,9 +355,13 @@ export default function CommuteStrip({
     if (!row) return;
     // Roughly the width one departure needs to stay readable at each size.
     const each = display ? 300 : 210;
+    // On a phone the stylesheet stacks departures instead of fitting them
+    // across; one train per row means three rows is the useful number.
     const measure = () =>
       setCapacity(
-        Math.max(1, Math.min(6, Math.floor(row.clientWidth / each) || 1)),
+        getComputedStyle(row).flexDirection === "column"
+          ? 3
+          : Math.max(1, Math.min(6, Math.floor(row.clientWidth / each) || 1)),
       );
     const observer = new ResizeObserver(measure);
     observer.observe(row);
@@ -426,10 +436,16 @@ export default function CommuteStrip({
         ) : (
           <div className="commute-weather-copy" aria-label="Weather loading">
             <strong>
-              <span className="skeleton skeleton-line" style={{ width: "1.4em" }} />
+              <span
+                className="skeleton skeleton-line"
+                style={{ width: "1.4em" }}
+              />
             </strong>
             <small>
-              <span className="skeleton skeleton-line" style={{ width: "7em" }} />
+              <span
+                className="skeleton skeleton-line"
+                style={{ width: "7em" }}
+              />
             </small>
           </div>
         )}

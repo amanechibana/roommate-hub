@@ -1473,10 +1473,6 @@ body {
   .commute-weather-copy strong {
     font-size: 21px;
   }
-  /* Only the soonest train fits comfortably on a phone. */
-  .commute-train:nth-child(n + 2) {
-    display: none;
-  }
 }
 /* Short phones already drop the summary line; the band goes too. */
 @media (max-width: 650px) and (max-height: 700px) {
@@ -1760,4 +1756,43 @@ body {
 }
 .wall-display .paper-receipt::after {
   display: none;
+}
+
+/* A phone is too narrow to fit departures beside the weather, and one
+   train is not a board. Weather and the controls share the first line;
+   the departures stack under them, one per line. */
+@media (max-width: 650px) {
+  .commute-strip {
+    gap: 10px 12px;
+    padding: 10px 12px;
+  }
+  .commute-weather {
+    flex: 1;
+    padding-right: 0;
+    border-right: 0;
+  }
+  .commute-actions {
+    order: 1;
+  }
+  .commute-trains {
+    order: 2;
+    flex: 1 1 100%;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 6px;
+  }
+  .commute-train {
+    flex: none;
+  }
+  .commute-alerts {
+    order: 3;
+  }
+}
+
+/* Between a short phone (where the band is dropped) and a tall one, two
+   trains leave the cards a row each. */
+@media (max-width: 650px) and (max-height: 800px) {
+  .commute-train:nth-child(n + 3) {
+    display: none;
+  }
 }
