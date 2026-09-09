@@ -16,7 +16,7 @@ Controls use Radix UI primitives and Motion, styled to match the house: sliding 
 
 Lists and undo notices animate out while writes continue in the background. Surviving rows move into place; dialog closes preserve focus and keyboard dismissal. Notes and expense editors share a transition with their source card or row. Reduced motion removes these transitions.
 
-To-dos and shopping rows have drag handles: use a pointer or focus the handle and press Up/Down (Home/End also work). Order is remembered **on this device, per household**, including across reloads. It does not change the household's due dates or synchronize a new order to other devices. Row menus offer edit and delete; the usual undo still works. House notes have a quick composer, member-colored paper, individual tilts, and crumpling exits. In household settings, hover or focus a member magnet for their open chore count and balance.
+To-dos and shopping rows have drag handles: use a pointer or focus the handle and press Up/Down (Home/End also work). Order is remembered **on this device, per household**, including across reloads. It does not change the household's due dates or synchronize a new order to other devices. Row menus offer edit and delete; the usual undo still works. House notes have a quick composer, member-colored paper, individual tilts, and crumpling exits. In household settings, hover or focus a member magnet for their open chore count and balance; a repeating chore counts once there, as it does on the overview.
 
 The home greeting highlights a recent action by another housemate. “Lately at
 home” in household settings shows the latest 20 completed chores, purchases,

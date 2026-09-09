@@ -19,7 +19,7 @@ import HomeBoard from "@/components/home-board";
 import HubSkeleton from "@/components/hub-skeleton";
 import { DisplayButton } from "@/components/ui/display-button";
 import { SegmentedControl } from "@/components/ui/segmented-control";
-import { dayOrder } from "@/lib/household-actions";
+import { collapseSeries, dayOrder } from "@/lib/household-actions";
 import { safeUrl, type Entry, type Kind, type Member } from "@/lib/model";
 import {
   ArrowRight,
@@ -109,6 +109,15 @@ export default function Hub() {
     person,
     friendlyDate,
   } = house;
+  // A housemate's load counts a repeating chore once, the way the overview
+  // does. Every future occurrence is open too, and "52 open to-dos" is
+  // nobody's week. Collapsing wants date order.
+  const openChores = collapseSeries(
+    tasks
+      .filter((entry) => !entry.done)
+      .sort((a, b) => (a.date || "9999").localeCompare(b.date || "9999")),
+    today,
+  );
   const avatar = (member: Member, i: number) => (
     <MemberCard
       key={member.user_id}
@@ -119,9 +128,7 @@ export default function Hub() {
           : null
       }
       chores={
-        tasks.filter(
-          (entry) => !entry.done && entry.assignee === member.user_id,
-        ).length
+        openChores.filter((entry) => entry.assignee === member.user_id).length
       }
     >
       <span title={member.name} className={`avatar tone-${i % 3}`}>
