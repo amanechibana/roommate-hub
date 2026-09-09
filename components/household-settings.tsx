@@ -54,17 +54,21 @@ export default function HouseholdSettings({
         >
           Change person on this device
         </Button>
-        {members.map((member, i) => (
-          <div className="member-row" key={member.user_id}>
-            {avatar(member, i)}
-            <strong>{member.name}</strong>
-            <span className="subtle">
-              {member.user_id === household.owner_id
-                ? "Shared home"
-                : "Housemate"}
-            </span>
-          </div>
-        ))}
+        {members.map((member, i) =>
+          // The legacy shared identity owns the household row but is nobody in
+          // particular; the index stays put so avatar tones keep matching.
+          member.name === "Housemates" ? null : (
+            <div className="member-row" key={member.user_id}>
+              {avatar(member, i)}
+              <strong>{member.name}</strong>
+              <span className="subtle">
+                {member.user_id === household.owner_id
+                  ? "Shared home"
+                  : "Housemate"}
+              </span>
+            </div>
+          ),
+        )}
         <h3>Add your housemates</h3>
         <p className="subtle">
           Everyone uses the same household code. Add names here to assign chores

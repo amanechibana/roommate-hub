@@ -212,7 +212,10 @@ or Barnatt. The choice is stored in an HTTP-only cookie for 30 days and can be
 changed from the sidebar footer or, on a phone, from **Our household →
 Switch person**. It controls attribution and the Mine filter;
 it does not grant different access rights. Existing entries keep their original
-creator, including the legacy shared Housemates identity.
+creator, including the legacy shared Housemates identity. That identity is a
+`members` row created by migration 002, not a person: it is never offered as an
+assignee, payer, or person to switch to, and it is not listed or counted as a
+housemate.
 
 For a fresh database, apply migrations in order: `001_household.sql`,
 `002_shared_code.sql` (using psql with `-v gateway_hash=<SHA-256 of your gateway token>`),
