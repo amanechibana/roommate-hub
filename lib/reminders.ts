@@ -1,4 +1,4 @@
-import { isBill } from "./household-actions";
+import { billShare, isBill, shareMoney } from "./household-actions";
 import { parseDate, type Entry, type Member } from "./model";
 
 export type Digest = { title: string; lines: string[] };
@@ -69,7 +69,12 @@ export function memberDigest(
             : days === 1
               ? "due tomorrow"
               : `due in ${days} days`;
-      const amount = e.amount ? ` (${money(e.amount)})` : "";
+      const share = billShare(e, member.user_id);
+      const amount = e.amount
+        ? share != null && share !== e.amount
+          ? ` (${money(e.amount)}, your share ${shareMoney(share)})`
+          : ` (${money(e.amount)})`
+        : "";
       return `${e.title}${amount} — ${when}`;
     });
   if (!chores.length && !bills.length) return null;
@@ -121,13 +126,17 @@ export function nudgeMessage(
       entry.paid_by?.includes(to.user_id)
     )
       return null;
-    const amount = entry.amount ? ` (${money(entry.amount)})` : "";
+    const share = billShare(entry, to.user_id);
     const when = entry.date ? ` ${dueWhen(entry.date, today)}` : "";
+    const yours =
+      share != null && share !== entry.amount
+        ? `your ${shareMoney(share)} share`
+        : "your share";
+    const amount =
+      entry.amount && yours === "your share" ? ` (${money(entry.amount)})` : "";
     return {
       title,
-      lines: [
-        `“${entry.title}”${amount}${when} — your share isn’t checked off`,
-      ],
+      lines: [`“${entry.title}”${amount}${when} — ${yours} isn’t checked off`],
     };
   }
   if (entry.kind !== "task" || entry.done || !entry.assignee) return null;

@@ -263,7 +263,10 @@ shopping pages also support typing a title and pressing Enter to add it.
 - **Rent and bills:** use an event with category **Rent** or **Bill**. Choose
   **Monthly** for a recurring bill. Open the saved event to see each person’s
   paid check; the current device identity can change only its own check. Each
-  occurrence starts unpaid. Existing Rent events gain checks for Amane and
+  occurrence starts unpaid. Each check shows that person's share of the
+  amount (the total divided evenly among the payers), the overview says
+  "$1,200 each", and reminders and nudges name your share rather than the
+  whole bill. Existing Rent events gain checks for Amane and
   Barnatt when migration 005 runs. Overdue unpaid bills stay on the home board.
   Payment check-offs record status only; the amount remains the bill amount.
 - **Undo:** deleting an entry or series shows an **Undo** notice for eight

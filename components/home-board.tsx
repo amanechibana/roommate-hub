@@ -37,7 +37,13 @@ import {
   type Kind,
   type Member,
 } from "@/lib/model";
-import { billPaid, collapseSeries, isBill } from "@/lib/household-actions";
+import {
+  billPaid,
+  billShare,
+  collapseSeries,
+  isBill,
+  shareMoney,
+} from "@/lib/household-actions";
 import { AmbientToggle } from "@/components/ui/display-button";
 import CommuteStrip from "@/components/commute-strip";
 import FlipClock from "@/components/ui/flip-clock";
@@ -548,6 +554,10 @@ export default function HomeBoard({
                         : ""}
                       {entry.amount != null
                         ? ` · ${dollars(entry.amount)}`
+                        : ""}
+                      {(entry.payment_members?.length || 0) > 1 &&
+                      billShare(entry) != null
+                        ? ` · ${shareMoney(billShare(entry)!)} each`
                         : ""}
                     </small>
                   </div>

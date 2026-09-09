@@ -82,7 +82,7 @@ test("digest lists bills the member has not covered within three days", () => {
   const digest = memberDigest(entries, amane, "2026-09-08")!;
   assert.deepEqual(digest.lines, [
     "Internet — due today",
-    "Rent ($2,400) — due in 2 days",
+    "Rent ($2,400, your share $1,200) — due in 2 days",
   ]);
   const barnattDigest = memberDigest(entries, barnatt, "2026-09-08")!;
   assert.equal(
@@ -177,8 +177,28 @@ test("a bill nudge chases one person's unpaid share", () => {
     paid_by: ["a"],
   });
   assert.deepEqual(nudgeMessage(rent, amane, today, barnatt)!.lines, [
-    "“Rent” ($2,400) is due today — your share isn’t checked off",
+    "“Rent” is due today — your $1,200 share isn’t checked off",
   ]);
+  // Odd cents are said to the cent, and land where the ledger would put them.
+  assert.deepEqual(
+    nudgeMessage(
+      entry({ ...rent, amount: 1000, payment_members: ["a", "b", "c"] }),
+      amane,
+      today,
+      barnatt,
+    )!.lines,
+    ["“Rent” is due today — your $333.33 share isn’t checked off"],
+  );
+  // One payer: the share is the bill, so say the bill.
+  assert.deepEqual(
+    nudgeMessage(
+      entry({ ...rent, payment_members: ["b"], paid_by: [] }),
+      amane,
+      today,
+      barnatt,
+    )!.lines,
+    ["“Rent” ($2,400) is due today — your share isn’t checked off"],
+  );
   // Already paid, not on the bill, or no target named: nothing to chase.
   assert.equal(nudgeMessage(rent, barnatt, today, amane), null);
   assert.equal(

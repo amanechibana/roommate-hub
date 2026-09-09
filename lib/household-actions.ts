@@ -1,3 +1,4 @@
+import { splitEvenly } from "./expenses";
 import type { Entry } from "./model";
 
 export const UNDO_DURATION = 8000;
@@ -10,6 +11,30 @@ export function billPaid(entry: Entry) {
     entry.payment_members.every((id) => entry.paid_by?.includes(id))
   );
 }
+// One person's cut of a bill, in dollars to the cent: the number a housemate
+// actually wants when the rent line says $2,400. With a member it is exactly
+// what covering the bill would book for them (the odd cents land the same
+// way splitEvenly lands them); without, the rounded average for "each".
+// Null when there is nothing to divide or nobody to divide it among.
+export function billShare(entry: Entry, member?: string): number | null {
+  const payers = entry.payment_members || [];
+  if (!isBill(entry) || !entry.amount || !payers.length) return null;
+  const cents = Math.round(entry.amount * 100);
+  if (member) {
+    const share = splitEvenly(cents, payers)[member];
+    return share === undefined ? null : share / 100;
+  }
+  return Math.round(cents / payers.length) / 100;
+}
+// Shares are the one money figure the house shows to the cent, but only
+// when the cents are there: $1,200 and $333.33, never $1,200.00.
+export const shareMoney = (dollars: number) =>
+  new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 2,
+  }).format(dollars);
 export function markPaid(entry: Entry, memberId: string, paid: boolean): Entry {
   if (!isBill(entry) || !entry.payment_members?.includes(memberId))
     return entry;
