@@ -45,6 +45,7 @@ import {
   shareMoney,
   titleGroup,
 } from "@/lib/household-actions";
+import { asPhrase } from "@/lib/household-config";
 import { AmbientToggle } from "@/components/ui/display-button";
 import CommuteStrip from "@/components/commute-strip";
 import FlipClock from "@/components/ui/flip-clock";
@@ -200,7 +201,7 @@ export default function HomeBoard({
             ? `${person(from)} owes ${person(to)} ${expenseMoney(amount)}`
             : `${from === viewer?.user_id ? "You owe" : `${person(from)} owes`} ${to === viewer?.user_id ? "you" : person(to)} ${expenseMoney(amount)}`,
         )
-        .join(" · ")
+        .join(". ")
     : expenses.expenses.length
       ? "You’re all settled up"
       : "No shared expenses yet";
@@ -536,7 +537,7 @@ export default function HomeBoard({
             <p className="board-lately">
               <Sparkles size={13} aria-hidden="true" />
               <span>
-                {lastActivity.line} · {activityWhen(lastActivity.at, now)}
+                {lastActivity.line}, {activityWhen(lastActivity.at, now)}
               </span>
             </p>
           )}
@@ -610,17 +611,20 @@ export default function HomeBoard({
                   <div className="board-entry-copy">
                     {title(entry)}
                     <small>
-                      {relative(entry.date!)} · {entry.category}
-                      {entry.series_id ? " · ↻" : ""}
-                      {isBill(entry)
-                        ? ` · ${billPaid(entry) ? "Paid" : `${entry.paid_by?.length || 0}/${entry.payment_members?.length || 0} paid`}`
-                        : ""}
-                      {entry.amount != null
-                        ? ` · ${dollars(entry.amount)}`
-                        : ""}
+                      {relative(entry.date!)}
+                      {isBill(entry) ? "" : `, ${entry.category.toLowerCase()}`}
+                      {entry.series_id ? ", repeats" : ""}
+                      {entry.amount != null ? `. ${dollars(entry.amount)}` : ""}
                       {(entry.payment_members?.length || 0) > 1 &&
                       billShare(entry) != null
-                        ? ` · ${shareMoney(billShare(entry)!)} each`
+                        ? `, ${shareMoney(billShare(entry)!)} each`
+                        : ""}
+                      {isBill(entry)
+                        ? billPaid(entry)
+                          ? ", paid"
+                          : entry.paid_by?.length
+                            ? `, ${entry.paid_by.length} of ${entry.payment_members?.length} paid`
+                            : ", nobody has paid yet"
                         : ""}
                     </small>
                   </div>
@@ -654,7 +658,7 @@ export default function HomeBoard({
               <CheckCheck size={19} />A little housework
             </h2>
             <span>
-              {tasks.length} open{viewer && !display ? " · Yours first" : ""}
+              {tasks.length} open{viewer && !display ? ", yours first" : ""}
             </span>
           </div>
           <div className="board-rows">
@@ -689,10 +693,9 @@ export default function HomeBoard({
                       }
                     >
                       {entry.assignee
-                        ? `${isViewer(entry.assignee) ? "You" : person(entry.assignee)} · `
-                        : ""}
-                      {friendly(entry.date)}
-                      {entry.series_id ? " · ↻" : ""}
+                        ? `${isViewer(entry.assignee) ? "You" : person(entry.assignee)}, ${asPhrase(friendly(entry.date))}`
+                        : friendly(entry.date)}
+                      {entry.series_id ? ", repeats" : ""}
                     </small>
                   </div>
                 </PresenceRow>
@@ -760,12 +763,12 @@ export default function HomeBoard({
                         </span>
                       )}
                       <small>
-                        {entry.assignee
-                          ? `${isViewer(entry.assignee) ? "You’re" : `${person(entry.assignee)} is`} getting it · `
-                          : ""}
                         {entry.category}
                         {entry.amount != null
-                          ? ` · about ${dollars(entry.amount)}`
+                          ? `, about ${dollars(entry.amount)}`
+                          : ""}
+                        {entry.assignee
+                          ? `. ${isViewer(entry.assignee) ? "You’re" : `${person(entry.assignee)} is`} getting it`
                           : ""}
                       </small>
                     </div>
@@ -828,7 +831,7 @@ export default function HomeBoard({
                     </h3>
                     <p title={note.description}>{note.description}</p>
                     <span>
-                      With love, {person(note.assignee || note.created_by)} ·{" "}
+                      With love, {person(note.assignee || note.created_by)},{" "}
                       {activityWhen(Date.parse(note.created_at), now)}
                     </span>
                   </div>
@@ -869,10 +872,10 @@ export default function HomeBoard({
         <footer className="wall-controls">
           <span className="wall-status">
             {demo
-              ? "Sample home · changes reset on reload"
+              ? "Sample home, changes reset on reload"
               : live
-                ? "Private household · updates live"
-                : "Private household · updates every 15 seconds"}
+                ? "Private household, updates live"
+                : "Private household, updates every 15 seconds"}
           </span>
           <div className="wall-pager">
             <Button

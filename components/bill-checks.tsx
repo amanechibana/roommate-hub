@@ -91,10 +91,11 @@ export default function BillChecks({
                 <span>
                   <strong>{name}</strong>
                   <small>
-                    {paid ? "Paid" : "Not paid yet"}
                     {billShare(entry, id) != null
-                      ? ` · ${shareMoney(billShare(entry, id)!)}`
-                      : ""}
+                      ? `${shareMoney(billShare(entry, id)!)}, ${paid ? "paid" : "not paid yet"}`
+                      : paid
+                        ? "Paid"
+                        : "Not paid yet"}
                   </small>
                 </span>
                 <span className="bill-tick">

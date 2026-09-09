@@ -36,7 +36,13 @@ import {
   X,
 } from "lucide-react";
 
-import { categories, labels, money, tabs } from "@/lib/household-config";
+import {
+  asPhrase,
+  categories,
+  labels,
+  money,
+  tabs,
+} from "@/lib/household-config";
 import { useHousehold } from "@/lib/use-household";
 import ActivityFeed from "./activity-feed";
 import CalendarTab from "./calendar-tab";
@@ -240,19 +246,22 @@ export default function Hub() {
         <span>
           {entry.title}
           {entry.series_id ? " ↻" : ""}
-          {entry.rotation_members?.length ? " · Taking turns" : ""}
+          {entry.rotation_members?.length ? ", taking turns" : ""}
         </span>
         <small
           className={
             entry.date && entry.date < today && !entry.done ? "overdue" : ""
           }
         >
-          {entry.date && entry.date < today && !entry.done ? "Overdue · " : ""}
-          {friendlyDate(entry.date)} <span>·</span> {entry.category}
+          {entry.date && entry.date < today && !entry.done
+            ? `Overdue ${entry.category.toLowerCase()}, was due ${asPhrase(friendlyDate(entry.date))}`
+            : entry.date
+              ? `${entry.category} for ${asPhrase(friendlyDate(entry.date))}`
+              : `${entry.category}, anytime`}
           {members.some(
             (m) => m.user_id === entry.created_by && m.name !== "Housemates",
           )
-            ? ` · Added by ${person(entry.created_by)}`
+            ? `. Added by ${person(entry.created_by)}`
             : ""}
         </small>
       </Button>
@@ -623,8 +632,8 @@ export default function Hub() {
           {demo && (
             <div className="demo-banner">
               <span>
-                <Sparkles size={15} /> Sample household · Try everything.
-                Changes last until you reload.
+                <Sparkles size={15} /> Sample household. Try everything; changes
+                last until you reload.
               </span>
               <Button onClick={() => setTab("Our household")}>
                 Connect your home <ArrowRight size={14} />
@@ -662,10 +671,10 @@ export default function Hub() {
                     {
                       {
                         Calendar: "Plans and dated to-dos for your home.",
-                        "To-dos": `${openTasks.length} open · ${openTasks.filter((entry) => entry.assignee === uid).length} assigned to you`,
+                        "To-dos": `${openTasks.length} open, ${openTasks.filter((entry) => entry.assignee === uid).length} assigned to you`,
                         "Shopping list": `${neededItems.length} ${neededItems.length === 1 ? "item" : "items"} to pick up`,
                         "House notes": `${notes.length} ${notes.length === 1 ? "note" : "notes"} shared with your home`,
-                        "Our household": `${household.name} · ${housemates.length} ${housemates.length === 1 ? "housemate" : "housemates"}`,
+                        "Our household": `${household.name}, ${housemates.length} ${housemates.length === 1 ? "housemate" : "housemates"}`,
                         Overview: "",
                         Expenses: "",
                       }[tab]
@@ -746,7 +755,7 @@ export default function Hub() {
                   {filter !== "Bought" &&
                     filteredShopping.some((e) => e.amount != null) && (
                       <span className="subtle">
-                        Estimated total ·{" "}
+                        Estimated total{" "}
                         <strong>
                           {money(
                             filteredShopping.reduce(
@@ -807,9 +816,9 @@ export default function Hub() {
                           <small>
                             {entry.category}
                             {claimedBy(entry)
-                              ? ` · ${claimedBy(entry) === uid ? "You’re" : `${person(entry.assignee)}’s`} getting it`
+                              ? `, ${claimedBy(entry) === uid ? "you’re" : `${person(entry.assignee)}’s`} getting it`
                               : ""}
-                            {entry.description ? ` · ${entry.description}` : ""}
+                            {entry.description ? `. ${entry.description}` : ""}
                           </small>
                           {members.some(
                             (m) =>
@@ -926,7 +935,7 @@ export default function Hub() {
                         <h3>{entry.title}</h3>
                         <p>{entry.description}</p>
                         <span>
-                          — {person(entry.assignee || entry.created_by)} ·{" "}
+                          {person(entry.assignee || entry.created_by)},{" "}
                           {activityWhen(Date.parse(entry.created_at), now)}
                         </span>
                       </Button>

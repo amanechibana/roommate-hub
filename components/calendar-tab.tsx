@@ -127,7 +127,7 @@ export default function CalendarTab({
                   {entry.title}
                 </strong>
                 <small>
-                  {entry.category} · {person(entry.assignee)}
+                  {entry.category}, {person(entry.assignee)}
                 </small>
               </span>
               <ChevronRight size={17} />
@@ -238,8 +238,8 @@ export default function CalendarTab({
                       {entry.title}
                       {isBill(entry)
                         ? billPaid(entry)
-                          ? " · Paid"
-                          : " · Payment due"
+                          ? ", paid"
+                          : ", payment due"
                         : ""}
                     </Button>
                   ))}
