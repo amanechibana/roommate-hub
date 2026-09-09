@@ -121,9 +121,12 @@ body {
 }
 .board-welcome h1 {
   font-family: var(--font-display), Georgia, serif;
-  font-size: 38px;
+  font-size: 32px;
   font-weight: 400;
-  letter-spacing: -1px;
+  letter-spacing: -0.4px;
+  line-height: 1.18;
+  max-width: 30ch;
+  text-wrap: balance;
   margin: 0 0 8px;
 }
 .board-summary {
@@ -331,49 +334,13 @@ body {
   border-color: #daccb5;
   color: #9d7856;
 }
-/* Each card is a different piece of paper, so the noticeboard reads as
-   things pinned to it rather than four copies of one panel. The wall
-   display keeps its own dark surfaces; these are for the paper theme. */
-.plans-card {
-  /* A leaf off a tear-off calendar: perforated top, faint ruling. */
-  border-top: 2px dashed #d3c5ae;
-  background:
-    repeating-linear-gradient(transparent 0 27px, #d9cfbe45 27px 28px) 0 62px /
-      100% calc(100% - 62px) no-repeat,
-    #fffdf7;
-}
 .plans-card .board-plan {
   /* The ruling is the divider here; a second line under each row would
      read as a smudge. */
   border-bottom-color: transparent;
 }
 .chores-card {
-  /* An index card: the red head rule and blue feint lines. */
-  background:
-    linear-gradient(#d9a094 0 0) 0 54px / 100% 1.5px no-repeat,
-    repeating-linear-gradient(transparent 0 25px, #b7c6d84a 25px 26px) 0 58px /
-      100% calc(100% - 58px) no-repeat,
-    #f6f7ee;
   border-color: #d8dbc4;
-}
-.groceries-card {
-  /* Receipt paper: a warm thermal white with a torn edge at the bottom. */
-  background: linear-gradient(#fffefb, #fbf6ea);
-  border-bottom-color: transparent;
-  border-radius: 12px 12px 0 0;
-  box-shadow: 1px 3px 0 #8f73550b;
-}
-.groceries-card::after {
-  content: "";
-  position: absolute;
-  left: -1px;
-  right: -1px;
-  bottom: -7px;
-  height: 7px;
-  background:
-    linear-gradient(135deg, #fbf6ea 50%, transparent 50%) 0 0 / 14px 14px,
-    linear-gradient(45deg, #fbf6ea 50%, transparent 50%) 0 0 / 14px 14px;
-  filter: drop-shadow(0 1px 0 #e0d5c4);
 }
 /* The things under a grouped title, laid out so a board reads them at a
    glance instead of running them together in one long line. */
@@ -674,6 +641,8 @@ body {
   display: flex;
   align-self: flex-end;
   gap: calc(var(--flip-h) * 0.08);
+  /* Room to breathe after the minute card; they were touching. */
+  margin-left: calc(var(--flip-h) * 0.5);
 }
 /* Seconds snap faster than the big cards, like the real thing. */
 .flip-clock .flip-seconds .flip-leaf-top {
@@ -696,6 +665,9 @@ body {
 }
 .wall-clock .flip-date {
   --flip-h: clamp(22px, 1.8vw, 38px);
+}
+.wall-clock .flip-date .flip-cards {
+  gap: calc(var(--flip-h) * 0.35);
 }
 .flip-date .flip-word {
   width: auto;
@@ -1778,14 +1750,14 @@ body {
   }
 }
 
-.wall-display .plans-card,
-.wall-display .chores-card,
-.wall-display .groceries-card {
+.wall-display .paper-leaf,
+.wall-display .paper-index,
+.wall-display .paper-receipt {
   background-image: none;
   border-top-style: solid;
   border-bottom-color: inherit;
   border-radius: inherit;
 }
-.wall-display .groceries-card::after {
+.wall-display .paper-receipt::after {
   display: none;
 }

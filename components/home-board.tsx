@@ -41,6 +41,7 @@ import {
   billPaid,
   billShare,
   collapseSeries,
+  houseHeadline,
   isBill,
   shareMoney,
   titleGroup,
@@ -484,22 +485,21 @@ export default function HomeBoard({
         <div>
           <p className="board-kicker">
             <Coffee size={16} />
-            {household.name}
-          </p>
-          <h1>
             {display
-              ? "Our home, today."
-              : viewer && viewer.name !== "You"
-                ? `Welcome home, ${viewer.name}.`
-                : "Welcome home."}
-          </h1>
-          <p className="board-summary">
-            {!tasks.length && entries.some((entry) => entry.kind === "task")
-              ? "All done. The cat approves."
-              : due
-                ? `${due} ${due === 1 ? "thing needs" : "things need"} a little love today.`
-                : "Nothing urgent. Make yourself a cup of something."}
+              ? household.name
+              : now.toLocaleDateString("en-US", {
+                  weekday: "long",
+                  month: "long",
+                  day: "numeric",
+                })}
           </p>
+          {/* The house's own headline: what today is asking of it. */}
+          <h1>
+            {houseHeadline(entries, today, viewer?.user_id ?? null) ||
+              (!tasks.length && entries.some((entry) => entry.kind === "task")
+                ? "All done. The cat approves."
+                : "All quiet at home.")}
+          </h1>
           {display ? (
             <p className="wall-expenses" aria-label="Expense balance">
               <Wallet size={16} aria-hidden="true" />
@@ -576,7 +576,7 @@ export default function HomeBoard({
           initial={reduced ? false : { opacity: 0.65 }}
           animate={{ opacity: 1 }}
           transition={{ duration: reduced ? 0 : 0.3, delay: reduced ? 0 : 0.0 }}
-          className="board-card plans-card"
+          className="board-card plans-card paper-leaf"
         >
           <div className="board-card-heading">
             <h2>
@@ -651,7 +651,7 @@ export default function HomeBoard({
             duration: reduced ? 0 : 0.3,
             delay: reduced ? 0 : 0.04,
           }}
-          className="board-card chores-card"
+          className="board-card chores-card paper-index"
         >
           <div className="board-card-heading">
             <h2>
@@ -721,7 +721,7 @@ export default function HomeBoard({
             duration: reduced ? 0 : 0.3,
             delay: reduced ? 0 : 0.08,
           }}
-          className="board-card groceries-card"
+          className="board-card groceries-card paper-receipt"
         >
           <div className="board-card-heading">
             <h2>
