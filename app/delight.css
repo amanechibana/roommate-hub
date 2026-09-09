@@ -1030,6 +1030,12 @@ html[data-ambient="off"] .flip-clock :is(.flip-leaf-top, .flip-leaf-bottom) {
 .wall-display[data-tone="night"] .board-shopping .board-entry-copy {
   background: transparent;
 }
+.wall-display[data-tone="night"] .board-group > span {
+  background: #414336;
+}
+.wall-display[data-tone="night"] .board-group > .board-group-more {
+  background: none;
+}
 .notes-grid {
   padding: 14px 4px 12px;
 }

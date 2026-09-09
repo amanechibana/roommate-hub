@@ -340,6 +340,28 @@ body {
 .groceries-card .board-entry-copy {
   background: #fff9ebcc;
 }
+/* The things under a grouped title, laid out so a board reads them at a
+   glance instead of running them together in one long line. */
+.board-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 6px;
+  margin-top: 5px;
+}
+.board-group > span {
+  font-size: 11px;
+  line-height: 1.4;
+  color: #6f6047;
+  background: #efe3d0;
+  border-radius: 5px;
+  padding: 2px 7px;
+}
+.board-group > .board-group-more {
+  background: none;
+  color: #93826a;
+  padding-left: 2px;
+}
+
 .grocery-bullet {
   width: 8px;
   height: 8px;
@@ -734,6 +756,16 @@ body {
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
+.wall-display .board-group {
+  gap: clamp(4px, 0.5vh, 9px) clamp(6px, 0.6vw, 13px);
+  margin-top: clamp(4px, 0.6vh, 10px);
+}
+.wall-display .board-group > span {
+  font-size: clamp(12px, 1.05vw, 23px);
+  padding: clamp(2px, 0.3vh, 6px) clamp(7px, 0.7vw, 15px);
+  border-radius: clamp(5px, 0.4vw, 9px);
+}
+
 .wall-display .board-entry-copy > small {
   font-size: clamp(11px, 1vw, 23px);
   white-space: nowrap;

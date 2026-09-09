@@ -19,7 +19,7 @@ import HomeBoard from "@/components/home-board";
 import HubSkeleton from "@/components/hub-skeleton";
 import { DisplayButton } from "@/components/ui/display-button";
 import { SegmentedControl } from "@/components/ui/segmented-control";
-import { collapseSeries, dayOrder } from "@/lib/household-actions";
+import { collapseSeries, dayOrder, titleGroup } from "@/lib/household-actions";
 import { safeUrl, type Entry, type Kind, type Member } from "@/lib/model";
 import {
   ArrowRight,
@@ -771,92 +771,104 @@ export default function Hub() {
               {quickAdd("request")}
               <div className="shopping-list">
                 <AnimatePresence initial={false}>
-                  {filteredShopping.map((entry, index) => (
-                    <DraggableRow
-                      title={entry.title}
-                      index={index}
-                      count={filteredShopping.length}
-                      onMove={(to) =>
-                        shoppingOrder.move(filteredShopping, index, to)
-                      }
-                      className={`task-row shopping-row ${entry.done ? "completed" : ""}`}
-                      key={entry.id}
-                    >
-                      <Button
-                        className="checkbox"
-                        aria-label={`${entry.done ? "Reopen" : "Mark as bought"}: ${entry.title}`}
-                        aria-pressed={entry.done}
-                        onClick={() => toggleBought(entry)}
-                      >
-                        {entry.done && <AnimatedCheck size={14} />}
-                      </Button>
-                      <Button
-                        className="entry-label"
-                        onClick={() => setEditing({ kind: "request", entry })}
-                      >
-                        <h2>{entry.title}</h2>
-                        <small>
-                          {entry.category}
-                          {claimedBy(entry)
-                            ? ` · ${claimedBy(entry) === uid ? "You’re" : `${person(entry.assignee)}’s`} getting it`
-                            : ""}
-                          {entry.description ? ` · ${entry.description}` : ""}
-                        </small>
-                        {members.some(
-                          (m) =>
-                            m.user_id === entry.created_by &&
-                            m.name !== "Housemates",
-                        ) && <small>Added by {person(entry.created_by)}</small>}
-                      </Button>
-                      {entry.amount != null && (
-                        <strong className="row-price">
-                          {money(entry.amount)}
-                        </strong>
-                      )}
-                      {!entry.done && uid && (
-                        <Button
-                          className="icon-button claim-button"
-                          aria-pressed={claimedBy(entry) === uid}
-                          aria-label={`${
-                            claimedBy(entry) === uid
-                              ? "Never mind, I’m not getting"
-                              : claimedBy(entry)
-                                ? "I’ll grab it instead"
-                                : "I’ll grab it"
-                          }: ${entry.title}`}
-                          onClick={() => claim(entry)}
-                        >
-                          <Hand size={16} />
-                        </Button>
-                      )}
-                      {safeUrl(entry.url) && (
-                        <a
-                          className="icon-button"
-                          aria-label={`View ${entry.title} in store`}
-                          href={safeUrl(entry.url)!}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                        >
-                          <ExternalLink size={16} />
-                        </a>
-                      )}
-                      <EntryMenu
+                  {filteredShopping.map((entry, index) => {
+                    const group = titleGroup(entry.title);
+                    return (
+                      <DraggableRow
                         title={entry.title}
-                        onEdit={() => setEditing({ kind: entry.kind, entry })}
-                        onDelete={() => void remove(entry)}
-                        actions={
-                          entry.done
-                            ? [
-                                {
-                                  label: "Need again",
-                                  onSelect: () => needAgain(entry),
-                                },
-                              ]
-                            : []
+                        index={index}
+                        count={filteredShopping.length}
+                        onMove={(to) =>
+                          shoppingOrder.move(filteredShopping, index, to)
                         }
-                      />
-                    </DraggableRow>
-                  ))}
+                        className={`task-row shopping-row ${entry.done ? "completed" : ""}`}
+                        key={entry.id}
+                      >
+                        <Button
+                          className="checkbox"
+                          aria-label={`${entry.done ? "Reopen" : "Mark as bought"}: ${entry.title}`}
+                          aria-pressed={entry.done}
+                          onClick={() => toggleBought(entry)}
+                        >
+                          {entry.done && <AnimatedCheck size={14} />}
+                        </Button>
+                        <Button
+                          className="entry-label"
+                          onClick={() => setEditing({ kind: "request", entry })}
+                        >
+                          <h2>{group?.heading ?? entry.title}</h2>
+                          {group && (
+                            <span className="row-group">
+                              {group.items.map((item, i) => (
+                                <span key={`${item}-${i}`}>{item}</span>
+                              ))}
+                            </span>
+                          )}
+                          <small>
+                            {entry.category}
+                            {claimedBy(entry)
+                              ? ` · ${claimedBy(entry) === uid ? "You’re" : `${person(entry.assignee)}’s`} getting it`
+                              : ""}
+                            {entry.description ? ` · ${entry.description}` : ""}
+                          </small>
+                          {members.some(
+                            (m) =>
+                              m.user_id === entry.created_by &&
+                              m.name !== "Housemates",
+                          ) && (
+                            <small>Added by {person(entry.created_by)}</small>
+                          )}
+                        </Button>
+                        {entry.amount != null && (
+                          <strong className="row-price">
+                            {money(entry.amount)}
+                          </strong>
+                        )}
+                        {!entry.done && uid && (
+                          <Button
+                            className="icon-button claim-button"
+                            aria-pressed={claimedBy(entry) === uid}
+                            aria-label={`${
+                              claimedBy(entry) === uid
+                                ? "Never mind, I’m not getting"
+                                : claimedBy(entry)
+                                  ? "I’ll grab it instead"
+                                  : "I’ll grab it"
+                            }: ${entry.title}`}
+                            onClick={() => claim(entry)}
+                          >
+                            <Hand size={16} />
+                          </Button>
+                        )}
+                        {safeUrl(entry.url) && (
+                          <a
+                            className="icon-button"
+                            aria-label={`View ${entry.title} in store`}
+                            href={safeUrl(entry.url)!}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                          >
+                            <ExternalLink size={16} />
+                          </a>
+                        )}
+                        <EntryMenu
+                          title={entry.title}
+                          onEdit={() => setEditing({ kind: entry.kind, entry })}
+                          onDelete={() => void remove(entry)}
+                          actions={
+                            entry.done
+                              ? [
+                                  {
+                                    label: "Need again",
+                                    onSelect: () => needAgain(entry),
+                                  },
+                                ]
+                              : []
+                          }
+                        />
+                      </DraggableRow>
+                    );
+                  })}
                 </AnimatePresence>
               </div>
               {!shopping.filter((e) =>

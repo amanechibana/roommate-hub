@@ -12,6 +12,7 @@ import {
   collapseSeries,
   dayOrder,
   shoppingListText,
+  titleGroup,
 } from "../lib/household-actions";
 
 test("chores alternate from the selected first person", () => {
@@ -233,4 +234,27 @@ test("a bill share is the amount divided among its payers, to the cent", () => {
     billShare({ ...chore, amount: 50, payment_members: ["a"] }),
     null,
   );
+});
+
+test("a title written as its own list is read as a heading and its things", () => {
+  assert.deepEqual(
+    titleGroup("Household supplies: Toilet Paper, Soap, Paper Towels"),
+    {
+      heading: "Household supplies",
+      items: ["Toilet Paper", "Soap", "Paper Towels"],
+    },
+  );
+  // Loose spacing and a trailing comma are how people actually type these.
+  assert.deepEqual(titleGroup("Snacks:chips , salsa ,"), {
+    heading: "Snacks",
+    items: ["chips", "salsa"],
+  });
+});
+test("an ordinary title stays one thing", () => {
+  // One thing after the colon is a note about the item, not a list.
+  assert.equal(titleGroup("Costco: olive oil"), null);
+  assert.equal(titleGroup("Dinner at 7:30"), null);
+  assert.equal(titleGroup("Olive oil"), null);
+  assert.equal(titleGroup(": soap, wipes"), null);
+  assert.equal(titleGroup("Milk, eggs, bread"), null);
 });
