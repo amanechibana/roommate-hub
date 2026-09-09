@@ -156,6 +156,11 @@ export default function HomeBoard({
             : parseDate(date).toLocaleDateString("en-US", {
                 month: "short",
                 day: "numeric",
+                // A chore repeating into next year would otherwise read
+                // "Jan 7", the same as the one that came and went.
+                ...(date.slice(0, 4) === today.slice(0, 4)
+                  ? {}
+                  : { year: "numeric" }),
               });
   const byDate = (a: Entry, b: Entry) =>
     (a.date || "9999").localeCompare(b.date || "9999");
