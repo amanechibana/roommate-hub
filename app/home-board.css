@@ -331,14 +331,49 @@ body {
   border-color: #daccb5;
   color: #9d7856;
 }
-.groceries-card {
+/* Each card is a different piece of paper, so the noticeboard reads as
+   things pinned to it rather than four copies of one panel. The wall
+   display keeps its own dark surfaces; these are for the paper theme. */
+.plans-card {
+  /* A leaf off a tear-off calendar: perforated top, faint ruling. */
+  border-top: 2px dashed #d3c5ae;
   background:
-    linear-gradient(90deg, #bd84621a 1px, transparent 1px),
-    linear-gradient(#bd84621a 1px, transparent 1px), #fff9eb;
-  background-size: 22px 22px;
+    repeating-linear-gradient(transparent 0 27px, #d9cfbe45 27px 28px) 0 62px /
+      100% calc(100% - 62px) no-repeat,
+    #fffdf7;
 }
-.groceries-card .board-entry-copy {
-  background: #fff9ebcc;
+.plans-card .board-plan {
+  /* The ruling is the divider here; a second line under each row would
+     read as a smudge. */
+  border-bottom-color: transparent;
+}
+.chores-card {
+  /* An index card: the red head rule and blue feint lines. */
+  background:
+    linear-gradient(#d9a094 0 0) 0 54px / 100% 1.5px no-repeat,
+    repeating-linear-gradient(transparent 0 25px, #b7c6d84a 25px 26px) 0 58px /
+      100% calc(100% - 58px) no-repeat,
+    #f6f7ee;
+  border-color: #d8dbc4;
+}
+.groceries-card {
+  /* Receipt paper: a warm thermal white with a torn edge at the bottom. */
+  background: linear-gradient(#fffefb, #fbf6ea);
+  border-bottom-color: transparent;
+  border-radius: 12px 12px 0 0;
+  box-shadow: 1px 3px 0 #8f73550b;
+}
+.groceries-card::after {
+  content: "";
+  position: absolute;
+  left: -1px;
+  right: -1px;
+  bottom: -7px;
+  height: 7px;
+  background:
+    linear-gradient(135deg, #fbf6ea 50%, transparent 50%) 0 0 / 14px 14px,
+    linear-gradient(45deg, #fbf6ea 50%, transparent 50%) 0 0 / 14px 14px;
+  filter: drop-shadow(0 1px 0 #e0d5c4);
 }
 /* The things under a grouped title, laid out so a board reads them at a
    glance instead of running them together in one long line. */
@@ -1741,4 +1776,16 @@ body {
   .commute-stale span {
     display: none;
   }
+}
+
+.wall-display .plans-card,
+.wall-display .chores-card,
+.wall-display .groceries-card {
+  background-image: none;
+  border-top-style: solid;
+  border-bottom-color: inherit;
+  border-radius: inherit;
+}
+.wall-display .groceries-card::after {
+  display: none;
 }
