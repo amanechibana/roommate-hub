@@ -200,7 +200,7 @@ Open the localhost address printed by Next.js. Without Supabase environment vari
   15-second poll as fallback.
 - An installable app with an opt-in morning reminder push per device.
 - Shared house notes. Create, edit, and delete entries through accessible dialogs.
-- `.ics` calendar export and per-event Google Calendar links. These create snapshots/copies, not subscriptions or two-way synchronization.
+- `.ics` calendar export and per-event Google Calendar links, which create snapshots/copies. **Subscribe on your phone** in household settings gives a private feed URL instead: Apple, Google, or Outlook Calendar polls it on its own schedule, so plans and dated chores stay current without re-exporting. The link is a secret derived from the household code and session secret, so it is never stored, and changing the household code revokes every subscription at once. It reads the calendar only; nothing writes back.
 - Shared household-code authentication and a remembered person picker.
 - Persistent shared records with database-enforced household isolation. Other housemates’ changes arrive live over the broadcast channel, with a 15-second poll and window-focus refresh as fallback.
 - Responsive desktop/mobile layouts and keyboard support.
@@ -352,7 +352,7 @@ Suggested order:
 2. **Meal planner + pantry:** dinner plans, staples running low, and one-click shopping requests.
 3. **Quick polls:** vote on purchases, movie nights, or house rules.
 4. **Guests / quiet hours:** overnight visitors, work-from-home blocks, and a heads-up board.
-5. **Calendar connections:** Google/Microsoft OAuth, server-side encrypted tokens, webhook handling, and conflict resolution for two-way sync. Private calendar subscription URLs should be revocable secrets.
+5. **Calendar connections:** Google/Microsoft OAuth, server-side encrypted tokens, webhook handling, and conflict resolution for two-way sync. (The read-only subscription feed shipped; its URL is a derived secret revoked by changing the household code.)
 6. **Shopping enrichment:** optional product metadata from approved retailer APIs. Current store links are manual; no Amazon login, price scraping, checkout, or purchase automation.
 7. **Membership management:** owner-controlled removal, leaving a house, ownership transfer, and recovery flows.
 
