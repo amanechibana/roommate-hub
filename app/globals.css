@@ -1968,6 +1968,19 @@ textarea {
 .shopping-row .entry-label small {
   overflow-wrap: anywhere;
 }
+.shopping-row .row-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 6px;
+}
+.shopping-row .row-group > span {
+  font-size: 10px;
+  color: #6f7a63;
+  background: #f0f2e9;
+  border-radius: 5px;
+  padding: 3px 8px;
+}
+
 .shopping-row .row-price {
   flex-shrink: 0;
   font-size: 13px;

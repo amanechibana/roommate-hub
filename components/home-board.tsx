@@ -43,6 +43,7 @@ import {
   collapseSeries,
   isBill,
   shareMoney,
+  titleGroup,
 } from "@/lib/household-actions";
 import { AmbientToggle } from "@/components/ui/display-button";
 import CommuteStrip from "@/components/commute-strip";
@@ -72,6 +73,10 @@ type Props = {
   ) => void;
   onToggle: (entry: Entry) => void;
 };
+// How many of a grouped title's things a board row shows before it says how
+// many are left. Enough for a real household list, few enough that one row
+// cannot swallow the card.
+const GROUP_ROOM = 6;
 const dollars = (amount: number) =>
   new Intl.NumberFormat("en-US", {
     style: "currency",
@@ -125,7 +130,10 @@ export default function HomeBoard({
   const board = useRef<HTMLElement>(null);
   const [page, setPage] = useState(0);
   const [paused, setPaused] = useState(false);
-  const [limit, setLimit] = useState(3);
+  // Room for rows, per card: the plans card being able to show one long
+  // entry must not decide how many chores the housework card shows.
+  const [limits, setLimits] = useState<Record<string, number>>({});
+  const roomFor = (kind: string) => limits[kind] ?? 3;
   const [full, setFull] = useState(false);
   const [fullscreenError, setFullscreenError] = useState("");
   const today = dateKey(now);
@@ -228,19 +236,19 @@ export default function HomeBoard({
   );
   const pages = Math.max(
     1,
-    Math.ceil(tasks.length / limit),
-    Math.ceil(events.length / limit),
-    Math.ceil(shopping.length / limit),
-    display ? Math.ceil(notes.length / limit) : 1,
+    Math.ceil(tasks.length / roomFor("task")),
+    Math.ceil(events.length / roomFor("event")),
+    Math.ceil(shopping.length / roomFor("request")),
+    display ? Math.ceil(notes.length / roomFor("note")) : 1,
   );
   const activePage = page % pages;
-  const visible = (items: Entry[]) =>
+  const visible = (items: Entry[], room: number) =>
     !display
-      ? items.slice(0, limit)
+      ? items.slice(0, room)
       : items.slice(
-          (activePage % Math.max(1, Math.ceil(items.length / limit))) * limit,
-          ((activePage % Math.max(1, Math.ceil(items.length / limit))) + 1) *
-            limit,
+          (activePage % Math.max(1, Math.ceil(items.length / room))) * room,
+          ((activePage % Math.max(1, Math.ceil(items.length / room))) + 1) *
+            room,
         );
 
   const due = tasks.filter((e) => e.date && e.date <= today).length;
@@ -249,8 +257,10 @@ export default function HomeBoard({
     if (display || !board.current) return;
     const rows = board.current.querySelector(".board-rows");
     if (!rows) return;
-    const resize = () =>
-      setLimit(Math.max(1, Math.min(3, Math.floor(rows.clientHeight / 64))));
+    const resize = () => {
+      const room = Math.max(1, Math.min(3, Math.floor(rows.clientHeight / 64)));
+      setLimits({ event: room, task: room, request: room, note: room });
+    };
     const observer = new ResizeObserver(resize);
     observer.observe(rows);
     resize();
@@ -288,9 +298,13 @@ export default function HomeBoard({
     const resize = () => {
       const rows = board.current?.querySelectorAll<HTMLElement>(".board-rows");
       if (!rows) return;
-      // Reserve enough room for titles on later pages as well as this one.
-      // Observe the cards so weather, balances, and font loading can resize them.
-      let capacity = 4;
+      // Every row this card can page to is measured on its own, and the
+      // tallest ones are packed first: any page has to fit, but one tall row
+      // must not cost the short rows beneath it their place. Ten is a guard
+      // against a degenerate measurement (fonts still loading report a
+      // near-zero row), not a design ceiling — a taller screen shows more.
+      // Observe the cards so weather, balances, and font loading resize them.
+      const room: Record<string, number> = {};
       rows.forEach((list) => {
         const row = list.querySelector<HTMLElement>(
           ".board-plan, .board-task, .board-shopping",
@@ -300,39 +314,78 @@ export default function HomeBoard({
         if (!row || !title || !detail) return;
         const style = getComputedStyle(row);
         const titleStyle = getComputedStyle(title);
-        if (measure) measure.font = titleStyle.font;
+        const detailStyle = getComputedStyle(detail);
+        const titleLine = parseFloat(titleStyle.lineHeight);
+        const detailLine = parseFloat(detailStyle.lineHeight);
+        const width = title.clientWidth;
         const kind = row.classList.contains("board-plan")
           ? "event"
           : row.classList.contains("board-task")
             ? "task"
             : "request";
-        const wraps =
-          !measure ||
-          entries.some(
-            (entry) =>
-              entry.kind === kind &&
-              !entry.done &&
-              measure.measureText(entry.title).width > title.clientWidth,
-          );
-        const titleHeight = parseFloat(titleStyle.lineHeight) * (wraps ? 2 : 1);
-        const detailStyle = getComputedStyle(detail);
-        const contentHeight =
-          titleHeight +
-          parseFloat(detailStyle.lineHeight) +
-          parseFloat(detailStyle.marginTop);
         const dateHeight =
           row.querySelector(".board-date")?.getBoundingClientRect().height || 0;
-        const rowHeight =
-          Math.max(contentHeight, dateHeight) +
-          parseFloat(style.paddingTop) +
-          parseFloat(style.paddingBottom) +
-          1;
-        capacity = Math.min(
-          capacity,
-          Math.max(1, Math.floor(list.clientHeight / rowHeight)),
-        );
+        // Two lines is the most either the title or the things under it get,
+        // matching what the wall's CSS will actually show.
+        const lines = (text: string, font: string) => {
+          if (!measure || !width) return 2;
+          measure.font = font;
+          return Math.min(
+            2,
+            Math.max(1, Math.ceil(measure.measureText(text).width / width)),
+          );
+        };
+        const heights = entries
+          .filter((entry) => entry.kind === kind && !entry.done)
+          .map((entry) => {
+            const group = titleGroup(entry.title);
+            let content =
+              titleLine * lines(group?.heading ?? entry.title, titleStyle.font);
+            if (group)
+              content +=
+                detailLine *
+                  // Each chip carries its own padding, near enough a line.
+                  lines(
+                    group.items
+                      .slice(0, GROUP_ROOM)
+                      .map((item) => `${item}\u2003`)
+                      .join(""),
+                    detailStyle.font,
+                  ) +
+                parseFloat(detailStyle.marginTop);
+            content += detailLine + parseFloat(detailStyle.marginTop);
+            return (
+              Math.max(content, dateHeight) +
+              parseFloat(style.paddingTop) +
+              parseFloat(style.paddingBottom) +
+              1
+            );
+          })
+          .sort((a, b) => b - a);
+        // An empty card has no rows to fit and must not hold the others back.
+        if (!heights.length) return;
+        let used = 0;
+        let fits = 0;
+        while (
+          fits < heights.length &&
+          used + heights[fits] <= list.clientHeight
+        ) {
+          used += heights[fits];
+          fits += 1;
+        }
+        room[kind] = Math.max(1, Math.min(10, fits));
       });
-      setLimit(capacity);
+      // The fridge has no rows to measure, so it follows the tightest card.
+      const measured = Object.values(room);
+      if (measured.length) room.note = Math.min(...measured);
+      // Keep the old object when nothing moved: a fresh one every measurement
+      // would re-render the board on each observer tick.
+      setLimits((current) =>
+        Object.keys(room).length === Object.keys(current).length &&
+        Object.keys(room).every((kind) => current[kind] === room[kind])
+          ? current
+          : room,
+      );
     };
     const observer = new ResizeObserver(resize);
     board.current
@@ -371,21 +424,22 @@ export default function HomeBoard({
   const more = (
     count: number,
     tab: "Calendar" | "To-dos" | "Shopping list" | "House notes",
+    room: number,
   ) =>
-    !display && count > limit ? (
+    !display && count > room ? (
       <Button className="board-more" onClick={() => onNavigate(tab)}>
         See all {count} <ArrowRight size={14} />
       </Button>
     ) : null;
-  const title = (entry: Entry) =>
+  const title = (entry: Entry, label = entry.title) =>
     display ? (
-      <strong title={entry.title}>{entry.title}</strong>
+      <strong title={entry.title}>{label}</strong>
     ) : (
       <Button
         className="board-entry-title"
         onClick={() => onOpen(entry.kind, entry)}
       >
-        {entry.title}
+        {label}
       </Button>
     );
 
@@ -534,8 +588,12 @@ export default function HomeBoard({
           </div>
           <div className="board-rows">
             {/* Capacity changes are immediate; user removals still animate out. */}
-            <AnimatePresence key={limit} initial={false} mode="popLayout">
-              {visible(events).map((entry) => (
+            <AnimatePresence
+              key={roomFor("event")}
+              initial={false}
+              mode="popLayout"
+            >
+              {visible(events, roomFor("event")).map((entry) => (
                 <PresenceRow
                   initial={false}
                   className="board-plan"
@@ -580,7 +638,7 @@ export default function HomeBoard({
               </div>
             )}
           </div>
-          {more(events.length, "Calendar")}
+          {more(events.length, "Calendar", roomFor("event"))}
         </m.section>
         <m.section
           initial={reduced ? false : { opacity: 0.65 }}
@@ -601,8 +659,12 @@ export default function HomeBoard({
           </div>
           <div className="board-rows">
             {/* Capacity changes are immediate; user removals still animate out. */}
-            <AnimatePresence key={limit} initial={false} mode="popLayout">
-              {visible(tasks).map((entry) => (
+            <AnimatePresence
+              key={roomFor("task")}
+              initial={false}
+              mode="popLayout"
+            >
+              {visible(tasks, roomFor("task")).map((entry) => (
                 <PresenceRow
                   initial={false}
                   className="board-task"
@@ -647,7 +709,7 @@ export default function HomeBoard({
               </div>
             )}
           </div>
-          {more(tasks.length, "To-dos")}
+          {more(tasks.length, "To-dos", roomFor("task"))}
         </m.section>
         <m.section
           initial={reduced ? false : { opacity: 0.65 }}
@@ -669,37 +731,56 @@ export default function HomeBoard({
           </div>
           <div className="board-rows">
             {/* Capacity changes are immediate; user removals still animate out. */}
-            <AnimatePresence key={limit} initial={false} mode="popLayout">
-              {visible(shopping).map((entry) => (
-                <PresenceRow
-                  initial={false}
-                  className="board-shopping"
-                  key={entry.id}
-                >
-                  <span className="grocery-bullet" aria-hidden="true" />
-                  <div className="board-entry-copy">
-                    {title(entry)}
-                    <small>
-                      {entry.assignee
-                        ? `${isViewer(entry.assignee) ? "You’re" : `${person(entry.assignee)} is`} getting it · `
-                        : ""}
-                      {entry.category}
-                      {entry.amount != null
-                        ? ` · about ${dollars(entry.amount)}`
-                        : ""}
-                    </small>
-                  </div>
-                  {!display && (
-                    <Button
-                      className="board-buy"
-                      aria-label={`Mark ${entry.title} as bought`}
-                      onClick={() => onToggle(entry)}
-                    >
-                      <Check size={17} />
-                    </Button>
-                  )}
-                </PresenceRow>
-              ))}
+            <AnimatePresence
+              key={roomFor("request")}
+              initial={false}
+              mode="popLayout"
+            >
+              {visible(shopping, roomFor("request")).map((entry) => {
+                const group = titleGroup(entry.title);
+                return (
+                  <PresenceRow
+                    initial={false}
+                    className="board-shopping"
+                    key={entry.id}
+                  >
+                    <span className="grocery-bullet" aria-hidden="true" />
+                    <div className="board-entry-copy">
+                      {title(entry, group?.heading)}
+                      {group && (
+                        <span className="board-group">
+                          {group.items.slice(0, GROUP_ROOM).map((item, i) => (
+                            <span key={`${item}-${i}`}>{item}</span>
+                          ))}
+                          {group.items.length > GROUP_ROOM && (
+                            <span className="board-group-more">
+                              +{group.items.length - GROUP_ROOM} more
+                            </span>
+                          )}
+                        </span>
+                      )}
+                      <small>
+                        {entry.assignee
+                          ? `${isViewer(entry.assignee) ? "You’re" : `${person(entry.assignee)} is`} getting it · `
+                          : ""}
+                        {entry.category}
+                        {entry.amount != null
+                          ? ` · about ${dollars(entry.amount)}`
+                          : ""}
+                      </small>
+                    </div>
+                    {!display && (
+                      <Button
+                        className="board-buy"
+                        aria-label={`Mark ${entry.title} as bought`}
+                        onClick={() => onToggle(entry)}
+                      >
+                        <Check size={17} />
+                      </Button>
+                    )}
+                  </PresenceRow>
+                );
+              })}
             </AnimatePresence>
             {!shopping.length && (
               <div className="board-empty">
@@ -712,7 +793,7 @@ export default function HomeBoard({
               </div>
             )}
           </div>
-          {more(shopping.length, "Shopping list")}
+          {more(shopping.length, "Shopping list", roomFor("request"))}
         </m.section>
         <m.section
           initial={reduced ? false : { opacity: 0.65 }}
@@ -733,24 +814,26 @@ export default function HomeBoard({
           </div>
           {notes.length ? (
             <div className="fridge-stack">
-              {(display ? visible(notes) : notes).map((note) => (
-                <div className="fridge-message" key={note.id}>
-                  <h3>
-                    {display ? (
-                      note.title
-                    ) : (
-                      <Button onClick={() => onOpen("note", note)}>
-                        {note.title}
-                      </Button>
-                    )}
-                  </h3>
-                  <p title={note.description}>{note.description}</p>
-                  <span>
-                    With love, {person(note.assignee || note.created_by)} ·{" "}
-                    {activityWhen(Date.parse(note.created_at), now)}
-                  </span>
-                </div>
-              ))}
+              {(display ? visible(notes, roomFor("note")) : notes).map(
+                (note) => (
+                  <div className="fridge-message" key={note.id}>
+                    <h3>
+                      {display ? (
+                        note.title
+                      ) : (
+                        <Button onClick={() => onOpen("note", note)}>
+                          {note.title}
+                        </Button>
+                      )}
+                    </h3>
+                    <p title={note.description}>{note.description}</p>
+                    <span>
+                      With love, {person(note.assignee || note.created_by)} ·{" "}
+                      {activityWhen(Date.parse(note.created_at), now)}
+                    </span>
+                  </div>
+                ),
+              )}
             </div>
           ) : (
             <div className="fridge-message">
@@ -775,7 +858,7 @@ export default function HomeBoard({
               All {notes.length} notes <ArrowRight size={14} />
             </Button>
           )}
-          {display && notes.length > limit && (
+          {display && notes.length > roomFor("note") && (
             <small className="wall-page-hint">
               Page {activePage + 1} of {pages}
             </small>

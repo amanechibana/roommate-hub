@@ -157,6 +157,25 @@ export function dayOrder(entries: Entry[]): Entry[] {
     entry.done || (isBill(entry) && billPaid(entry));
   return [...entries].sort((a, b) => Number(settled(a)) - Number(settled(b)));
 }
+export type TitleGroup = { heading: string; items: string[] };
+/**
+ * A shopping title written as its own little list — "Household supplies:
+ * toilet paper, soap, paper towels" — is one opaque row wherever it lands,
+ * and a long one crowds out the rows beside it. Read the heading and the
+ * things under it so a board can lay them out instead. Two things minimum,
+ * so "Costco: milk" and "Dinner at 7:30" stay ordinary titles.
+ */
+export function titleGroup(title: string): TitleGroup | null {
+  const colon = title.indexOf(":");
+  if (colon < 1) return null;
+  const heading = title.slice(0, colon).trim();
+  const items = title
+    .slice(colon + 1)
+    .split(",")
+    .map((item) => item.trim())
+    .filter(Boolean);
+  return heading && items.length > 1 ? { heading, items } : null;
+}
 export function occurrenceAssignee(
   first: string | null,
   partner: string | undefined,
