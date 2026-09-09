@@ -47,7 +47,9 @@ export default function CalendarFeed() {
             readOnly
             value={url}
             aria-label="Calendar subscription link"
-            onFocus={(e) => e.currentTarget.select()}
+            onFocus={(e) =>
+              e.currentTarget.setSelectionRange(0, e.currentTarget.value.length)
+            }
           />
           <Button
             className="button secondary small"
@@ -57,7 +59,9 @@ export default function CalendarFeed() {
           </Button>
           <a
             className="button secondary small"
-            href={url.replace(/^https?:/, "webcal:")}
+            href={url
+              .replace(/^https:/, "webcals:")
+              .replace(/^http:/, "webcal:")}
           >
             <CalendarPlus size={14} /> Open in calendar
           </a>
