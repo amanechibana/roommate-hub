@@ -157,15 +157,21 @@ export default function HomeBoard({
                 month: "short",
                 day: "numeric",
               });
-  const tasks = entries
-    .filter((e) => e.kind === "task" && !e.done)
-    .sort(
-      (a, b) =>
-        (viewer
-          ? Number(b.assignee === viewer.user_id) -
-            Number(a.assignee === viewer.user_id)
-          : 0) || (a.date || "9999").localeCompare(b.date || "9999"),
-    );
+  const byDate = (a: Entry, b: Entry) =>
+    (a.date || "9999").localeCompare(b.date || "9999");
+  // Same reason Up next collapses: a chore set to repeat weekly for the year
+  // would otherwise fill the card with fifty copies of one title. Collapsing
+  // wants date order, so yours-first is applied to what survives.
+  const tasks = collapseSeries(
+    entries.filter((e) => e.kind === "task" && !e.done).sort(byDate),
+    today,
+  ).sort(
+    (a, b) =>
+      (viewer
+        ? Number(b.assignee === viewer.user_id) -
+          Number(a.assignee === viewer.user_id)
+        : 0) || byDate(a, b),
+  );
   const repayments = suggestedRepayments(expenseBalances(expenses.expenses));
   const balanceSummary = repayments.length
     ? repayments

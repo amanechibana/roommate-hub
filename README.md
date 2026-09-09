@@ -4,7 +4,7 @@ A warm, private roommate hub built with Next.js, React, TypeScript, and Supabase
 
 ## Home and display mode
 
-The homepage and calendar fit the available viewport without page scrolling. Home cards adapt their item count to the space; a "See all" link on each card opens the full tab when more items exist. Complete chores or mark purchases directly, or use the To-do / Item / Plan shortcuts. Calendar rows resize to fit even six-week months; crowded days open a detail dialog. On phones, navigation stays at the bottom and the calendar becomes a paginated monthly agenda.
+The homepage and calendar fit the available viewport without page scrolling. Home cards adapt their item count to the space; a "See all" link on each card opens the full tab when more items exist. A repeating chore or plan takes one row on the overview — its next turn, plus anything overdue — while the full tab still lists every occurrence. Complete chores or mark purchases directly, or use the To-do / Item / Plan shortcuts. Calendar rows resize to fit even six-week months; crowded days open a detail dialog. On phones, navigation stays at the bottom and the calendar becomes a paginated monthly agenda.
 
 Choose **Display mode** in the top bar for a monitor/TV, or bookmark `/?display=1`. It fills the browser viewport with four cards, a clock, and no scrolling. The number of visible items adapts to screen height. Extra items and notes rotate every 20 seconds; the bottom controls let you pause, change pages, enter full screen, or exit. Long titles and notes are shown as concise previews; open the normal app for full details.
 
