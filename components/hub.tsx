@@ -440,6 +440,12 @@ export default function Hub() {
   const openTasks = tasks.filter((entry) => !entry.done);
   const doneCount = tasks.length - openTasks.length;
   const neededItems = shopping.filter((entry) => !entry.done);
+  // What the nav badge counts: to-dos that have come due, the same set the
+  // board's greeting counts. Every future occurrence of a repeating chore is
+  // open too, and a badge reading 52 would say nothing about today.
+  const dueTasks = openTasks.filter(
+    (entry) => entry.date && entry.date <= today,
+  );
 
   const boardProps = {
     activity: house.activity,
@@ -498,9 +504,20 @@ export default function Hub() {
               )}
               <Icon size={19} />
               <span>{name}</span>
-              {name === "Shopping list" && (
-                <span className="nav-count">
-                  {shopping.filter((e) => !e.done).length}
+              {name === "Shopping list" && !!neededItems.length && (
+                <span
+                  className="nav-count"
+                  aria-label={`${neededItems.length} to pick up`}
+                >
+                  {neededItems.length}
+                </span>
+              )}
+              {name === "To-dos" && !!dueTasks.length && (
+                <span
+                  className="nav-count"
+                  aria-label={`${dueTasks.length} due`}
+                >
+                  {dueTasks.length}
                 </span>
               )}
             </Button>
