@@ -25,12 +25,15 @@ export async function GET(
     return new Response("Not found", { status: 404 });
   try {
     const data = await sharedDatabase("get");
-    return new Response(calendarFile(data.entries as Entry[]), {
-      headers: {
-        "Content-Type": "text/calendar; charset=utf-8",
-        "Cache-Control": "private, no-store",
+    return new Response(
+      calendarFile(data.entries as Entry[], data.household?.name),
+      {
+        headers: {
+          "Content-Type": "text/calendar; charset=utf-8",
+          "Cache-Control": "private, no-store",
+        },
       },
-    });
+    );
   } catch (err) {
     console.error("GET /api/calendar/[token]", err);
     return new Response("Calendar unavailable", { status: 503 });

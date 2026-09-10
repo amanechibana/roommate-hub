@@ -87,12 +87,18 @@ function foldLine(line: string): string {
   lines.push(part);
   return lines.join("\r\n");
 }
-export function calendarFile(entries: Entry[]): string {
+export function calendarFile(entries: Entry[], name = ""): string {
   const lines = [
     "BEGIN:VCALENDAR",
     "VERSION:2.0",
     "PRODID:-//Common Ground//Household Calendar//EN",
     "CALSCALE:GREGORIAN",
+    // A subscribed feed is listed under the name the calendar carries, not the
+    // URL it came from. NAME is RFC 7986; X-WR-CALNAME is the older spelling
+    // Apple and Google actually read, so send both.
+    ...(name
+      ? [`NAME:${escapeICS(name)}`, `X-WR-CALNAME:${escapeICS(name)}`]
+      : []),
   ];
   for (const entry of entries.filter(
     (e) => e.date && (e.kind === "event" || e.kind === "task"),
