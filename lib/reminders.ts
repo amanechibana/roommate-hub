@@ -149,9 +149,6 @@ function dueWhen(date: string, today: string) {
   return days < 0 ? `was due ${when}` : `is due ${when}`;
 }
 
-// One housemate poking another: about an open to-do of theirs, or about a
-// bill share they haven't checked off (`to` says whose share). Null when a
-// nudge makes no sense (done, nobody's, already paid).
 // A chore changing hands from the row menu: the new owner hears about it
 // the moment it lands, in the same voice as a nudge.
 export function handoffMessage(
@@ -166,6 +163,9 @@ export function handoffMessage(
     lines: [`“${entry.title}”${when}`],
   };
 }
+// One housemate poking another: about an open to-do of theirs, or about a
+// bill share they haven't checked off (`to` says whose share). Null when a
+// nudge makes no sense (done, nobody's, already paid).
 export function nudgeMessage(
   entry: Entry,
   from: Member,

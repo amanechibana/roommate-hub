@@ -648,12 +648,18 @@ export function useHousehold() {
         e.id === entry.id ? { ...e, assignee: member.user_id } : e,
       ),
     );
-    persist("update", { id: entry.id, assignee: member.user_id });
-    // Their phone hears about it once the write has landed. Best effort:
-    // the hand-off itself is already done, so nothing here is worth an error.
+    // Their phone hears about it once the write has landed, and only if it
+    // did: a failed save would otherwise announce a hand-off that never
+    // happened, to the person who still has the chore. Best effort after
+    // that; the hand-off itself is done, so a lost push is not an error.
+    let failed = false;
+    persist("update", { id: entry.id, assignee: member.user_id }, [], () => {
+      failed = true;
+    });
     if (!demo && process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY)
       void (async () => {
         await writes.current;
+        if (failed) return;
         await homeRequest("/api/nudge", "POST", {
           id: savedIds.current.get(entry.id) || entry.id,
           handoff: true,

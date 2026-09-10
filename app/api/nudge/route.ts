@@ -26,6 +26,7 @@ export const runtime = "nodejs";
 // plenty: a double tap or an impatient housemate must not turn into a
 // buzzing phone. Per server instance, which is fine for a household.
 const NUDGE_COOLDOWN = 15 * 60000;
+const HANDOFF_COOLDOWN = 60000;
 const recent = new Map<string, number>();
 
 export async function POST(request: Request) {
@@ -89,18 +90,27 @@ export async function POST(request: Request) {
     // Not an error: the nudge was understood, the house is just asleep.
     if (quietHours(new Date()))
       return json({ sent: 0, devices: 0, quiet: true });
-    const slot = bill ? `${entry.id}:${target.user_id}` : entry.id;
+    // A hand-off has its own short slot per new owner: a second real
+    // hand-off a minute later still goes through, a replayed request doesn't.
+    const slot = handingOff
+      ? `handoff:${entry.id}:${target.user_id}`
+      : bill
+        ? `${entry.id}:${target.user_id}`
+        : entry.id;
+    const cooldown = handingOff ? HANDOFF_COOLDOWN : NUDGE_COOLDOWN;
     const last = recent.get(slot);
-    if (!handingOff && last && Date.now() - last < NUDGE_COOLDOWN)
-      return json(
-        { error: `${target.name} was nudged about that a moment ago.` },
-        429,
-      );
+    if (last && Date.now() - last < cooldown)
+      return handingOff
+        ? json({ sent: 0, devices: 0 })
+        : json(
+            { error: `${target.name} was nudged about that a moment ago.` },
+            429,
+          );
     // Claimed before the sends so an overlapping double tap sees it; a nudge
     // that reached nobody gives the slot back so a retry can go through.
     for (const [key, at] of recent)
       if (Date.now() - at >= NUDGE_COOLDOWN) recent.delete(key);
-    if (!handingOff) recent.set(slot, Date.now());
+    recent.set(slot, Date.now());
     const devices = (push.subscriptions as Subscription[]).filter(
       (sub) => sub.member === target.user_id,
     );
@@ -118,7 +128,7 @@ export async function POST(request: Request) {
         )
           sent++;
     }
-    if (!sent && !handingOff) recent.delete(slot);
+    if (!sent) recent.delete(slot);
     return json({ sent, devices: devices.length });
   } catch (err) {
     console.error("POST /api/nudge", err);
