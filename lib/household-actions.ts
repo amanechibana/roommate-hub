@@ -133,8 +133,15 @@ export function houseHeadline(
             : `${what} in ${days} days`,
     );
   }
+  // A title written as its own list is named by its heading here: the whole
+  // "Household supplies: toilet paper, soap, paper towels" would swallow the
+  // sentence, and the card underneath already spells the things out.
   if (needs.length && needs.length <= 2)
-    parts.push(`${needs.map((e) => casual(e.title)).join(" and ")} to grab`);
+    parts.push(
+      `${needs
+        .map((e) => casual(titleGroup(e.title)?.heading ?? e.title))
+        .join(" and ")} to grab`,
+    );
   else if (needs.length) parts.push(`${needs.length} things to grab`);
   if (!parts.length) return "";
   const sentence =
