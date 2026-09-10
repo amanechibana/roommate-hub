@@ -9,8 +9,10 @@ test("phone users can switch person, tap member details, and reach every home it
 }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/");
-  await expect(page.locator(".board-task")).toHaveCount(2);
-  await expect(page.locator(".board-shopping")).toHaveCount(2);
+  // The trains stack three deep on a phone, so each card keeps one row and
+  // the rest is one tap away.
+  await expect(page.locator(".board-task")).toHaveCount(1);
+  await expect(page.locator(".board-shopping")).toHaveCount(1);
   await expect(
     page.getByRole("button", { name: "Next home page" }),
   ).toHaveCount(0);
@@ -43,7 +45,7 @@ test("phone users can switch person, tap member details, and reach every home it
   await page.keyboard.press("Escape");
   await page
     .getByRole("navigation")
-    .getByRole("button", { name: "To-dos", exact: true })
+    .getByRole("button", { name: /^To-dos/ })
     .click();
   const handle = await page.locator(".drag-handle").first().boundingBox();
   expect(handle!.width).toBeGreaterThanOrEqual(44);

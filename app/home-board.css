@@ -482,7 +482,13 @@ body {
 }
 .wall-display .board-welcome h1 {
   font-size: clamp(26px, 3vw, 62px);
-  max-width: none;
+  /* The clock and the cat sit to the right; the sentence stays clear of them
+     and never grows past three lines on a small screen. */
+  max-width: 26ch;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 .wall-display .board-summary {
   font-size: clamp(12px, 1.1vw, 24px);

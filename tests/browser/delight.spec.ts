@@ -6,7 +6,7 @@ test("keyboard reordering persists and row menus support delete and undo", async
   await page.goto("/");
   await page
     .getByRole("navigation")
-    .getByRole("button", { name: "To-dos", exact: true })
+    .getByRole("button", { name: /^To-dos/ })
     .click();
   const rows = page.locator('[data-order-row="true"]');
   const title = await rows.first().locator(".entry-label > span").textContent();
@@ -17,7 +17,7 @@ test("keyboard reordering persists and row menus support delete and undo", async
   await page.reload();
   await page
     .getByRole("navigation")
-    .getByRole("button", { name: "To-dos", exact: true })
+    .getByRole("button", { name: /^To-dos/ })
     .click();
   await expect(rows.nth(1).locator(".entry-label > span")).toHaveText(title!);
   await rows
@@ -110,7 +110,7 @@ test("reduced motion keeps new interactions usable without confetti", async ({
   await page.goto("/");
   await page
     .getByRole("navigation")
-    .getByRole("button", { name: "To-dos", exact: true })
+    .getByRole("button", { name: /^To-dos/ })
     .click();
   await page.getByRole("button", { name: "Open", exact: true }).click();
   const complete = page.getByRole("button", { name: /^Complete / }).first();
@@ -133,7 +133,7 @@ test("drag handles move rows without completing or opening them", async ({
   await page.goto("/");
   await page
     .getByRole("navigation")
-    .getByRole("button", { name: "To-dos", exact: true })
+    .getByRole("button", { name: /^To-dos/ })
     .click();
   const rows = page.locator('[data-order-row="true"]');
   const title = await rows.first().locator(".entry-label > span").textContent();

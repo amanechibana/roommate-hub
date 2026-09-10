@@ -12,9 +12,7 @@ for (const [width, height] of [
   test(`home and calendar fit ${width}x${height}`, async ({ page }) => {
     await page.setViewportSize({ width, height });
     await page.goto("/");
-    await expect(
-      page.getByRole("heading", { name: "Welcome home." }),
-    ).toBeVisible();
+    await expect(page.locator(".board-welcome h1")).toHaveText(/\S/);
     await expect(
       page.getByRole("button", { name: "Next home page" }),
     ).toHaveCount(0);

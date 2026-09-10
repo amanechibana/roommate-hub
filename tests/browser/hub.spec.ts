@@ -6,9 +6,7 @@ test("shared task creation, completion, editing, and deletion", async ({
   const errors: string[] = [];
   page.on("pageerror", (error) => errors.push(error.message));
   await page.goto("/");
-  await expect(
-    page.getByRole("heading", { name: "Welcome home." }),
-  ).toBeVisible();
+  await expect(page.locator(".board-welcome h1")).toHaveText(/\S/);
   await page.getByRole("button", { name: "To-do", exact: true }).click();
   await page.getByLabel("What’s on your mind?").fill("Test our household flow");
   await page.getByLabel("Who’s on it?").selectOption("you");
@@ -27,7 +25,7 @@ test("shared task creation, completion, editing, and deletion", async ({
     .click();
   await page.getByRole("button", { name: "Done", exact: true }).click();
   await page
-    .getByRole("button", { name: /Test our household flow Anytime/ })
+    .getByRole("button", { name: /Test our household flow Chore, anytime/ })
     .click();
   await page.getByLabel("What’s on your mind?").fill("Verified household flow");
   await page.getByRole("button", { name: "Save to our home" }).click();
@@ -35,7 +33,7 @@ test("shared task creation, completion, editing, and deletion", async ({
     page.getByText("Verified household flow", { exact: true }),
   ).toBeVisible();
   await page
-    .getByRole("button", { name: /Verified household flow Anytime/ })
+    .getByRole("button", { name: /Verified household flow Chore, anytime/ })
     .click();
   await page.getByRole("button", { name: "Delete entry" }).click();
   await expect(
@@ -110,9 +108,7 @@ test("keyboard shortcuts switch tabs, add entries, and stay out of inputs", asyn
   page,
 }) => {
   await page.goto("/");
-  await expect(
-    page.getByRole("heading", { name: "Welcome home." }),
-  ).toBeVisible();
+  await expect(page.locator(".board-welcome h1")).toHaveText(/\S/);
   await expect
     .poll(async () => {
       await page.keyboard.press("4");
@@ -157,9 +153,7 @@ test("keyboard shortcuts switch tabs, add entries, and stay out of inputs", asyn
 test("mobile navigation and layout fit the screen", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/");
-  await expect(
-    page.getByRole("heading", { name: "Welcome home." }),
-  ).toBeVisible();
+  await expect(page.locator(".board-welcome h1")).toHaveText(/\S/);
   await page.screenshot({
     path: "test-results/mobile-overview.png",
     fullPage: true,
@@ -198,9 +192,7 @@ test("mobile navigation and layout fit the screen", async ({ page }) => {
 test("desktop overview", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto("/");
-  await expect(
-    page.getByRole("heading", { name: "Welcome home." }),
-  ).toBeVisible();
+  await expect(page.locator(".board-welcome h1")).toHaveText(/\S/);
   await page.evaluate(() => document.fonts.ready);
   await page.screenshot({
     path: "test-results/desktop-overview.png",

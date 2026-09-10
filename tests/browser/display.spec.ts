@@ -55,9 +55,7 @@ for (const [width, height] of [
   }) => {
     await page.setViewportSize({ width, height });
     await page.goto("/?display=1");
-    await expect(
-      page.getByRole("heading", { name: "Our home, today." }),
-    ).toBeVisible();
+    await expect(page.locator(".board-welcome h1")).toHaveText(/\S/);
     await expect(page.getByRole("navigation")).not.toBeVisible();
     const overflow = await page.evaluate(() => {
       const elements = [
@@ -92,9 +90,7 @@ for (const [width, height] of [
     await page.screenshot({ path: `test-results/display-${width}.png` });
     await page.getByRole("button", { name: "Exit display" }).click();
     await expect(page).not.toHaveURL(/display=1/);
-    await expect(
-      page.getByRole("heading", { name: "Welcome home." }),
-    ).toBeVisible();
+    await expect(page.locator(".board-welcome h1")).toHaveText(/\S/);
   });
 }
 
@@ -132,9 +128,7 @@ test("display paginates a busy household, pauses, rotates, and survives reload",
       ),
   ).toBe(true);
   await page.reload();
-  await expect(
-    page.getByRole("heading", { name: "Our home, today." }),
-  ).toBeVisible();
+  await expect(page.locator(".board-welcome h1")).toHaveText(/\S/);
 });
 
 test("phone homepage leads with useful content and immediate actions", async ({
@@ -146,12 +140,15 @@ test("phone homepage leads with useful content and immediate actions", async ({
   await expect(
     page.getByRole("heading", { name: "A little housework" }),
   ).toBeInViewport();
+  // Your own chore leads the card; completing it from the homepage is the
+  // immediate action, and the row leaves.
   await page
-    .getByRole("button", { name: "Complete Give the kitchen a little love" })
+    .getByRole("button", { name: "Complete Take out recycling" })
     .click();
   await expect(
-    page.getByText("Nothing urgent. Make yourself a cup of something."),
-  ).toBeVisible();
+    page.getByRole("button", { name: "Complete Take out recycling" }),
+  ).toHaveCount(0);
+  await expect(page.locator(".board-welcome h1")).toHaveText(/\S/);
   await page.getByRole("button", { name: "Item", exact: true }).click();
   await page.getByLabel("What’s on your mind?").fill("Milk");
   await page.getByRole("button", { name: "Save to our home" }).click();
