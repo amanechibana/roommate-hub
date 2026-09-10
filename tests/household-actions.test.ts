@@ -305,3 +305,20 @@ test("the headline says what the house needs today, in one sentence", () => {
     "One thing to do and 3 things to grab.",
   );
 });
+
+test("the headline names a title's own list by its heading", () => {
+  const { entries } = demoData();
+  const today = entries.find((e) =>
+    e.title.startsWith("Give the kitchen"),
+  )!.date!;
+  // Spelling the whole list out here would swallow the sentence.
+  const grouped = entries.map((e) =>
+    e.title === "Dishwasher tablets"
+      ? { ...e, title: "Household supplies: dish soap, sponges, paper towels" }
+      : e,
+  );
+  assert.equal(
+    houseHeadline(grouped, today, "you"),
+    "One thing to do, rent in 5 days, and olive oil and household supplies to grab.",
+  );
+});
