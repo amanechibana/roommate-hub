@@ -163,7 +163,9 @@ export default function Hub() {
           kind === "request"
             ? raw
                 .split(/\n/)
-                .map((line) => line.trim())
+                // A title is at most 160 characters; a longer line keeps
+                // its start rather than being lost from the middle of a paste.
+                .map((line) => line.trim().slice(0, 160))
                 .filter(Boolean)
             : [raw.trim()].filter(Boolean);
         if (!lines.length) return;
@@ -193,7 +195,13 @@ export default function Hub() {
           required
           maxLength={2000}
           onKeyDown={(event) => {
-            if (event.key === "Enter" && !event.shiftKey) {
+            // Enter while an IME is composing confirms the candidate; only a
+            // plain Enter adds the lines.
+            if (
+              event.key === "Enter" &&
+              !event.shiftKey &&
+              !event.nativeEvent.isComposing
+            ) {
               event.preventDefault();
               event.currentTarget.form?.requestSubmit();
             }

@@ -287,8 +287,9 @@ export function useHousehold() {
           setEditing({ kind });
         }
       } else if (event.key === "/") {
-        const input =
-          document.querySelector<HTMLInputElement>(".quick-add input");
+        const input = document.querySelector<HTMLElement>(
+          ".quick-add input, .quick-add textarea",
+        );
         if (input) {
           event.preventDefault();
           input.focus();
@@ -784,7 +785,10 @@ export function useHousehold() {
       return { values, copy };
     });
     setEntries((current) => [...copies.map((c) => c.copy), ...current]);
-    for (const { values, copy } of copies) persist("create", values, [copy]);
+    // The server lists newest first, so the first line typed is written
+    // last; after a refresh the list still reads the way it was written.
+    for (const { values, copy } of [...copies].reverse())
+      persist("create", values, [copy]);
     if (titles.length > 1) setNotice(`Added ${titles.length} items`);
   }
   function togglePayment(entry: Entry) {
