@@ -209,7 +209,9 @@ export default function Hub() {
           onInput={(event) => {
             const box = event.currentTarget;
             box.style.height = "";
-            box.style.height = `${box.scrollHeight}px`;
+            // scrollHeight excludes the borders; without them the box sits
+            // two pixels short and grows a scrollbar it never needs.
+            box.style.height = `${box.scrollHeight + box.offsetHeight - box.clientHeight}px`;
           }}
         />
       ) : (
