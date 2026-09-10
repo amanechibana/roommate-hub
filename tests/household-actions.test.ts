@@ -9,6 +9,7 @@ import {
   billShare,
   editEntries,
   houseHeadline,
+  isSharedScreen,
   remoteActivity,
   collapseSeries,
   dayOrder,
@@ -253,6 +254,22 @@ test("a bill share is the amount divided among its payers, to the cent", () => {
     billShare({ ...chore, amount: 50, payment_members: ["a"] }),
     null,
   );
+});
+
+test("the household identity marks a device as a shared screen", () => {
+  const { members } = demoData();
+  const shared = [
+    ...members,
+    { user_id: "house", name: "Housemates", household_id: "demo" },
+  ];
+  assert.equal(isSharedScreen("house", shared), true);
+  // A person is not a shared screen, and neither is a device that has not
+  // chosen yet or one whose stored identity is no longer in the household.
+  assert.equal(isSharedScreen("you", shared), false);
+  assert.equal(isSharedScreen(null, shared), false);
+  assert.equal(isSharedScreen("gone", shared), false);
+  // A household with no legacy row has no shared identity to sign in as.
+  assert.equal(isSharedScreen("house", members), false);
 });
 
 test("a list opens with what is waiting on you", () => {

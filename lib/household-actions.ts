@@ -1,5 +1,5 @@
 import { splitEvenly } from "./expenses";
-import type { Entry } from "./model";
+import type { Entry, Member } from "./model";
 
 export const UNDO_DURATION = 8000;
 export function isBill(entry: Pick<Entry, "kind" | "category">) {
@@ -237,6 +237,21 @@ export function dayOrder(entries: Entry[]): Entry[] {
   const settled = (entry: Entry) =>
     entry.done || (isBill(entry) && billPaid(entry));
   return [...entries].sort((a, b) => Number(settled(a)) - Number(settled(b)));
+}
+/**
+ * Whether this device is signed in as the household itself rather than as a
+ * person — the kitchen or wall screen that is nobody in particular. Every
+ * gateway function refuses that identity as an actor, so such a device reads
+ * the house and is offered nothing that would author a change.
+ */
+export function isSharedScreen(
+  identity: string | null,
+  members: Pick<Member, "user_id" | "name">[],
+): boolean {
+  return (
+    !!identity &&
+    members.some((m) => m.user_id === identity && m.name === "Housemates")
+  );
 }
 /**
  * Opens a list with what is actually waiting on you: your own unfinished

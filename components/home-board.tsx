@@ -65,6 +65,7 @@ type Props = {
   memberId: string | null;
   expenses: ExpensesController;
   display?: boolean;
+  readOnly?: boolean;
   demo: boolean;
   live?: boolean;
   error: string;
@@ -94,6 +95,7 @@ export default function HomeBoard({
   memberId,
   expenses,
   display = false,
+  readOnly = false,
   demo,
   live = false,
   error,
@@ -434,7 +436,7 @@ export default function HomeBoard({
       </Button>
     ) : null;
   const title = (entry: Entry, label = entry.title) =>
-    display ? (
+    display || readOnly ? (
       <strong title={entry.title}>{label}</strong>
     ) : (
       <Button
@@ -548,7 +550,7 @@ export default function HomeBoard({
             <span className="clock-breath" aria-hidden="true" />
             <FlipClock />
           </div>
-        ) : (
+        ) : readOnly ? null : (
           <div className="board-quick-actions">
             <Button onClick={() => onOpen("task")}>
               <Plus size={16} />
@@ -674,7 +676,7 @@ export default function HomeBoard({
                   className="board-task"
                   key={entry.id}
                 >
-                  {display ? (
+                  {display || readOnly ? (
                     <span className="wall-task-dot" />
                   ) : (
                     <Button
@@ -772,7 +774,7 @@ export default function HomeBoard({
                           : ""}
                       </small>
                     </div>
-                    {!display && (
+                    {!display && !readOnly && (
                       <Button
                         className="board-buy"
                         aria-label={`Mark ${entry.title} as bought`}
@@ -821,7 +823,7 @@ export default function HomeBoard({
                 (note) => (
                   <div className="fridge-message" key={note.id}>
                     <h3>
-                      {display ? (
+                      {display || readOnly ? (
                         note.title
                       ) : (
                         <Button onClick={() => onOpen("note", note)}>
@@ -845,7 +847,7 @@ export default function HomeBoard({
                 A place for little reminders, big thank-yous, and “there’s cake
                 in the fridge.”
               </p>
-              {!display && (
+              {!display && !readOnly && (
                 <Button className="board-more" onClick={() => onOpen("note")}>
                   <Plus size={15} />
                   Leave a note

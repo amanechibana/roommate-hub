@@ -15,6 +15,7 @@ import {
   isBill,
   markAllPaid,
   markPaid,
+  isSharedScreen,
   occurrenceAssignee,
   yoursFirst,
 } from "@/lib/household-actions";
@@ -84,7 +85,11 @@ export function useHousehold() {
   const [identity, setIdentity] = useState<string | null>(null);
   const [channel, setChannel] = useState<string | null>(null);
   const [choosingPerson, setChoosingPerson] = useState(false);
-  const uid = demo ? identity || "you" : identity;
+  // A shared screen signs in as the household itself: it reads the house but
+  // is nobody in particular, so it has no `uid`. Every gateway function
+  // refuses that identity as an actor, so the app must not offer it writes.
+  const sharedScreen = isSharedScreen(identity, members);
+  const uid = demo ? identity || "you" : sharedScreen ? null : identity;
   const pending = useRef(0);
   const writes = useRef(Promise.resolve());
   const needsRecovery = useRef(false);
@@ -880,6 +885,7 @@ export function useHousehold() {
     ]);
     persist("restore", { undo_token: token });
   }
+  const houseIdentity = members.find((m) => m.name === "Housemates");
   async function choosePerson(member: Member) {
     ++loadSequence.current;
     setBusy(true);
@@ -1037,6 +1043,8 @@ export function useHousehold() {
     choosingPerson,
     setChoosingPerson,
     uid,
+    sharedScreen,
+    houseIdentity,
     pending,
     savedIds,
     expenseController,

@@ -19,8 +19,7 @@ export async function GET() {
       ...data,
       channel: realtimeChannel(),
       member_id: data.members.some(
-        (m: { user_id: string; name: string }) =>
-          m.user_id === memberId && m.name !== "Housemates",
+        (m: { user_id: string }) => m.user_id === memberId,
       )
         ? memberId
         : null,

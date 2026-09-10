@@ -50,16 +50,19 @@ export default function ExpensesTab({
 }: {
   controller: ExpensesController;
   members: Member[];
-  memberId: string;
+  memberId: string | null;
   pending: Entry[];
 }) {
+  // A shared screen reads the ledger but is nobody in particular: no "you"
+  // balance, and nothing here can be authored.
+  const readOnly = !memberId;
   const { reduced, celebrate } = useHouseMotion();
   const [draft, setDraft] = useState<Draft | null>(null);
   const { expenses, loaded, error } = controller;
   const name = (id: string) =>
     members.find((member) => member.user_id === id)?.name || "Housemate";
   const balances = expenseBalances(expenses);
-  const mine = balances[memberId] || 0;
+  const mine = (memberId && balances[memberId]) || 0;
   const month = dateKey(new Date()).slice(0, 7);
   const monthTotal = expenses
     .filter((item) => item.kind === "expense" && item.date.startsWith(month))
@@ -85,6 +88,7 @@ export default function ExpensesTab({
         <Button
           className="button"
           disabled={!loaded}
+          hidden={readOnly}
           onClick={() => setDraft({ kind: "expense" })}
         >
           <Plus size={16} /> Add expense
@@ -151,6 +155,7 @@ export default function ExpensesTab({
               <h2>Who owes whom</h2>
               <Button
                 className="text-button"
+                hidden={readOnly}
                 onClick={() => setDraft({ kind: "settlement" })}
               >
                 Record repayment <Plus size={14} />
@@ -170,6 +175,7 @@ export default function ExpensesTab({
                   <strong>{expenseMoney(payment.amount)}</strong>
                   <Button
                     className="button secondary small"
+                    hidden={readOnly}
                     onClick={() => setDraft({ kind: "settlement", ...payment })}
                   >
                     Record paid
@@ -257,6 +263,7 @@ export default function ExpensesTab({
                                 }}
                                 transition={{ duration: reduced ? 0 : 0.18 }}
                                 className={styles.row}
+                                disabled={readOnly}
                                 onClick={() =>
                                   setDraft({ kind: item.kind, entry: item })
                                 }
@@ -307,6 +314,7 @@ export default function ExpensesTab({
                 </p>
                 <Button
                   className="button secondary"
+                  hidden={readOnly}
                   onClick={() => setDraft({ kind: "expense" })}
                 >
                   Add your first expense
@@ -317,7 +325,7 @@ export default function ExpensesTab({
         </>
       )}
       <AnimatePresence>
-        {draft && (
+        {draft && memberId && (
           <ExpenseDialog
             draft={draft}
             members={members}

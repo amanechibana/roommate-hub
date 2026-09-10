@@ -85,6 +85,8 @@ export default function Hub() {
     choosingPerson,
     setChoosingPerson,
     uid,
+    sharedScreen,
+    houseIdentity,
     pending,
     savedIds,
     expenseController,
@@ -117,6 +119,10 @@ export default function Hub() {
     person,
     friendlyDate,
   } = house;
+  // The shared screen reads the house but is nobody in particular, so nothing
+  // that needs an author is offered. The gateway refuses that identity anyway.
+  const readOnly = sharedScreen;
+  const whoAmI = readOnly ? "Household" : person(uid || null);
   // A housemate's load counts a repeating chore once, the way the overview
   // does. Every future occurrence is open too, and "52 open to-dos" is
   // nobody's week. Collapsing wants date order.
@@ -152,89 +158,94 @@ export default function Hub() {
   // The shopping box is a notepad: one thing per line, Enter adds what's
   // there and leaves the cursor in place, so a list goes in the way it
   // would on paper. A to-do is still one line.
-  const quickAdd = (kind: "task" | "request") => (
-    <form
-      className="quick-add"
-      onSubmit={(event) => {
-        event.preventDefault();
-        const form = event.currentTarget;
-        const raw = String(new FormData(form).get("title") || "");
-        const lines =
-          kind === "request"
-            ? raw
-                .split(/\n/)
-                // A title is at most 160 characters; a longer line keeps
-                // its start rather than being lost from the middle of a paste.
-                .map((line) => line.trim().slice(0, 160))
-                .filter(Boolean)
-            : [raw.trim()].filter(Boolean);
-        if (!lines.length) return;
-        if (kind === "request" && lines.length > 1) addItems(lines);
-        else
-          void save({
-            kind,
-            title: lines[0],
-            category: categories[kind][0],
-            description: "",
-            date: null,
-            assignee: kind === "task" && filter === "Mine" ? uid : null,
-            amount: null,
-            url: "",
-          });
-        form.reset();
-        const box = form.elements.namedItem("title") as HTMLElement | null;
-        if (box) box.style.height = "";
-      }}
-    >
-      {kind === "request" ? (
-        <textarea
-          name="title"
-          aria-label="Add items, one per line"
-          placeholder="Add items, one per line…"
-          rows={1}
-          required
-          maxLength={2000}
-          onKeyDown={(event) => {
-            // Enter while an IME is composing confirms the candidate; only a
-            // plain Enter adds the lines.
-            if (
-              event.key === "Enter" &&
-              !event.shiftKey &&
-              !event.nativeEvent.isComposing
-            ) {
-              event.preventDefault();
-              event.currentTarget.form?.requestSubmit();
-            }
-          }}
-          onInput={(event) => {
-            const box = event.currentTarget;
-            box.style.height = "";
-            // scrollHeight excludes the borders; without them the box sits
-            // two pixels short and grows a scrollbar it never needs.
-            box.style.height = `${box.scrollHeight + box.offsetHeight - box.clientHeight}px`;
-          }}
-        />
-      ) : (
-        <input
-          name="title"
+  const quickAdd = (kind: "task" | "request") =>
+    readOnly ? null : (
+      <form
+        className="quick-add"
+        onSubmit={(event) => {
+          event.preventDefault();
+          const form = event.currentTarget;
+          const raw = String(new FormData(form).get("title") || "");
+          const lines =
+            kind === "request"
+              ? raw
+                  .split(/\n/)
+                  // A title is at most 160 characters; a longer line keeps
+                  // its start rather than being lost from the middle of a paste.
+                  .map((line) => line.trim().slice(0, 160))
+                  .filter(Boolean)
+              : [raw.trim()].filter(Boolean);
+          if (!lines.length) return;
+          if (kind === "request" && lines.length > 1) addItems(lines);
+          else
+            void save({
+              kind,
+              title: lines[0],
+              category: categories[kind][0],
+              description: "",
+              date: null,
+              assignee: kind === "task" && filter === "Mine" ? uid : null,
+              amount: null,
+              url: "",
+            });
+          form.reset();
+          const box = form.elements.namedItem("title") as HTMLElement | null;
+          if (box) box.style.height = "";
+        }}
+      >
+        {kind === "request" ? (
+          <textarea
+            name="title"
+            aria-label="Add items, one per line"
+            placeholder="Add items, one per line…"
+            rows={1}
+            required
+            maxLength={2000}
+            onKeyDown={(event) => {
+              // Enter while an IME is composing confirms the candidate; only a
+              // plain Enter adds the lines.
+              if (
+                event.key === "Enter" &&
+                !event.shiftKey &&
+                !event.nativeEvent.isComposing
+              ) {
+                event.preventDefault();
+                event.currentTarget.form?.requestSubmit();
+              }
+            }}
+            onInput={(event) => {
+              const box = event.currentTarget;
+              box.style.height = "";
+              // scrollHeight excludes the borders; without them the box sits
+              // two pixels short and grows a scrollbar it never needs.
+              box.style.height = `${box.scrollHeight + box.offsetHeight - box.clientHeight}px`;
+            }}
+          />
+        ) : (
+          <input
+            name="title"
+            aria-label={`Quick add ${labels[kind]}`}
+            placeholder="Add a to-do and press Enter…"
+            required
+            maxLength={160}
+          />
+        )}
+        <Button
+          className="button small"
           aria-label={`Quick add ${labels[kind]}`}
-          placeholder="Add a to-do and press Enter…"
-          required
-          maxLength={160}
-        />
-      )}
-      <Button className="button small" aria-label={`Quick add ${labels[kind]}`}>
+        >
+          <Plus size={16} />
+          Add
+        </Button>
+      </form>
+    );
+  const addButton = (kind: Kind, text = `Add ${labels[kind]}`) =>
+    readOnly ? null : (
+      <Button className="button small" onClick={() => setEditing({ kind })}>
         <Plus size={16} />
-        Add
+        {text}
       </Button>
-    </form>
-  );
-  const addButton = (kind: Kind, text = `Add ${labels[kind]}`) => (
-    <Button className="button small" onClick={() => setEditing({ kind })}>
-      <Plus size={16} />
-      {text}
-    </Button>
-  );
+    );
   // Only another housemate's to-do, and only where a push can actually land.
   const canNudge = (entry: Entry) =>
     !demo &&
@@ -276,6 +287,7 @@ export default function Hub() {
     >
       <Button
         className="checkbox"
+        disabled={readOnly}
         aria-label={`${entry.done ? "Reopen" : "Complete"} ${entry.title}`}
         aria-pressed={entry.done}
         onClick={() => void toggle(entry)}
@@ -284,6 +296,7 @@ export default function Hub() {
       </Button>
       <Button
         className="entry-label"
+        disabled={readOnly}
         onClick={() => setEditing({ kind: entry.kind, entry })}
       >
         <span>
@@ -323,41 +336,43 @@ export default function Hub() {
           {person(entry.assignee)}
         </span>
       )}
-      <EntryMenu
-        title={entry.title}
-        onEdit={() => setEditing({ kind: entry.kind, entry })}
-        onDelete={() => void remove(entry)}
-        actions={
-          entry.done
-            ? []
-            : [
-                {
-                  label:
-                    entry.date && entry.date > today
-                      ? "Push back a day"
-                      : "Push to tomorrow",
-                  onSelect: () => pushToTomorrow(entry),
-                },
-                ...(canNudge(entry)
-                  ? [
-                      {
-                        label: `Nudge ${person(entry.assignee)}`,
-                        onSelect: () => void nudge(entry),
-                      },
-                    ]
-                  : []),
-                ...members
-                  .filter(
-                    (m) =>
-                      m.name !== "Housemates" && m.user_id !== entry.assignee,
-                  )
-                  .map((m) => ({
-                    label: `Hand to ${m.name}`,
-                    onSelect: () => handOff(entry, m),
-                  })),
-              ]
-        }
-      />
+      {!readOnly && (
+        <EntryMenu
+          title={entry.title}
+          onEdit={() => setEditing({ kind: entry.kind, entry })}
+          onDelete={() => void remove(entry)}
+          actions={
+            entry.done
+              ? []
+              : [
+                  {
+                    label:
+                      entry.date && entry.date > today
+                        ? "Push back a day"
+                        : "Push to tomorrow",
+                    onSelect: () => pushToTomorrow(entry),
+                  },
+                  ...(canNudge(entry)
+                    ? [
+                        {
+                          label: `Nudge ${person(entry.assignee)}`,
+                          onSelect: () => void nudge(entry),
+                        },
+                      ]
+                    : []),
+                  ...members
+                    .filter(
+                      (m) =>
+                        m.name !== "Housemates" && m.user_id !== entry.assignee,
+                    )
+                    .map((m) => ({
+                      label: `Hand to ${m.name}`,
+                      onSelect: () => handOff(entry, m),
+                    })),
+                ]
+          }
+        />
+      )}
     </DraggableRow>
   );
 
@@ -421,6 +436,24 @@ export default function Hub() {
                 </Button>
               ))}
           </div>
+          {!demo && houseIdentity && (
+            <Button
+              className="button secondary"
+              disabled={busy}
+              onClick={() => void choosePerson(houseIdentity)}
+            >
+              <span className="avatar tone-2">
+                <Home size={15} />
+              </span>
+              This is a shared screen
+            </Button>
+          )}
+          {!demo && houseIdentity && (
+            <p className="subtle">
+              For the kitchen or a wall display. It shows the house by name and
+              stays read-only — pick a person to check things off.
+            </p>
+          )}
           {error && (
             <p className="error" role="alert">
               {error}
@@ -523,6 +556,7 @@ export default function Hub() {
     onOpen: (kind: Kind, entry?: Entry) => setEditing({ kind, entry }),
     onNavigate: setTab,
     onToggle: toggleBought,
+    readOnly,
   };
   if (display)
     return (
@@ -599,7 +633,7 @@ export default function Hub() {
             <Button
               className="text-button profile-switch"
               onClick={() => setChoosingPerson(true)}
-              aria-label={`Switch person (now ${person(uid || null)})`}
+              aria-label={`Switch person (now ${whoAmI})`}
             >
               <span
                 className={`avatar tone-${
@@ -609,11 +643,17 @@ export default function Hub() {
                   ) % 3
                 }`}
               >
-                {person(uid || null).slice(0, 1)}
+                {readOnly ? <Home size={15} /> : whoAmI.slice(0, 1)}
               </span>
               <span className="profile-copy">
-                <strong>{person(uid || null)}</strong>
-                <small>{demo ? "Exploring the demo" : "Right at home"}</small>
+                <strong>{whoAmI}</strong>
+                <small>
+                  {demo
+                    ? "Exploring the demo"
+                    : readOnly
+                      ? "Shared screen, read-only"
+                      : "Right at home"}
+                </small>
               </span>
             </Button>
             {!demo && (
@@ -745,7 +785,7 @@ export default function Hub() {
             <ExpensesTab
               controller={expenseController}
               members={members.filter((member) => member.name !== "Housemates")}
-              memberId={uid!}
+              memberId={uid}
               pending={shopping.filter((e) => !e.done && e.amount != null)}
             />
           )}
@@ -840,6 +880,7 @@ export default function Hub() {
                       >
                         <Button
                           className="checkbox"
+                          disabled={readOnly}
                           aria-label={`${entry.done ? "Reopen" : "Mark as bought"}: ${entry.title}`}
                           aria-pressed={entry.done}
                           onClick={() => toggleBought(entry)}
@@ -848,6 +889,7 @@ export default function Hub() {
                         </Button>
                         <Button
                           className="entry-label"
+                          disabled={readOnly}
                           onClick={() => setEditing({ kind: "request", entry })}
                         >
                           <h2>{group?.heading ?? entry.title}</h2>
@@ -905,21 +947,25 @@ export default function Hub() {
                             <ExternalLink size={16} />
                           </a>
                         )}
-                        <EntryMenu
-                          title={entry.title}
-                          onEdit={() => setEditing({ kind: entry.kind, entry })}
-                          onDelete={() => void remove(entry)}
-                          actions={
-                            entry.done
-                              ? [
-                                  {
-                                    label: "Need again",
-                                    onSelect: () => needAgain(entry),
-                                  },
-                                ]
-                              : []
-                          }
-                        />
+                        {!readOnly && (
+                          <EntryMenu
+                            title={entry.title}
+                            onEdit={() =>
+                              setEditing({ kind: entry.kind, entry })
+                            }
+                            onDelete={() => void remove(entry)}
+                            actions={
+                              entry.done
+                                ? [
+                                    {
+                                      label: "Need again",
+                                      onSelect: () => needAgain(entry),
+                                    },
+                                  ]
+                                : []
+                            }
+                          />
+                        )}
                       </DraggableRow>
                     );
                   })}
@@ -937,20 +983,22 @@ export default function Hub() {
 
           {tab === "House notes" && (
             <div className="notes-page">
-              <NoteComposer
-                onSave={(title, description) =>
-                  void save({
-                    kind: "note",
-                    title,
-                    description,
-                    category: "Note",
-                    date: null,
-                    assignee: null,
-                    amount: null,
-                    url: "",
-                  })
-                }
-              />
+              {!readOnly && (
+                <NoteComposer
+                  onSave={(title, description) =>
+                    void save({
+                      kind: "note",
+                      title,
+                      description,
+                      category: "Note",
+                      date: null,
+                      assignee: null,
+                      amount: null,
+                      url: "",
+                    })
+                  }
+                />
+              )}
               <div className="notes-grid">
                 <AnimatePresence>
                   {notes.map((entry, index) => (
@@ -967,14 +1015,17 @@ export default function Hub() {
                       layoutId={reduced ? undefined : `note-${entry.id}`}
                     >
                       <span className="tape" />
-                      <EntryMenu
-                        title={entry.title}
-                        onEdit={() => setEditing({ kind: "note", entry })}
-                        onConvert={() => setEditing({ kind: "note", entry })}
-                        onDelete={() => void remove(entry)}
-                      />
+                      {!readOnly && (
+                        <EntryMenu
+                          title={entry.title}
+                          onEdit={() => setEditing({ kind: "note", entry })}
+                          onConvert={() => setEditing({ kind: "note", entry })}
+                          onDelete={() => void remove(entry)}
+                        />
+                      )}
                       <Button
                         className="note-preview"
+                        disabled={readOnly}
                         onClick={() => setEditing({ kind: "note", entry })}
                       >
                         <h3>{entry.title}</h3>
@@ -1016,14 +1067,22 @@ export default function Hub() {
             )}
             person={person}
             onClose={() => setSelectedDay(null)}
-            onOpen={(entry) => {
-              setSelectedDay(null);
-              setEditing({ kind: entry.kind, entry });
-            }}
-            onAdd={() => {
-              setEditing({ kind: "event", date: selectedDay });
-              setSelectedDay(null);
-            }}
+            onOpen={
+              readOnly
+                ? undefined
+                : (entry) => {
+                    setSelectedDay(null);
+                    setEditing({ kind: entry.kind, entry });
+                  }
+            }
+            onAdd={
+              readOnly
+                ? undefined
+                : () => {
+                    setEditing({ kind: "event", date: selectedDay });
+                    setSelectedDay(null);
+                  }
+            }
           />
         )}
         {editing && (
