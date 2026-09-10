@@ -116,6 +116,8 @@ export default function Hub() {
     filteredTasks,
     filteredShopping,
     notes,
+    takenDown,
+    takeDown,
     person,
     friendlyDate,
   } = house;
@@ -758,7 +760,7 @@ export default function Hub() {
                         Calendar: "Plans and dated to-dos for your home.",
                         "To-dos": `${openTasks.length} open, ${openTasks.filter((entry) => entry.assignee === uid).length} assigned to you`,
                         "Shopping list": `${neededItems.length} ${neededItems.length === 1 ? "item" : "items"} to pick up`,
-                        "House notes": `${notes.length} ${notes.length === 1 ? "note" : "notes"} shared with your home`,
+                        "House notes": `${notes.length} ${notes.length === 1 ? "note" : "notes"} shared with your home${takenDown.length ? `, ${takenDown.length} taken down` : ""}`,
                         "Our household": `${household.name}, ${housemates.length} ${housemates.length === 1 ? "housemate" : "housemates"}`,
                         Overview: "",
                         Expenses: "",
@@ -1021,6 +1023,12 @@ export default function Hub() {
                           onEdit={() => setEditing({ kind: "note", entry })}
                           onConvert={() => setEditing({ kind: "note", entry })}
                           onDelete={() => void remove(entry)}
+                          actions={[
+                            {
+                              label: "Take down",
+                              onSelect: () => takeDown(entry, true),
+                            },
+                          ]}
                         />
                       )}
                       <Button
@@ -1038,10 +1046,45 @@ export default function Hub() {
                     </PresenceRow>
                   ))}
                 </AnimatePresence>
-                {!notes.length && (
+                {!notes.length && !takenDown.length && (
                   <Empty text="Your fridge is a blank canvas. Leave a note." />
                 )}
               </div>
+              {!!takenDown.length && (
+                <section className="taken-down">
+                  <h2>Taken down</h2>
+                  <ul>
+                    {takenDown.map((entry) => (
+                      <li key={entry.id}>
+                        <span>
+                          <strong>{entry.title}</strong>
+                          <small>
+                            {person(entry.assignee || entry.created_by)},{" "}
+                            {activityWhen(Date.parse(entry.created_at), now)}
+                          </small>
+                        </span>
+                        {!readOnly && (
+                          <>
+                            <Button
+                              className="text-button"
+                              onClick={() => takeDown(entry, false)}
+                            >
+                              Put back up
+                            </Button>
+                            <Button
+                              className="icon-button"
+                              aria-label={`Delete ${entry.title}`}
+                              onClick={() => void remove(entry)}
+                            >
+                              <X size={15} />
+                            </Button>
+                          </>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                </section>
+              )}
             </div>
           )}
 

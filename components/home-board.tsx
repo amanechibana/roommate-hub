@@ -225,7 +225,7 @@ export default function HomeBoard({
     .sort(
       (a, b) => Number(b.category === "Need") - Number(a.category === "Need"),
     );
-  const notes = entries.filter((e) => e.kind === "note");
+  const notes = entries.filter((e) => e.kind === "note" && !e.done);
   const lately = activity.map((item) => ({
     member: person(item.actor),
     line: `${person(item.actor)} ${activityVerb(item.action)} ${item.title}`,
