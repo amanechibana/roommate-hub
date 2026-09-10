@@ -18,6 +18,10 @@
   grid-template-columns: 1fr 1fr;
   gap: 18px;
 }
+/* A shared screen has no "your balance", so the month's spending takes the row. */
+.summary.houseOnly {
+  grid-template-columns: 1fr;
+}
 .balance,
 .spending {
   padding: 24px;

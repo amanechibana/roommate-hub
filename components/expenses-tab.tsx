@@ -127,20 +127,26 @@ export default function ExpensesTab({
       ) : (
         <>
           {!!expenses.length && (
-            <div className={styles.summary}>
-              <section className={`${styles.balance} panel`}>
-                <span>Your balance</span>
-                <strong>
-                  <AnimatedMoney cents={Math.abs(mine)} />
-                </strong>
-                <p>
-                  {mine > 0
-                    ? "Owed to you"
-                    : mine < 0
-                      ? "You owe"
-                      : "You’re settled up"}
-                </p>
-              </section>
+            <div
+              className={`${styles.summary} ${readOnly ? styles.houseOnly : ""}`}
+            >
+              {/* Nobody in particular is reading a shared screen, so "you're
+                  settled up" would be a claim about the house it can't make. */}
+              {!readOnly && (
+                <section className={`${styles.balance} panel`}>
+                  <span>Your balance</span>
+                  <strong>
+                    <AnimatedMoney cents={Math.abs(mine)} />
+                  </strong>
+                  <p>
+                    {mine > 0
+                      ? "Owed to you"
+                      : mine < 0
+                        ? "You owe"
+                        : "You’re settled up"}
+                  </p>
+                </section>
+              )}
               <section className={`${styles.spending} panel`}>
                 <span>Shared spending this month</span>
                 <strong>
