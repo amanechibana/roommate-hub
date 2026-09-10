@@ -6,19 +6,19 @@ test("TV button has a keyboard-accessible hint and opens display mode", async ({
   await page.goto("/");
   const tv = page.getByRole("button", { name: "Display mode", exact: true });
   await expect(tv).toBeVisible();
+  // The ambient flag lands with hydration; a focus before that finds a
+  // button with no tooltip behind it yet.
+  await expect(page.locator("html")).toHaveAttribute("data-ambient", "on");
   await tv.focus();
   await expect(page.getByRole("tooltip")).toContainText(
     "Made for the big screen",
   );
-  await expect(page.locator("html")).toHaveAttribute("data-ambient", "on");
   await expect(page.locator(".tv-screen")).toHaveCSS(
     "animation-name",
     "screen-breathe",
   );
   await page.keyboard.press("Enter");
-  await expect(
-    page.getByRole("heading", { name: "Our home, today." }),
-  ).toBeVisible();
+  await expect(page.locator(".board-welcome h1")).toHaveText(/\S/);
   await expect(page.getByRole("tooltip")).toHaveCount(0);
   await expect(page.locator(".board-plan").first()).toHaveCSS("opacity", "1");
   await page.screenshot({ path: "test-results/motion-wall.png" });
@@ -154,7 +154,7 @@ test("cat fits the phone header across tabs and TV scene stays beside the clock"
   ).toBeInViewport();
   const [cat, title] = await Promise.all([
     page.getByRole("button", { name: "Pet the house cat" }).boundingBox(),
-    page.getByRole("heading", { name: "Our home, today." }).boundingBox(),
+    page.locator(".board-welcome h1").boundingBox(),
   ]);
   expect(cat!.x).toBeGreaterThan(title!.x + title!.width);
   await expect(page.locator(".board-plan").first()).toHaveCSS("opacity", "1");

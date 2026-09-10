@@ -722,19 +722,22 @@ nav button.active {
   border-bottom-color: transparent;
   border-radius: 12px 12px 0 0;
   box-shadow: 1px 3px 0 #8f73550b;
-  overflow: visible;
+  padding-bottom: 20px;
 }
+/* The torn edge is drawn inside the card's last 8px, so the card's box never
+   overflows and the no-scroll pages stay honest. */
 .paper-receipt::after {
   content: "";
   position: absolute;
   left: -1px;
   right: -1px;
-  bottom: -7px;
-  height: 7px;
+  bottom: 0;
+  height: 8px;
   background:
-    linear-gradient(135deg, #fbf6ea 50%, transparent 50%) 0 0 / 14px 14px,
-    linear-gradient(45deg, #fbf6ea 50%, transparent 50%) 0 0 / 14px 14px;
-  filter: drop-shadow(0 1px 0 #e0d5c4);
+    linear-gradient(135deg, #fbf6ea 50%, transparent 50%) 0 0 / 16px 16px,
+    linear-gradient(45deg, #fbf6ea 50%, transparent 50%) 0 0 / 16px 16px,
+    var(--bg);
+  filter: drop-shadow(0 -1px 0 #e0d5c4);
 }
 .paper-ledger {
   /* Ledger paper: green feint and the double rule that walls off the

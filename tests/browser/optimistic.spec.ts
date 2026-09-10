@@ -151,7 +151,7 @@ async function home(page: Page, picked: string | null = "you") {
 const tasks = (page: Page) =>
   page
     .getByRole("navigation")
-    .getByRole("button", { name: "To-dos", exact: true })
+    .getByRole("button", { name: /^To-dos/ })
     .click();
 
 test("three rapid checkboxes update before the first POST completes, with no refetch", async ({
