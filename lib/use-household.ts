@@ -816,6 +816,15 @@ export function useHousehold() {
       persist("create", values, [copy]);
     if (titles.length > 1) setNotice(`Added ${titles.length} items`);
   }
+  function takeDown(entry: Entry, down: boolean) {
+    setEntries((current) =>
+      current.map((e) => (e.id === entry.id ? { ...e, done: down } : e)),
+    );
+    persist("update", { id: entry.id, done: down });
+    setNotice(
+      down ? `Took down “${entry.title}”` : `“${entry.title}” is back up`,
+    );
+  }
   function togglePayment(entry: Entry) {
     if (!uid) return;
     const paid = !entry.paid_by?.includes(uid);
@@ -994,7 +1003,10 @@ export function useHousehold() {
       ? e.done
       : !e.done && (filter === "All" || e.category === filter),
   );
-  const notes = entries.filter((e) => e.kind === "note");
+  // A note comes down off the fridge without being thrown away: done is
+  // "taken down", and it can go back up.
+  const notes = entries.filter((e) => e.kind === "note" && !e.done);
+  const takenDown = entries.filter((e) => e.kind === "note" && e.done);
   const monthEntries = entries
     .filter(
       (e) =>
@@ -1097,6 +1109,8 @@ export function useHousehold() {
     filteredTasks,
     filteredShopping,
     notes,
+    takenDown,
+    takeDown,
     monthEntries,
     person,
     friendlyDate,

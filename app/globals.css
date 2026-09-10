@@ -2301,3 +2301,42 @@ textarea {
     grid-template-columns: 1fr;
   }
 }
+
+/* Notes that came down off the fridge: still around, quietly, under the
+   board, until someone puts one back up or throws it out. */
+.taken-down {
+  margin-top: 28px;
+}
+.taken-down h2 {
+  font-size: 15px;
+  color: var(--muted);
+  margin-bottom: 8px;
+}
+.taken-down ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border-top: 1px solid var(--line);
+}
+.taken-down li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 4px;
+  border-bottom: 1px solid var(--line);
+}
+.taken-down li > span {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.taken-down strong {
+  font-weight: 500;
+  overflow-wrap: anywhere;
+}
+.taken-down small {
+  color: var(--muted);
+  font-size: 11px;
+}
