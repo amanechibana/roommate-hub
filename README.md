@@ -264,7 +264,9 @@ shopping pages also support typing a title and pressing Enter to add it.
   every fifteen minutes. Needs the push setup below. Open a rent or bill
   event and each unpaid housemate's check gets a **Nudge <name>** link that
   does the same for their share ("“Rent” ($2,400) is due today — your share
-  isn't checked off").
+  isn't checked off"). Between 10pm and 8am household time nudges don't go
+  out at all; the app says so, and the morning digest at 8 covers what's
+  due.
 - **Rent and bills:** use an event with category **Rent** or **Bill**. Choose
   **Monthly** for a recurring bill. Open the saved event to see each person’s
   paid check; the current device identity can change only its own check. Each
