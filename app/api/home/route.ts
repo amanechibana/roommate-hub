@@ -6,6 +6,7 @@ import {
 } from "@/lib/push-server";
 import { doneMessage, noteMessage, quietHours } from "@/lib/reminders";
 import type { Entry, Member } from "@/lib/model";
+import type { HouseActivity } from "@/lib/activity";
 import {
   broadcastChange,
   json,
@@ -98,11 +99,17 @@ export async function POST(request: Request) {
     broadcastChange("home", sender);
     // A check-off closes a loop for whoever added the thing: they hear it
     // got done, once, unless they did it themselves. The stored row is the
-    // authority on kind, title, and who added it.
+    // authority on kind, title, and who added it, and the activity row the
+    // gateway wrote in the same transaction is the proof the row actually
+    // flipped: a repeated or racing check-off writes none, so it stays quiet.
+    const flipped = (result?.activity as HouseActivity[] | undefined)?.[0];
     if (
       operation === "update" &&
       values.done === true &&
       typeof values.id === "string" &&
+      flipped?.actor === actor &&
+      ["completed", "bought"].includes(flipped.action) &&
+      Date.now() - Date.parse(flipped.created_at) < 15000 &&
       pushConfigured() &&
       !quietHours(new Date())
     )
@@ -110,7 +117,7 @@ export async function POST(request: Request) {
         try {
           const home = await sharedDatabase("get");
           const entry = (home.entries as Entry[]).find(
-            (e) => e.id === values.id,
+            (e) => e.id === values.id && e.title === flipped.title,
           );
           const by = (home.members as Member[]).find(
             (m) => m.user_id === actor && m.name !== "Housemates",
