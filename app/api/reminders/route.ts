@@ -12,7 +12,13 @@ import {
   type Subscription,
 } from "@/lib/push-server";
 import { equalSecret } from "@/lib/session-token";
-import { localDateKey, memberDigest, quietDigest } from "@/lib/reminders";
+import {
+  balanceLines,
+  localDateKey,
+  memberDigest,
+  quietDigest,
+} from "@/lib/reminders";
+import type { Expense } from "@/lib/expenses";
 import type { Entry, Member } from "@/lib/model";
 
 export const runtime = "nodejs";
@@ -23,12 +29,15 @@ export const maxDuration = 60;
 // so the pipeline stays verifiable.
 async function sendDigests(onlyMember: string | null) {
   preparePush();
-  const [home, push] = await Promise.all([
+  const [home, push, ledger] = await Promise.all([
     sharedDatabase("get"),
     sharedDatabase("get", {}, "shared_push"),
+    // The ledger is a nicety here: a digest still goes out if it can't load.
+    sharedDatabase("get", {}, "shared_expenses").catch(() => null),
   ]);
   const entries: Entry[] = home.entries;
   const members: Member[] = home.members;
+  const expenses: Expense[] = ledger?.expenses ?? [];
   const today = localDateKey(new Date());
   let sent = 0;
   let pruned = 0;
@@ -39,8 +48,12 @@ async function sendDigests(onlyMember: string | null) {
     );
     if (!member) continue;
     const digest =
-      memberDigest(entries, member, today) ??
-      (onlyMember ? quietDigest(member.name) : null);
+      memberDigest(
+        entries,
+        member,
+        today,
+        balanceLines(expenses, member, members),
+      ) ?? (onlyMember ? quietDigest(member.name) : null);
     if (!digest) continue;
     const result = await sendPush(sub, {
       title: digest.title,

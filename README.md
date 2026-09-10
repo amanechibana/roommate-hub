@@ -57,7 +57,9 @@ Screen; Android and desktop Chrome offer their own install prompts.
 **Morning reminders** send one push notification per subscribed device around
 7–8am New York time: the day's chores for whoever the device belongs to
 (unassigned chores go to both people), any bill whose check that person hasn't
-ticked within three days of its date, and a count of needed shopping items.
+ticked within three days of its date, and a count of needed shopping items. When a digest is going out anyway, it ends with what the ledger says
+about you ("You owe Alex $12", "Sam owes you $5", at most two lines); a
+balance on its own doesn't wake anyone.
 Nothing due means no notification. Each device opts in from **Our household →
 Morning reminders**, which also has a "send today's digest now" button for
 checking the pipeline end to end. On iOS the app must be installed to the Home
