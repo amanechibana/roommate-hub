@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { demoData } from "../lib/model";
+import { demoData, shiftDay } from "../lib/model";
 import {
   occurrenceAssignee,
   markPaid,
@@ -346,6 +346,30 @@ test("the headline says what the house needs today, in one sentence", () => {
   assert.equal(
     houseHeadline(busy, today, null),
     "One thing to do and 3 things to grab.",
+  );
+});
+
+test("the headline reaches for the nearest bill, not the oldest", () => {
+  const { entries } = demoData();
+  const today = entries.find((e) =>
+    e.title.startsWith("Give the kitchen"),
+  )!.date!;
+  const rent = entries.find((e) => e.category === "Rent")!;
+  // Someone paid January in cash and never ticked the box. It should not hold
+  // the line for months and hide the rent that is actually coming up.
+  const stale = { ...rent, id: "stale", date: shiftDay(today, -40) };
+  assert.match(
+    houseHeadline([...entries, stale], today, null),
+    /rent in 5 days/,
+  );
+  // Overdue by a little still beats upcoming: it is the one still owed.
+  const recent = { ...rent, id: "recent", date: shiftDay(today, -2) };
+  const soon = { ...rent, id: "soon", date: shiftDay(today, 2) };
+  assert.match(houseHeadline([recent, soon], today, null), /[Rr]ent overdue/);
+  // Same distance either side, and the overdue one still wins.
+  assert.match(
+    houseHeadline([{ ...soon, date: shiftDay(today, 2) }, recent], today, null),
+    /[Rr]ent overdue/,
   );
 });
 

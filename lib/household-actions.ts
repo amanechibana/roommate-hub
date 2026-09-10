@@ -109,7 +109,15 @@ export function houseHeadline(
         !billPaid(e) &&
         daysBetween(today, e.date) <= 7,
     )
-    .sort((a, b) => a.date!.localeCompare(b.date!))[0];
+    // "Nearest" is distance from today, not earliest on the calendar. A bill
+    // nobody ever ticked off would otherwise hold this line for months and
+    // hide the rent that is actually coming up. A tie goes to the overdue one,
+    // since that is the one still owed.
+    .sort((a, b) => {
+      const first = daysBetween(today, a.date!);
+      const second = daysBetween(today, b.date!);
+      return Math.abs(first) - Math.abs(second) || first - second;
+    })[0];
   const needs = entries.filter(
     (e) => e.kind === "request" && !e.done && e.category === "Need",
   );
