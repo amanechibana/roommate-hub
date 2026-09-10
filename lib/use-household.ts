@@ -7,6 +7,7 @@ import { expenseMoney, splitEvenly, type ExpenseValues } from "@/lib/expenses";
 import { useExpenses } from "@/lib/use-expenses";
 
 import { useHouseMotion } from "@/components/ui/motion-provider";
+import { movePushSubscription } from "@/components/push-settings";
 
 import { hasDatabase, homeRequest } from "@/lib/home-client";
 import {
@@ -909,10 +910,13 @@ export function useHousehold() {
     try {
       await writes.current;
       await expenseController.flush();
-      if (!demo)
+      if (!demo) {
         await homeRequest("/api/session", "PATCH", {
           member_id: member.user_id,
         });
+        // Morning reminders belong to the person, not the handset.
+        await movePushSubscription(member.name !== "Housemates");
+      }
       ++loadSequence.current;
       setIdentity(member.user_id);
       setUndoDeletes([]);

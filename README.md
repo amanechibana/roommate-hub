@@ -93,9 +93,12 @@ Setup needs four server-side pieces:
    plan runs crons at most once a day, which suits a morning digest).
 
 Subscriptions live in the `push_subscriptions` table behind the same
-token-gated gateway pattern as everything else, tied to the person the device
-had selected when it opted in. Dead endpoints are pruned automatically when a
-push bounces.
+token-gated gateway pattern as everything else, tied to the person using the
+device. **Change person on this device** moves the subscription with them, so
+the morning digest never keeps arriving for the housemate who used the phone
+last; choosing the shared screen clears it, since a kitchen display gets no
+personal reminders. Dead endpoints are pruned automatically when a push
+bounces.
 
 ## Weather and train times
 
