@@ -1,6 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
+  balanceLines,
   localDateKey,
   memberDigest,
   nudgeMessage,
@@ -222,4 +223,38 @@ test("quiet hours follow the household clock, ten to eight", () => {
   assert.equal(quietHours(new Date("2026-09-09T12:00:00Z")), false);
   // 01:59 UTC is 21:59: still up.
   assert.equal(quietHours(new Date("2026-09-09T01:59:00Z")), false);
+});
+
+test("the digest says who owes whom, only alongside something due", () => {
+  const today = "2026-09-08";
+  const expense = {
+    id: "x",
+    household_id: "h",
+    kind: "expense" as const,
+    title: "Groceries",
+    date: today,
+    amount_cents: 2400,
+    paid_by: "a",
+    shares: { a: 1200, b: 1200 },
+    recipient: null,
+    created_by: "a",
+    created_at: "",
+  };
+  const members = [amane, barnatt];
+  assert.deepEqual(balanceLines([expense], barnatt, members), [
+    "You owe Amane $12.00",
+  ]);
+  assert.deepEqual(balanceLines([expense], amane, members), [
+    "Barnatt owes you $12.00",
+  ]);
+  const owed = balanceLines([expense], barnatt, members);
+  // Nothing due means no digest, even with money on the table.
+  assert.equal(memberDigest([], barnatt, today, owed), null);
+  const digest = memberDigest(
+    [entry({ title: "Dishes", date: today, assignee: "b" })],
+    barnatt,
+    today,
+    owed,
+  )!;
+  assert.equal(digest.lines.at(-1), "You owe Amane $12.00");
 });

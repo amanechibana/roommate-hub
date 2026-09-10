@@ -1,4 +1,10 @@
 import { billShare, isBill, shareMoney } from "./household-actions";
+import {
+  expenseBalances,
+  expenseMoney,
+  suggestedRepayments,
+  type Expense,
+} from "./expenses";
 import { parseDate, type Entry, type Member } from "./model";
 
 export type Digest = { title: string; lines: string[] };
@@ -43,10 +49,28 @@ function daysBetween(from: string, to: string) {
 // The morning digest for one person: their chores due or overdue (unassigned
 // chores belong to everyone), bills their check hasn't covered yet, and a
 // nudge about needed shopping items. Null when there is nothing to say.
+// What the ledger says about one person, the way the overview says it:
+// "You owe Alex $12", "Sam owes you $5". Nothing when they're square.
+export function balanceLines(
+  expenses: Expense[],
+  member: Member,
+  members: Member[],
+): string[] {
+  const name = (id: string) =>
+    members.find((m) => m.user_id === id)?.name ?? "a housemate";
+  return suggestedRepayments(expenseBalances(expenses))
+    .filter((p) => p.from === member.user_id || p.to === member.user_id)
+    .map((p) =>
+      p.from === member.user_id
+        ? `You owe ${name(p.to)} ${expenseMoney(p.amount)}`
+        : `${name(p.from)} owes you ${expenseMoney(p.amount)}`,
+    );
+}
 export function memberDigest(
   entries: Entry[],
   member: Member,
   today: string,
+  owed: string[] = [],
 ): Digest | null {
   const chores = entries
     .filter(
@@ -102,6 +126,9 @@ export function memberDigest(
         ? "1 needed item on the shopping list"
         : `${needs} needed items on the shopping list`,
     );
+  // Money rides along with a digest that is going out anyway; a balance on
+  // its own is not worth a morning buzz.
+  lines.push(...owed.slice(0, 2));
   return { title: `Good morning, ${member.name} ☀️`, lines };
 }
 
