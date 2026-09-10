@@ -195,6 +195,23 @@ test("the shareable shopping list reads needs first with prices and claims", () 
   );
 });
 
+test("a shared list writes a title's own list one thing per line", () => {
+  const { entries, members } = demoData();
+  const text = shoppingListText(
+    entries.map((e) =>
+      e.title === "Olive oil"
+        ? { ...e, title: "Costco: olive oil, rice, coffee" }
+        : e,
+    ),
+    members,
+    "The Maple House",
+  );
+  assert.match(
+    text,
+    /• Costco — \$12\.00\n   – olive oil\n   – rice\n   – coffee\n/,
+  );
+});
+
 test("bought items and the legacy identity stay off the shared list", () => {
   const { entries, members } = demoData();
   const bought = entries.map((e) =>
