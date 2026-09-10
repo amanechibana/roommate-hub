@@ -50,6 +50,13 @@ test("a named calendar carries its name for the phone to list it under", () => {
   assert.ok(!calendarFile([entry]).includes("CALNAME"));
 });
 
+test("the feed asks phones to re-read it hourly", () => {
+  // Without this a phone picks its own cadence, which on iOS can be daily.
+  const text = calendarFile([entry], "The Maple House");
+  assert.ok(text.includes("REFRESH-INTERVAL;VALUE=DURATION:PT1H\r\n"));
+  assert.ok(text.includes("X-PUBLISHED-TTL:PT1H\r\n"));
+});
+
 test("escapes calendar control characters and prevents line injection", () => {
   const text = calendarFile([entry]);
   assert.ok(text.includes("SUMMARY:Dinner\\, friends\\; fun"));
