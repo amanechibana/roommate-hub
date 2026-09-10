@@ -12,7 +12,12 @@ import {
   type Subscription,
 } from "@/lib/push-server";
 import { isBill } from "@/lib/household-actions";
-import { localDateKey, nudgeMessage, quietHours } from "@/lib/reminders";
+import {
+  handoffMessage,
+  localDateKey,
+  nudgeMessage,
+  quietHours,
+} from "@/lib/reminders";
 import type { Entry, Member } from "@/lib/model";
 
 export const runtime = "nodejs";
@@ -21,6 +26,7 @@ export const runtime = "nodejs";
 // plenty: a double tap or an impatient housemate must not turn into a
 // buzzing phone. Per server instance, which is fine for a household.
 const NUDGE_COOLDOWN = 15 * 60000;
+const HANDOFF_COOLDOWN = 60000;
 const recent = new Map<string, number>();
 
 export async function POST(request: Request) {
@@ -34,10 +40,11 @@ export async function POST(request: Request) {
     return json({ error: "Choose who’s using this device first." }, 400);
   let id: unknown;
   let member: unknown;
+  let handoff: unknown;
   try {
     const raw = await request.text();
     if (raw.length > 300) return json({ error: "Invalid request." }, 400);
-    ({ id, member } = JSON.parse(raw) ?? {});
+    ({ id, member, handoff } = JSON.parse(raw) ?? {});
   } catch {
     return json({ error: "Invalid request." }, 400);
   }
@@ -68,23 +75,37 @@ export async function POST(request: Request) {
     if (!sender || !entry || !target) return json({ error: nothing }, 400);
     if (target.user_id === sender.user_id)
       return json({ error: "That one’s yours." }, 400);
-    const message = nudgeMessage(
-      entry,
-      sender,
-      localDateKey(new Date()),
-      bill ? target : undefined,
-    );
+    // A hand-off tells the new owner once; it is not subject to the nudge
+    // cooldown, since nothing stops a second hand-off from being real.
+    const handingOff = handoff === true && !bill;
+    const message = handingOff
+      ? handoffMessage(entry, sender, localDateKey(new Date()))
+      : nudgeMessage(
+          entry,
+          sender,
+          localDateKey(new Date()),
+          bill ? target : undefined,
+        );
     if (!message) return json({ error: nothing }, 400);
     // Not an error: the nudge was understood, the house is just asleep.
     if (quietHours(new Date()))
       return json({ sent: 0, devices: 0, quiet: true });
-    const slot = bill ? `${entry.id}:${target.user_id}` : entry.id;
+    // A hand-off has its own short slot per new owner: a second real
+    // hand-off a minute later still goes through, a replayed request doesn't.
+    const slot = handingOff
+      ? `handoff:${entry.id}:${target.user_id}`
+      : bill
+        ? `${entry.id}:${target.user_id}`
+        : entry.id;
+    const cooldown = handingOff ? HANDOFF_COOLDOWN : NUDGE_COOLDOWN;
     const last = recent.get(slot);
-    if (last && Date.now() - last < NUDGE_COOLDOWN)
-      return json(
-        { error: `${target.name} was nudged about that a moment ago.` },
-        429,
-      );
+    if (last && Date.now() - last < cooldown)
+      return handingOff
+        ? json({ sent: 0, devices: 0 })
+        : json(
+            { error: `${target.name} was nudged about that a moment ago.` },
+            429,
+          );
     // Claimed before the sends so an overlapping double tap sees it; a nudge
     // that reached nobody gives the slot back so a retry can go through.
     for (const [key, at] of recent)

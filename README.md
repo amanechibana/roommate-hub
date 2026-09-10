@@ -273,7 +273,10 @@ shopping pages also support typing a title and pressing Enter to add it.
 - **Quick moves:** a to-do row's menu offers **Push to tomorrow** (or **Push
   back a day** for something already scheduled ahead) and **Hand to …** for
   each housemate. Both change that one occurrence only, save in the
-  background like a check-off, and show up on the other phone live.
+  background like a check-off, and show up on the other phone live. A
+  hand-off also sends the new owner one push ("Alex handed you a to-do —
+  “Take out recycling” is due tomorrow"), with the same quiet hours as a
+  nudge and no cooldown.
 - **Nudge:** the same menu offers **Nudge <name>** on a to-do assigned to
   someone else. It sends one push notification to that person's subscribed
   devices ("Alex gave you a nudge — “Dishes” was due yesterday"), and says
