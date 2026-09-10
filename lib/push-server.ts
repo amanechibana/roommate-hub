@@ -51,3 +51,21 @@ export async function sendPush(
     return "failed";
   }
 }
+
+// One push to every subscribed device in the house except the sender's.
+// Loads the roster itself so a route can fire it after responding.
+export async function pushToHousemates(
+  except: string,
+  payload: { title: string; body: string; tag: string; url: string },
+) {
+  const push = await sharedDatabase("get", {}, "shared_push");
+  const devices = (push.subscriptions as Subscription[]).filter(
+    (sub) => sub.member !== except,
+  );
+  if (!devices.length) return 0;
+  preparePush();
+  let sent = 0;
+  for (const sub of devices)
+    if ((await sendPush(sub, payload)) === "sent") sent++;
+  return sent;
+}

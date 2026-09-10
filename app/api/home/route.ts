@@ -1,3 +1,7 @@
+import { after } from "next/server";
+import { pushConfigured, pushToHousemates } from "@/lib/push-server";
+import { noteMessage, quietHours } from "@/lib/reminders";
+import type { Member } from "@/lib/model";
 import {
   broadcastChange,
   json,
@@ -88,6 +92,41 @@ export async function POST(request: Request) {
       return json({ error: "Choose who’s using this device first." }, 400);
     const result = await sharedDatabase(operation, { ...values, actor });
     broadcastChange("home", sender);
+    // A new note on the fridge is read out to the rest of the house, after
+    // the response is sent and never during quiet hours; a note keeps.
+    if (
+      operation === "create" &&
+      values.kind === "note" &&
+      pushConfigured() &&
+      !quietHours(new Date())
+    )
+      after(async () => {
+        try {
+          const home = await sharedDatabase("get");
+          const from = (home.members as Member[]).find(
+            (m) => m.user_id === actor && m.name !== "Housemates",
+          );
+          const message =
+            from &&
+            noteMessage(
+              {
+                kind: "note",
+                title: String(values.title ?? ""),
+                description: String(values.description ?? ""),
+              },
+              from,
+            );
+          if (!message) return;
+          await pushToHousemates(actor, {
+            title: message.title,
+            body: message.lines.join("\n"),
+            tag: `note-${Date.now()}`,
+            url: "/",
+          });
+        } catch (err) {
+          console.error("note push failed", (err as Error).name);
+        }
+      });
     // A covered bill writes to the ledger too, so other screens' expense
     // views need the ping as well.
     if (operation === "payment" && values.expense)
