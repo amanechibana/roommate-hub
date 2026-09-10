@@ -75,6 +75,7 @@ type Props = {
     tab: "Calendar" | "To-dos" | "Shopping list" | "House notes" | "Expenses",
   ) => void;
   onToggle: (entry: Entry) => void;
+  onPay: (entry: Entry) => void;
 };
 // How many of a grouped title's things a board row shows before it says how
 // many are left. Enough for a real household list, few enough that one row
@@ -103,6 +104,7 @@ export default function HomeBoard({
   onOpen,
   onNavigate,
   onToggle,
+  onPay,
 }: Props) {
   const {
     reduced,
@@ -630,6 +632,23 @@ export default function HomeBoard({
                         : ""}
                     </small>
                   </div>
+                  {/* Your own unpaid share is one tap from here; the dialog
+                      still has everyone's checks and the cover-it option. */}
+                  {!display &&
+                    !readOnly &&
+                    viewer &&
+                    isBill(entry) &&
+                    entry.payment_members?.includes(viewer.user_id) &&
+                    !entry.paid_by?.includes(viewer.user_id) && (
+                      <Button
+                        className="board-pay"
+                        onClick={() => onPay(entry)}
+                        aria-label={`Mark my share of ${entry.title} paid`}
+                      >
+                        <Check size={14} />
+                        <span>I paid</span>
+                      </Button>
+                    )}
                 </PresenceRow>
               ))}
             </AnimatePresence>

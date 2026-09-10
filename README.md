@@ -300,7 +300,7 @@ shopping pages also support typing a title and pressing Enter to add it.
   amount (the total divided evenly among the payers), the overview says
   "$1,200 each", and reminders and nudges name your share rather than the
   whole bill. Existing Rent events gain checks for Amane and
-  Barnatt when migration 005 runs. Overdue unpaid bills stay on the home board.
+  Barnatt when migration 005 runs. Overdue unpaid bills stay on the home board. When your own share is unpaid, the board's bill row carries **I paid**, one tap for the same check-off as in the dialog.
   Payment check-offs record status only; the amount remains the bill amount.
 - **Undo:** deleting an entry or series shows an **Undo** notice for eight
   seconds. Multiple deletions have separate notices. Undo restores original
