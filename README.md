@@ -4,7 +4,7 @@ A warm, private roommate hub built with Next.js, React, TypeScript, and Supabase
 
 ## Home and display mode
 
-The overview opens with the date and one sentence about what the house needs today: chores that have come due, the nearest unpaid bill within the week, and what is on the shopping list ("One thing to do, rent in 5 days, and olive oil to grab."). Each card is a different piece of paper: a calendar leaf for plans, an index card for chores, receipt paper for shopping, and the taped fridge note; the To-dos, Shopping, and Expenses pages carry the same papers. The homepage and calendar fit the available viewport without page scrolling. Home cards adapt their item count to the space; a "See all" link on each card opens the full tab when more items exist. A repeating chore or plan takes one row on the overview — its next turn, plus anything overdue — while the full tab still lists every occurrence. Complete chores or mark purchases directly, or use the To-do / Item / Plan shortcuts. Calendar rows resize to fit even six-week months; crowded days open a detail dialog. On phones, navigation stays at the bottom and the calendar becomes a paginated monthly agenda.
+The overview opens with the date and one sentence about what the house needs today: chores that have come due, the nearest unpaid bill within the week — nearest by distance from today, so an old bill nobody ticked off never hides the rent that is actually coming up, and a tie goes to the overdue one — and what is on the shopping list ("One thing to do, rent in 5 days, and olive oil to grab."). Each card is a different piece of paper: a calendar leaf for plans, an index card for chores, receipt paper for shopping, and the taped fridge note; the To-dos, Shopping, and Expenses pages carry the same papers. The homepage and calendar fit the available viewport without page scrolling. Home cards adapt their item count to the space; a "See all" link on each card opens the full tab when more items exist. A repeating chore or plan takes one row on the overview — its next turn, plus anything overdue — while the full tab still lists every occurrence. Complete chores or mark purchases directly, or use the To-do / Item / Plan shortcuts. Calendar rows resize to fit even six-week months; crowded days open a detail dialog. On phones, navigation stays at the bottom and the calendar becomes a paginated monthly agenda.
 
 Choose **Display mode** in the top bar for a monitor/TV, or bookmark `/?display=1`. It fills the browser viewport with four cards, a clock, and no scrolling. Each card fits as many rows as its own space allows, measured per row, so a tall entry in one card no longer decides how many the others show and a bigger screen genuinely shows more. Extra items and notes rotate every 20 seconds; the bottom controls let you pause, change pages, enter full screen, or exit. Long titles and notes are shown as concise previews; open the normal app for full details.
 
@@ -38,8 +38,8 @@ House notes can be turned into a to-do, plan, or shopping item: open the note an
 
 ## The shared screen
 
-A device can sign in as the **household** instead of as a person: pick *This is
-a shared screen* on the "Who's this?" step. It is meant for the kitchen tablet
+A device can sign in as the **household** instead of as a person: pick _This is
+a shared screen_ on the "Who's this?" step. It is meant for the kitchen tablet
 or the wall display, which is nobody in particular.
 
 Such a device is **read-only**. It shows the house by name with no "you"
