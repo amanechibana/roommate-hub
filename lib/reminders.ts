@@ -149,6 +149,20 @@ function dueWhen(date: string, today: string) {
   return days < 0 ? `was due ${when}` : `is due ${when}`;
 }
 
+// A note pinned to the fridge, read out to the rest of the house. The body
+// is the note's first line or so; the rest is on the fridge.
+export function noteMessage(
+  entry: Pick<Entry, "kind" | "title" | "description">,
+  from: Member,
+): Digest | null {
+  if (entry.kind !== "note") return null;
+  const body = entry.description.trim().replace(/\s+/g, " ");
+  const preview = body.length > 140 ? `${body.slice(0, 139).trimEnd()}…` : body;
+  return {
+    title: `${from.name} left a note on the fridge`,
+    lines: [entry.title, ...(preview ? [preview] : [])],
+  };
+}
 // A chore changing hands from the row menu: the new owner hears about it
 // the moment it lands, in the same voice as a nudge.
 export function handoffMessage(

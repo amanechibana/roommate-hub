@@ -75,7 +75,10 @@ Screen; Android and desktop Chrome offer their own install prompts.
 ticked within three days of its date, and a count of needed shopping items. When a digest is going out anyway, it ends with what the ledger says
 about you ("You owe Alex $12", "Sam owes you $5", at most two lines); a
 balance on its own doesn't wake anyone.
-Nothing due means no notification. Each device opts in from **Our household →
+Nothing due means no notification. Separately, a new house note is read
+out to everyone else's subscribed phones the moment it's pinned ("Sam left
+a note on the fridge — Friends coming over this weekend?…"), except during
+quiet hours, when the note simply waits on the fridge. Each device opts in from **Our household →
 Morning reminders**, which also has a "send today's digest now" button for
 checking the pipeline end to end. On iOS the app must be installed to the Home
 Screen first; the settings section says so when it detects that state.

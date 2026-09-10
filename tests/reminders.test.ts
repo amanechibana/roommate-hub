@@ -5,6 +5,7 @@ import {
   handoffMessage,
   localDateKey,
   memberDigest,
+  noteMessage,
   nudgeMessage,
   quietDigest,
   quietHours,
@@ -279,4 +280,22 @@ test("a hand-off tells the new owner what landed and when", () => {
     handoffMessage(entry({ ...chore, done: true }), amane, today),
     null,
   );
+});
+
+test("a note is read out with its first line or so", () => {
+  const note = {
+    kind: "note" as const,
+    title: "Heads up",
+    description: "  Friends over  Saturday.\nBring snacks. ",
+  };
+  assert.deepEqual(noteMessage(note, amane), {
+    title: "Amane left a note on the fridge",
+    lines: ["Heads up", "Friends over Saturday. Bring snacks."],
+  });
+  const long = { ...note, description: "x".repeat(200) };
+  assert.equal(noteMessage(long, amane)!.lines[1].length, 140);
+  assert.deepEqual(noteMessage({ ...note, description: "" }, amane)!.lines, [
+    "Heads up",
+  ]);
+  assert.equal(noteMessage({ ...note, kind: "task" as const }, amane), null);
 });
