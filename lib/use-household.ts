@@ -754,6 +754,39 @@ export function useHousehold() {
     persist("create", values, [copy]);
     setNotice(`Added “${entry.title}” back to the list`);
   }
+  // Several items at once, each its own row from the first paint, saved in
+  // the order typed so the list reads back the way it was written.
+  function addItems(titles: string[]) {
+    if (!household || !uid) return;
+    const copies = titles.map((title) => {
+      const values: SaveValues = {
+        kind: "request",
+        title,
+        category: "Need",
+        description: "",
+        date: null,
+        assignee: null,
+        amount: null,
+        url: "",
+      };
+      const copy = {
+        ...values,
+        household_id: household.id,
+        created_by: uid,
+        created_at: new Date().toISOString(),
+        done: false,
+        id: crypto.randomUUID(),
+        series_id: null,
+        rotation_members: [],
+        payment_members: [],
+        paid_by: [],
+      } as Entry;
+      return { values, copy };
+    });
+    setEntries((current) => [...copies.map((c) => c.copy), ...current]);
+    for (const { values, copy } of copies) persist("create", values, [copy]);
+    if (titles.length > 1) setNotice(`Added ${titles.length} items`);
+  }
   function togglePayment(entry: Entry) {
     if (!uid) return;
     const paid = !entry.paid_by?.includes(uid);
@@ -1006,6 +1039,7 @@ export function useHousehold() {
     claim,
     toggleBought,
     needAgain,
+    addItems,
     togglePayment,
     coverBill,
     remove,
