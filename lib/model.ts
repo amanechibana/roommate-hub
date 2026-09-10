@@ -99,6 +99,12 @@ export function calendarFile(entries: Entry[], name = ""): string {
     ...(name
       ? [`NAME:${escapeICS(name)}`, `X-WR-CALNAME:${escapeICS(name)}`]
       : []),
+    // Left to itself a phone re-reads a subscription on its own schedule,
+    // which on iOS can be once a day. An hour keeps tonight's plan on
+    // tomorrow's screen without hammering the feed. REFRESH-INTERVAL is
+    // RFC 7986; X-PUBLISHED-TTL is the spelling Outlook and Google read.
+    "REFRESH-INTERVAL;VALUE=DURATION:PT1H",
+    "X-PUBLISHED-TTL:PT1H",
   ];
   for (const entry of entries.filter(
     (e) => e.date && (e.kind === "event" || e.kind === "task"),
