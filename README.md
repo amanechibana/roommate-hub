@@ -36,6 +36,21 @@ Expenses use migration `006_expenses.sql` and a separate household-scoped gatewa
 
 House notes can be turned into a to-do, plan, or shopping item: open the note and pick a new type in the edit dialog. The entry keeps its title, details, and author; turning one into a rent or bill event adds payment checks for everyone.
 
+## The shared screen
+
+A device can sign in as the **household** instead of as a person: pick *This is
+a shared screen* on the "Who's this?" step. It is meant for the kitchen tablet
+or the wall display, which is nobody in particular.
+
+Such a device is **read-only**. It shows the house by name with no "you"
+anywhere, no yours-first ordering, and none of the controls that would author a
+change — no quick add, no checkboxes, no row menus, no note composer, no
+expense editor, no add-housemate form. This is not only a UI choice: every
+gateway function in the migrations requires an actor that is a real housemate
+(`name <> 'Housemates'`) and refuses the shared identity, so the house's own
+records always say which person did a thing. Pick a person from **Change person
+on this device** to check things off again.
+
 ## Live updates
 
 Signed-in devices join a Supabase Realtime broadcast channel and ping each

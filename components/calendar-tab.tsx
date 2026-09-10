@@ -14,6 +14,7 @@ type Props = Pick<
   | "members"
   | "entries"
   | "setEditing"
+  | "sharedScreen"
   | "month"
   | "setMonth"
   | "agendaPage"
@@ -32,6 +33,7 @@ export default function CalendarTab({
   members,
   entries,
   setEditing,
+  sharedScreen,
   month,
   setMonth,
   agendaPage,
@@ -110,6 +112,7 @@ export default function CalendarTab({
             <Button
               className="agenda-entry"
               key={entry.id}
+              disabled={sharedScreen}
               onClick={() => setEditing({ kind: entry.kind, entry })}
             >
               <span className="board-date">
@@ -205,6 +208,7 @@ export default function CalendarTab({
                   <Button
                     className="day-number"
                     aria-label={`Add event on ${key}`}
+                    disabled={sharedScreen}
                     onClick={() => setEditing({ kind: "event", date: key })}
                   >
                     {date.getDate()}
@@ -231,6 +235,7 @@ export default function CalendarTab({
                           ),
                         ) % 3
                       } ${entry.category === "Rent" ? "rent" : ""} ${entry.done ? "completed-event" : ""}`}
+                      disabled={sharedScreen}
                       onClick={() => setEditing({ kind: entry.kind, entry })}
                     >
                       {entry.series_id ? "↻ " : ""}

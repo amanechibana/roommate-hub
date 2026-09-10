@@ -81,12 +81,10 @@ export async function PATCH(request: Request) {
     if (raw.length > 1024) return json({ error: "Invalid person." }, 400);
     const { member_id } = JSON.parse(raw);
     const data = await sharedDatabase("get");
-    if (
-      !data.members.some(
-        (m: { user_id: string; name: string }) =>
-          m.user_id === member_id && m.name !== "Housemates",
-      )
-    )
+    // The shared identity is a valid choice for a kitchen or wall screen that
+    // is nobody in particular. It still cannot write: every gateway function
+    // refuses it as an actor, which is what makes that device read-only.
+    if (!data.members.some((m: { user_id: string }) => m.user_id === member_id))
       return json({ error: "Choose a person from this household." }, 400);
     (await cookies()).set(MEMBER_COOKIE, member_id, {
       httpOnly: true,

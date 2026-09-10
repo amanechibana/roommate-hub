@@ -53,8 +53,9 @@ export function DayDialog({
   entries: Entry[];
   person: (id: string | null) => string;
   onClose: () => void;
-  onOpen: (entry: Entry) => void;
-  onAdd: () => void;
+  // A shared screen reads the day without opening anything to edit.
+  onOpen?: (entry: Entry) => void;
+  onAdd?: () => void;
 }) {
   return (
     <PaperDialog
@@ -82,7 +83,8 @@ export function DayDialog({
         <Button
           className="agenda-entry"
           key={entry.id}
-          onClick={() => onOpen(entry)}
+          disabled={!onOpen}
+          onClick={() => onOpen?.(entry)}
         >
           <span>
             <strong>
@@ -102,10 +104,12 @@ export function DayDialog({
           <ChevronRight size={16} />
         </Button>
       ))}
-      <Button className="button" onClick={onAdd}>
-        <Plus size={16} />
-        Add event
-      </Button>
+      {onAdd && (
+        <Button className="button" onClick={onAdd}>
+          <Plus size={16} />
+          Add event
+        </Button>
+      )}
     </PaperDialog>
   );
 }

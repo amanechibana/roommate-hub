@@ -18,6 +18,7 @@ type Props = Pick<
   | "live"
   | "exportCalendar"
   | "addMember"
+  | "sharedScreen"
   | "uid"
   | "setChoosingPerson"
 > & { avatar: (member: Member, index: number) => import("react").ReactNode };
@@ -29,6 +30,7 @@ export default function HouseholdSettings({
   live,
   exportCalendar,
   addMember,
+  sharedScreen,
   avatar,
   uid,
   setChoosingPerson,
@@ -70,26 +72,35 @@ export default function HouseholdSettings({
             </div>
           ),
         )}
-        <h3>Add your housemates</h3>
-        <p className="subtle">
-          Everyone uses the same household code. Add names here to assign chores
-          and leave notes for each other.
-        </p>
-        <form onSubmit={addMember}>
-          <label>
-            Housemate’s name
-            <input
-              name="name"
-              required
-              maxLength={50}
-              placeholder="Their name"
-            />
-          </label>
-          <Button className="button secondary" disabled={busy}>
-            <Plus size={16} />
-            Add housemate
-          </Button>
-        </form>
+        {sharedScreen ? (
+          <p className="subtle">
+            This device is signed in as the household, so it reads the house but
+            doesn’t check things off. Pick a person above to join in.
+          </p>
+        ) : (
+          <>
+            <h3>Add your housemates</h3>
+            <p className="subtle">
+              Everyone uses the same household code. Add names here to assign
+              chores and leave notes for each other.
+            </p>
+            <form onSubmit={addMember}>
+              <label>
+                Housemate’s name
+                <input
+                  name="name"
+                  required
+                  maxLength={50}
+                  placeholder="Their name"
+                />
+              </label>
+              <Button className="button secondary" disabled={busy}>
+                <Plus size={16} />
+                Add housemate
+              </Button>
+            </form>
+          </>
+        )}
       </section>
       <section className="panel settings-panel">
         <h2>
