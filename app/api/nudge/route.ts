@@ -12,7 +12,7 @@ import {
   type Subscription,
 } from "@/lib/push-server";
 import { isBill } from "@/lib/household-actions";
-import { localDateKey, nudgeMessage } from "@/lib/reminders";
+import { localDateKey, nudgeMessage, quietHours } from "@/lib/reminders";
 import type { Entry, Member } from "@/lib/model";
 
 export const runtime = "nodejs";
@@ -75,6 +75,9 @@ export async function POST(request: Request) {
       bill ? target : undefined,
     );
     if (!message) return json({ error: nothing }, 400);
+    // Not an error: the nudge was understood, the house is just asleep.
+    if (quietHours(new Date()))
+      return json({ sent: 0, devices: 0, quiet: true });
     const slot = bill ? `${entry.id}:${target.user_id}` : entry.id;
     const last = recent.get(slot);
     if (last && Date.now() - last < NUDGE_COOLDOWN)

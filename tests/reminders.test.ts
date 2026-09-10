@@ -5,6 +5,7 @@ import {
   memberDigest,
   nudgeMessage,
   quietDigest,
+  quietHours,
 } from "../lib/reminders";
 import type { Entry, Member } from "../lib/model";
 
@@ -211,4 +212,14 @@ test("a bill nudge chases one person's unpaid share", () => {
     null,
   );
   assert.equal(nudgeMessage(rent, amane, today), null);
+});
+
+test("quiet hours follow the household clock, ten to eight", () => {
+  // 02:30 UTC is 22:30 in New York in September: asleep.
+  assert.equal(quietHours(new Date("2026-09-09T02:30:00Z")), true);
+  // 11:59 UTC is 07:59: still asleep. 12:00 UTC is 08:00: awake.
+  assert.equal(quietHours(new Date("2026-09-09T11:59:00Z")), true);
+  assert.equal(quietHours(new Date("2026-09-09T12:00:00Z")), false);
+  // 01:59 UTC is 21:59: still up.
+  assert.equal(quietHours(new Date("2026-09-09T01:59:00Z")), false);
 });

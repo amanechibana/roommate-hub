@@ -661,9 +661,11 @@ export function useHousehold() {
       setNotice(
         result.sent
           ? `Nudged ${name}`
-          : result.devices
-            ? `Couldn’t reach ${name}’s phone right now`
-            : `${name} hasn’t turned on reminders on any device`,
+          : result.quiet
+            ? "It’s late at home, so no buzz tonight. Nudges go out after 8am."
+            : result.devices
+              ? `Couldn’t reach ${name}’s phone right now`
+              : `${name} hasn’t turned on reminders on any device`,
       );
     } catch (err) {
       setError((err as Error).message);
