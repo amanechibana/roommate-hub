@@ -149,6 +149,19 @@ function dueWhen(date: string, today: string) {
   return days < 0 ? `was due ${when}` : `is due ${when}`;
 }
 
+// Something you added got done by someone else: the one line that closes
+// the loop. Nothing for a note, a plan, or your own check-off.
+export function doneMessage(
+  entry: Pick<Entry, "kind" | "title" | "done">,
+  by: Member,
+): Digest | null {
+  if (!entry.done) return null;
+  if (entry.kind === "task")
+    return { title: `${by.name} took care of “${entry.title}”`, lines: [] };
+  if (entry.kind === "request")
+    return { title: `${by.name} picked up “${entry.title}”`, lines: [] };
+  return null;
+}
 // A note pinned to the fridge, read out to the rest of the house. The body
 // is the note's first line or so; the rest is on the fridge.
 export function noteMessage(

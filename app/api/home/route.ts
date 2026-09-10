@@ -1,7 +1,12 @@
 import { after } from "next/server";
-import { pushConfigured, pushToHousemates } from "@/lib/push-server";
-import { noteMessage, quietHours } from "@/lib/reminders";
-import type { Member } from "@/lib/model";
+import {
+  pushConfigured,
+  pushToHousemates,
+  pushToMember,
+} from "@/lib/push-server";
+import { doneMessage, noteMessage, quietHours } from "@/lib/reminders";
+import type { Entry, Member } from "@/lib/model";
+import type { HouseActivity } from "@/lib/activity";
 import {
   broadcastChange,
   json,
@@ -92,6 +97,49 @@ export async function POST(request: Request) {
       return json({ error: "Choose who’s using this device first." }, 400);
     const result = await sharedDatabase(operation, { ...values, actor });
     broadcastChange("home", sender);
+    // A check-off closes a loop for whoever added the thing: they hear it
+    // got done, once, unless they did it themselves. The stored row is the
+    // authority on kind, title, and who added it, and the activity row the
+    // gateway wrote in the same transaction is the proof the row actually
+    // flipped: a repeated or racing check-off writes none, so it stays quiet.
+    const flipped = (result?.activity as HouseActivity[] | undefined)?.[0];
+    if (
+      operation === "update" &&
+      values.done === true &&
+      typeof values.id === "string" &&
+      flipped?.actor === actor &&
+      ["completed", "bought"].includes(flipped.action) &&
+      Date.now() - Date.parse(flipped.created_at) < 15000 &&
+      pushConfigured() &&
+      !quietHours(new Date())
+    )
+      after(async () => {
+        try {
+          const home = await sharedDatabase("get");
+          const entry = (home.entries as Entry[]).find(
+            (e) => e.id === values.id && e.title === flipped.title,
+          );
+          const by = (home.members as Member[]).find(
+            (m) => m.user_id === actor && m.name !== "Housemates",
+          );
+          const adder =
+            entry &&
+            (home.members as Member[]).find(
+              (m) => m.user_id === entry.created_by && m.name !== "Housemates",
+            );
+          if (!entry || !by || !adder || adder.user_id === by.user_id) return;
+          const message = doneMessage(entry, by);
+          if (!message) return;
+          await pushToMember(adder.user_id, {
+            title: message.title,
+            body: message.lines.join("\n"),
+            tag: `done-${entry.id}`,
+            url: "/",
+          });
+        } catch (err) {
+          console.error("done push failed", (err as Error).name);
+        }
+      });
     // A new note on the fridge is read out to the rest of the house, after
     // the response is sent and never during quiet hours; a note keeps.
     if (
