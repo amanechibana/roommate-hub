@@ -32,6 +32,24 @@ test("exports all-day events with exclusive end dates across year boundaries", (
   assert.ok(text.includes("UID:abc@common-ground"));
   assert.ok(text.endsWith("END:VCALENDAR\r\n"));
 });
+test("a named calendar carries its name for the phone to list it under", () => {
+  const text = calendarFile([entry], "The Maple House");
+  assert.ok(text.includes("NAME:The Maple House\r\n"));
+  assert.ok(text.includes("X-WR-CALNAME:The Maple House\r\n"));
+  // A household name is free text, so it escapes like any other value and
+  // cannot break out into a line of its own.
+  const risky = calendarFile([entry], "Us, them; here\nEND:VCALENDAR");
+  assert.ok(risky.includes("X-WR-CALNAME:Us\\, them\\; here\\nEND:VCALENDAR"));
+  // The escaped "\\n" is two characters, not a line break, so the calendar
+  // still ends exactly once.
+  assert.equal(
+    risky.split("\r\n").filter((line) => line === "END:VCALENDAR").length,
+    1,
+  );
+  // An unnamed export stays exactly as it was.
+  assert.ok(!calendarFile([entry]).includes("CALNAME"));
+});
+
 test("escapes calendar control characters and prevents line injection", () => {
   const text = calendarFile([entry]);
   assert.ok(text.includes("SUMMARY:Dinner\\, friends\\; fun"));

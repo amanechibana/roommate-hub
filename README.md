@@ -225,7 +225,7 @@ Open the localhost address printed by Next.js. Without Supabase environment vari
   15-second poll as fallback.
 - An installable app with an opt-in morning reminder push per device.
 - Shared house notes. Create, edit, and delete entries through accessible dialogs.
-- `.ics` calendar export and per-event Google Calendar links, which create snapshots/copies. **Subscribe on your phone** in household settings gives a private feed URL instead: Apple, Google, or Outlook Calendar polls it on its own schedule, so plans and dated chores stay current without re-exporting. The link is a secret derived from the household code and session secret, so it is never stored, and changing the household code revokes every subscription at once. It reads the calendar only; nothing writes back.
+- `.ics` calendar export and per-event Google Calendar links, which create snapshots/copies. **Subscribe on your phone** in household settings gives a private feed URL instead: Apple, Google, or Outlook Calendar polls it on its own schedule, so plans and dated chores stay current without re-exporting. The feed and the export both carry the household's name, so the phone lists it as "The Maple House" rather than the URL it came from. The link is a secret derived from the household code and session secret, so it is never stored, and changing the household code revokes every subscription at once. It reads the calendar only; nothing writes back.
 - Shared household-code authentication and a remembered person picker.
 - Persistent shared records with database-enforced household isolation. Other housemates’ changes arrive live over the broadcast channel, with a 15-second poll and window-focus refresh as fallback.
 - Responsive desktop/mobile layouts and keyboard support.

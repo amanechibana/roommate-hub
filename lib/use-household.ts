@@ -928,7 +928,7 @@ export function useHousehold() {
     }
   }
   function exportCalendar() {
-    const blob = new Blob([calendarFile(entries)], {
+    const blob = new Blob([calendarFile(entries, household?.name)], {
       type: "text/calendar;charset=utf-8",
     });
     const url = URL.createObjectURL(blob);
