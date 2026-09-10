@@ -152,6 +152,20 @@ function dueWhen(date: string, today: string) {
 // One housemate poking another: about an open to-do of theirs, or about a
 // bill share they haven't checked off (`to` says whose share). Null when a
 // nudge makes no sense (done, nobody's, already paid).
+// A chore changing hands from the row menu: the new owner hears about it
+// the moment it lands, in the same voice as a nudge.
+export function handoffMessage(
+  entry: Entry,
+  from: Member,
+  today: string,
+): Digest | null {
+  if (entry.kind !== "task" || entry.done || !entry.assignee) return null;
+  const when = entry.date ? ` ${dueWhen(entry.date, today)}` : "";
+  return {
+    title: `${from.name} handed you a to-do`,
+    lines: [`“${entry.title}”${when}`],
+  };
+}
 export function nudgeMessage(
   entry: Entry,
   from: Member,

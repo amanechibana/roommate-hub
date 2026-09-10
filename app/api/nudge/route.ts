@@ -12,7 +12,12 @@ import {
   type Subscription,
 } from "@/lib/push-server";
 import { isBill } from "@/lib/household-actions";
-import { localDateKey, nudgeMessage, quietHours } from "@/lib/reminders";
+import {
+  handoffMessage,
+  localDateKey,
+  nudgeMessage,
+  quietHours,
+} from "@/lib/reminders";
 import type { Entry, Member } from "@/lib/model";
 
 export const runtime = "nodejs";
@@ -34,10 +39,11 @@ export async function POST(request: Request) {
     return json({ error: "Choose who’s using this device first." }, 400);
   let id: unknown;
   let member: unknown;
+  let handoff: unknown;
   try {
     const raw = await request.text();
     if (raw.length > 300) return json({ error: "Invalid request." }, 400);
-    ({ id, member } = JSON.parse(raw) ?? {});
+    ({ id, member, handoff } = JSON.parse(raw) ?? {});
   } catch {
     return json({ error: "Invalid request." }, 400);
   }
@@ -68,19 +74,24 @@ export async function POST(request: Request) {
     if (!sender || !entry || !target) return json({ error: nothing }, 400);
     if (target.user_id === sender.user_id)
       return json({ error: "That one’s yours." }, 400);
-    const message = nudgeMessage(
-      entry,
-      sender,
-      localDateKey(new Date()),
-      bill ? target : undefined,
-    );
+    // A hand-off tells the new owner once; it is not subject to the nudge
+    // cooldown, since nothing stops a second hand-off from being real.
+    const handingOff = handoff === true && !bill;
+    const message = handingOff
+      ? handoffMessage(entry, sender, localDateKey(new Date()))
+      : nudgeMessage(
+          entry,
+          sender,
+          localDateKey(new Date()),
+          bill ? target : undefined,
+        );
     if (!message) return json({ error: nothing }, 400);
     // Not an error: the nudge was understood, the house is just asleep.
     if (quietHours(new Date()))
       return json({ sent: 0, devices: 0, quiet: true });
     const slot = bill ? `${entry.id}:${target.user_id}` : entry.id;
     const last = recent.get(slot);
-    if (last && Date.now() - last < NUDGE_COOLDOWN)
+    if (!handingOff && last && Date.now() - last < NUDGE_COOLDOWN)
       return json(
         { error: `${target.name} was nudged about that a moment ago.` },
         429,
@@ -89,7 +100,7 @@ export async function POST(request: Request) {
     // that reached nobody gives the slot back so a retry can go through.
     for (const [key, at] of recent)
       if (Date.now() - at >= NUDGE_COOLDOWN) recent.delete(key);
-    recent.set(slot, Date.now());
+    if (!handingOff) recent.set(slot, Date.now());
     const devices = (push.subscriptions as Subscription[]).filter(
       (sub) => sub.member === target.user_id,
     );
@@ -107,7 +118,7 @@ export async function POST(request: Request) {
         )
           sent++;
     }
-    if (!sent) recent.delete(slot);
+    if (!sent && !handingOff) recent.delete(slot);
     return json({ sent, devices: devices.length });
   } catch (err) {
     console.error("POST /api/nudge", err);

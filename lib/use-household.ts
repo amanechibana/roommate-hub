@@ -649,6 +649,16 @@ export function useHousehold() {
       ),
     );
     persist("update", { id: entry.id, assignee: member.user_id });
+    // Their phone hears about it once the write has landed. Best effort:
+    // the hand-off itself is already done, so nothing here is worth an error.
+    if (!demo && process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY)
+      void (async () => {
+        await writes.current;
+        await homeRequest("/api/nudge", "POST", {
+          id: savedIds.current.get(entry.id) || entry.id,
+          handoff: true,
+        }).catch(() => {});
+      })();
   }
   // A nudge is a push to the assignee's phones, not a change to the entry,
   // so nothing here is optimistic: the toast waits for the server's word.

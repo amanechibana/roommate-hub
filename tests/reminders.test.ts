@@ -2,6 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
   balanceLines,
+  handoffMessage,
   localDateKey,
   memberDigest,
   nudgeMessage,
@@ -257,4 +258,25 @@ test("the digest says who owes whom, only alongside something due", () => {
     owed,
   )!;
   assert.equal(digest.lines.at(-1), "You owe Amane $12.00");
+});
+
+test("a hand-off tells the new owner what landed and when", () => {
+  const today = "2026-09-08";
+  const chore = entry({
+    title: "Take out recycling",
+    date: "2026-09-09",
+    assignee: "b",
+  });
+  assert.deepEqual(handoffMessage(chore, amane, today), {
+    title: "Amane handed you a to-do",
+    lines: ["“Take out recycling” is due tomorrow"],
+  });
+  assert.deepEqual(
+    handoffMessage(entry({ ...chore, date: null }), amane, today)!.lines,
+    ["“Take out recycling”"],
+  );
+  assert.equal(
+    handoffMessage(entry({ ...chore, done: true }), amane, today),
+    null,
+  );
 });
