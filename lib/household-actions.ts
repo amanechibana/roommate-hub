@@ -70,15 +70,19 @@ export function shoppingListText(
       const who = members.find(
         (m) => m.user_id === item.assignee && m.name !== "Housemates",
       );
+      const group = titleGroup(item.title);
       lines.push(
         [
-          `• ${item.title}`,
+          `• ${group?.heading ?? item.title}`,
           item.amount != null ? money(Number(item.amount)) : "",
           who ? `${who.name} is getting it` : "",
         ]
           .filter(Boolean)
           .join(" — "),
       );
+      // A title written as its own list is a trip's worth of things, and the
+      // person reading this in Messages has to buy them one at a time.
+      if (group) lines.push(...group.items.map((thing) => `   – ${thing}`));
     }
   }
   return lines.join("\n");
