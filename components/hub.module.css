@@ -226,15 +226,23 @@
   margin: 0;
   gap: 8px;
 }
-.shell :global(.quick-add input) {
+.shell :global(.quick-add input),
+.shell :global(.quick-add textarea) {
   background: #f7f9f2;
   border-color: #dce3d1;
   padding: 12px 14px;
   min-height: 44px;
   font-size: 13px;
 }
-.shell :global(.quick-add input::placeholder) {
+.shell :global(.quick-add input::placeholder),
+.shell :global(.quick-add textarea::placeholder) {
   color: #788572;
+}
+.shell :global(.quick-add textarea) {
+  align-self: flex-start;
+}
+.shell :global(.quick-add .button) {
+  align-self: flex-start;
 }
 .shell :global(.quick-add .button) {
   min-width: 74px;
@@ -509,7 +517,8 @@
   .shell :global(.quick-add) {
     padding: 0 12px 14px;
   }
-  .shell :global(.quick-add input) {
+  .shell :global(.quick-add input),
+  .shell :global(.quick-add textarea) {
     font-size: 16px;
     padding: 10px;
   }

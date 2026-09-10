@@ -2132,9 +2132,16 @@ textarea {
   padding: 12px;
   margin-bottom: 10px;
 }
-.quick-add input {
+.quick-add input,
+.quick-add textarea {
   flex: 1;
   min-width: 0;
+}
+.quick-add textarea {
+  resize: none;
+  line-height: 1.45;
+  max-height: 40vh;
+  overflow-y: auto;
 }
 
 @media (max-width: 650px) {

@@ -123,7 +123,7 @@ test("keyboard shortcuts switch tabs, add entries, and stay out of inputs", asyn
     .toBe(true);
   await page.keyboard.press("/");
   await expect(
-    page.getByRole("textbox", { name: "Quick add item" }),
+    page.getByRole("textbox", { name: "Add items, one per line" }),
   ).toBeFocused();
   await page.keyboard.type("Batteries 4 pack");
   await page.keyboard.press("Enter");

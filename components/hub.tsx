@@ -103,6 +103,7 @@ export default function Hub() {
     claim,
     toggleBought,
     needAgain,
+    addItems,
     togglePayment,
     coverBill,
     remove,
@@ -148,38 +149,80 @@ export default function Hub() {
     members.some((m) => m.user_id === entry.assignee && m.name !== "Housemates")
       ? entry.assignee
       : null;
+  // The shopping box is a notepad: one thing per line, Enter adds what's
+  // there and leaves the cursor in place, so a list goes in the way it
+  // would on paper. A to-do is still one line.
   const quickAdd = (kind: "task" | "request") => (
     <form
       className="quick-add"
       onSubmit={(event) => {
         event.preventDefault();
         const form = event.currentTarget;
-        const title = String(new FormData(form).get("title") || "").trim();
-        if (!title) return;
-        void save({
-          kind,
-          title,
-          category: categories[kind][0],
-          description: "",
-          date: null,
-          assignee: kind === "task" && filter === "Mine" ? uid : null,
-          amount: null,
-          url: "",
-        });
+        const raw = String(new FormData(form).get("title") || "");
+        const lines =
+          kind === "request"
+            ? raw
+                .split(/\n/)
+                // A title is at most 160 characters; a longer line keeps
+                // its start rather than being lost from the middle of a paste.
+                .map((line) => line.trim().slice(0, 160))
+                .filter(Boolean)
+            : [raw.trim()].filter(Boolean);
+        if (!lines.length) return;
+        if (kind === "request" && lines.length > 1) addItems(lines);
+        else
+          void save({
+            kind,
+            title: lines[0],
+            category: categories[kind][0],
+            description: "",
+            date: null,
+            assignee: kind === "task" && filter === "Mine" ? uid : null,
+            amount: null,
+            url: "",
+          });
         form.reset();
+        const box = form.elements.namedItem("title") as HTMLElement | null;
+        if (box) box.style.height = "";
       }}
     >
-      <input
-        name="title"
-        aria-label={`Quick add ${labels[kind]}`}
-        placeholder={
-          kind === "task"
-            ? "Add a to-do and press Enter…"
-            : "Add an item and press Enter…"
-        }
-        required
-        maxLength={160}
-      />
+      {kind === "request" ? (
+        <textarea
+          name="title"
+          aria-label="Add items, one per line"
+          placeholder="Add items, one per line…"
+          rows={1}
+          required
+          maxLength={2000}
+          onKeyDown={(event) => {
+            // Enter while an IME is composing confirms the candidate; only a
+            // plain Enter adds the lines.
+            if (
+              event.key === "Enter" &&
+              !event.shiftKey &&
+              !event.nativeEvent.isComposing
+            ) {
+              event.preventDefault();
+              event.currentTarget.form?.requestSubmit();
+            }
+          }}
+          onInput={(event) => {
+            const box = event.currentTarget;
+            box.style.height = "";
+            // scrollHeight excludes the borders; without them the box sits
+            // two pixels short and grows a scrollbar it never needs.
+            box.style.height = `${box.scrollHeight + box.offsetHeight - box.clientHeight}px`;
+          }}
+        />
+      ) : (
+        <input
+          name="title"
+          aria-label={`Quick add ${labels[kind]}`}
+          placeholder="Add a to-do and press Enter…"
+          required
+          maxLength={160}
+        />
+      )}
       <Button className="button small" aria-label={`Quick add ${labels[kind]}`}>
         <Plus size={16} />
         Add
