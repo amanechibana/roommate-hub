@@ -1802,3 +1802,31 @@ body {
     display: none;
   }
 }
+
+.board-pay {
+  margin-left: auto;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 7px 11px;
+  border: 1px solid #cfc3ad;
+  border-radius: 999px;
+  background: #fffaf0;
+  color: #7a5a3e;
+  font-size: 11px;
+  font-weight: 500;
+}
+.board-pay:hover {
+  background: #f7edd9;
+}
+/* A phone's card is too narrow for the words; the tick alone keeps the row
+   its measured height, and the label lives on for screen readers. */
+@media (max-width: 650px) {
+  .board-pay {
+    padding: 8px;
+  }
+  .board-pay span {
+    display: none;
+  }
+}

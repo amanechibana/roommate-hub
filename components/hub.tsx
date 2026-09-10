@@ -558,6 +558,7 @@ export default function Hub() {
     onOpen: (kind: Kind, entry?: Entry) => setEditing({ kind, entry }),
     onNavigate: setTab,
     onToggle: toggleBought,
+    onPay: togglePayment,
     readOnly,
   };
   if (display)
