@@ -12,6 +12,31 @@ function serverKey(base64: string) {
   return Uint8Array.from(window.atob(normalized), (char) => char.charCodeAt(0));
 }
 
+/**
+ * Moves this device's push row to whoever is using it now, or clears it when
+ * the device stops being a person. The row is keyed to the member selected
+ * when it opted in, so without this the morning digest keeps arriving for the
+ * housemate who last used the phone. Best effort: the settings panel re-points
+ * a stale row on its next visit anyway.
+ */
+export async function movePushSubscription(toPerson: boolean) {
+  if (!KEY || !("serviceWorker" in navigator)) return;
+  try {
+    const registration = await navigator.serviceWorker.getRegistration();
+    const subscription = await registration?.pushManager.getSubscription();
+    if (!subscription) return;
+    await homeRequest("/api/push", "POST", {
+      operation: toPerson ? "subscribe" : "unsubscribe",
+      subscription: subscription.toJSON(),
+    });
+    // A shared screen is nobody in particular and gets no personal digest,
+    // so let the browser go too rather than leaving a dead endpoint behind.
+    if (!toPerson) await subscription.unsubscribe();
+  } catch {
+    /* Reminders stay as they were; settings can fix them. */
+  }
+}
+
 export default function PushSettings() {
   const [state, setState] = useState<"checking" | "unsupported" | "off" | "on">(
     "checking",
