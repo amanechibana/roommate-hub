@@ -16,6 +16,7 @@ import {
   markAllPaid,
   markPaid,
   occurrenceAssignee,
+  yoursFirst,
 } from "@/lib/household-actions";
 import {
   calendarFile,
@@ -939,9 +940,19 @@ export function useHousehold() {
       setBusy(false);
     }
   }
-  const tasks = taskOrder.sort(entries.filter((e) => e.kind === "task"));
+  // A list this device has arranged by hand is left exactly as arranged;
+  // until then it opens with whatever is waiting on you.
+  const tasks = taskOrder.sort(
+    yoursFirst(
+      entries.filter((e) => e.kind === "task"),
+      taskOrder.touched ? null : uid,
+    ),
+  );
   const shopping = shoppingOrder.sort(
-    entries.filter((e) => e.kind === "request"),
+    yoursFirst(
+      entries.filter((e) => e.kind === "request"),
+      shoppingOrder.touched ? null : uid,
+    ),
   );
   const filteredTasks = tasks.filter(
     (e) =>

@@ -14,6 +14,7 @@ import {
   dayOrder,
   shoppingListText,
   titleGroup,
+  yoursFirst,
 } from "../lib/household-actions";
 
 test("chores alternate from the selected first person", () => {
@@ -252,6 +253,31 @@ test("a bill share is the amount divided among its payers, to the cent", () => {
     billShare({ ...chore, amount: 50, payment_members: ["a"] }),
     null,
   );
+});
+
+test("a list opens with what is waiting on you", () => {
+  const { entries } = demoData();
+  const chores = entries.filter((e) => e.kind === "task");
+  // Demo chores are Alex's, yours, then Sam's.
+  assert.deepEqual(
+    yoursFirst(chores, "you").map((e) => e.assignee),
+    ["you", "alex", "sam"],
+  );
+  // Your own finished chore has stopped waiting on you, so it stays put.
+  const done = chores.map((e) =>
+    e.assignee === "you" ? { ...e, done: true } : e,
+  );
+  assert.deepEqual(
+    yoursFirst(done, "you").map((e) => e.assignee),
+    ["alex", "you", "sam"],
+  );
+  // A housemate's order is otherwise untouched, and a shared screen with
+  // nobody signed in reorders nothing.
+  assert.deepEqual(
+    yoursFirst(chores, "sam").map((e) => e.assignee),
+    ["sam", "alex", "you"],
+  );
+  assert.deepEqual(yoursFirst(chores, null), chores);
 });
 
 test("a title written as its own list is read as a heading and its things", () => {

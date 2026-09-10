@@ -238,6 +238,20 @@ export function dayOrder(entries: Entry[]): Entry[] {
     entry.done || (isBill(entry) && billPaid(entry));
   return [...entries].sort((a, b) => Number(settled(a)) - Number(settled(b)));
 }
+/**
+ * Opens a list with what is actually waiting on you: your own unfinished
+ * chores and the items you said you'd grab, the way the overview already
+ * puts your chores first. Anything done, or belonging to your housemate,
+ * keeps the order it had. No viewer (a shared screen) means no reordering.
+ */
+export function yoursFirst<T extends Pick<Entry, "done" | "assignee">>(
+  items: T[],
+  viewer: string | null,
+): T[] {
+  if (!viewer) return items;
+  const waiting = (item: T) => Number(item.done || item.assignee !== viewer);
+  return [...items].sort((a, b) => waiting(a) - waiting(b));
+}
 export type TitleGroup = { heading: string; items: string[] };
 /**
  * A shopping title written as its own little list — "Household supplies:

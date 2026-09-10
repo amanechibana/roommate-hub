@@ -26,6 +26,9 @@ export function useListOrder(key: string) {
   }, [key]);
   const ids = saved.key === key ? saved.ids : [];
   return {
+    // Whether this device has ever arranged this list by hand. Until it has,
+    // callers are free to pick their own opening order.
+    touched: ids.length > 0,
     sort: <T extends { id: string }>(items: T[]) =>
       [...items].sort((a, b) => {
         const rank = (id: string) =>
