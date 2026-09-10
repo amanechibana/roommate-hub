@@ -69,3 +69,20 @@ export async function pushToHousemates(
     if ((await sendPush(sub, payload)) === "sent") sent++;
   return sent;
 }
+
+// One push to one person's subscribed devices.
+export async function pushToMember(
+  member: string,
+  payload: { title: string; body: string; tag: string; url: string },
+) {
+  const push = await sharedDatabase("get", {}, "shared_push");
+  const devices = (push.subscriptions as Subscription[]).filter(
+    (sub) => sub.member === member,
+  );
+  if (!devices.length) return 0;
+  preparePush();
+  let sent = 0;
+  for (const sub of devices)
+    if ((await sendPush(sub, payload)) === "sent") sent++;
+  return sent;
+}

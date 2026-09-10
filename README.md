@@ -78,7 +78,9 @@ balance on its own doesn't wake anyone.
 Nothing due means no notification. Separately, a new house note is read
 out to everyone else's subscribed phones the moment it's pinned ("Sam left
 a note on the fridge — Friends coming over this weekend?…"), except during
-quiet hours, when the note simply waits on the fridge. Each device opts in from **Our household →
+quiet hours, when the note simply waits on the fridge. And when someone
+else ticks off a to-do or picks up an item you added, your phone hears it
+("Alex took care of “Take out recycling”"), same quiet hours. Each device opts in from **Our household →
 Morning reminders**, which also has a "send today's digest now" button for
 checking the pipeline end to end. On iOS the app must be installed to the Home
 Screen first; the settings section says so when it detects that state.

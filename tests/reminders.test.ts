@@ -2,6 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
   balanceLines,
+  doneMessage,
   handoffMessage,
   localDateKey,
   memberDigest,
@@ -298,4 +299,27 @@ test("a note is read out with its first line or so", () => {
     "Heads up",
   ]);
   assert.equal(noteMessage({ ...note, kind: "task" as const }, amane), null);
+});
+
+test("a check-off by someone else is one line to whoever added it", () => {
+  assert.deepEqual(
+    doneMessage({ kind: "task", title: "Dishes", done: true }, amane),
+    {
+      title: "Amane took care of “Dishes”",
+      lines: [],
+    },
+  );
+  assert.equal(
+    doneMessage({ kind: "request", title: "Olive oil", done: true }, amane)!
+      .title,
+    "Amane picked up “Olive oil”",
+  );
+  assert.equal(
+    doneMessage({ kind: "task", title: "Dishes", done: false }, amane),
+    null,
+  );
+  assert.equal(
+    doneMessage({ kind: "note", title: "Hi", done: true }, amane),
+    null,
+  );
 });
