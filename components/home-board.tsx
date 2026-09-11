@@ -170,7 +170,9 @@ export default function HomeBoard({
       : date === today
         ? "Today"
         : date < today
-          ? "Overdue"
+          ? // How long it has been waiting, the way the plans beside it read:
+            // "3 days overdue" is a different feeling from "Overdue".
+            relative(date)
           : date === shiftDay(today, 1)
             ? "Tomorrow"
             : parseDate(date).toLocaleDateString("en-US", {
