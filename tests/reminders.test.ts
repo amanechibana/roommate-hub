@@ -6,6 +6,7 @@ import {
   doneMessage,
   eveningDigest,
   eventMessage,
+  expenseMessage,
   handoffMessage,
   localDateKey,
   memberDigest,
@@ -735,4 +736,59 @@ test("a new plan or bill is read out with its day and, for a bill, its cost", ()
   assert.equal(dayWord("2026-09-09", today), "tomorrow");
   assert.equal(dayWord("2026-09-07", today), "yesterday");
   assert.equal(dayWord("2026-10-01", today), "Oct 1");
+});
+
+test("a ledger entry is read out to the people in it", () => {
+  const sam: Member = { user_id: "c", household_id: "h", name: "Sam" };
+  const groceries = {
+    kind: "expense" as const,
+    title: "Groceries",
+    amount_cents: 8250,
+    paid_by: "a",
+    shares: { a: 2750, b: 2750, c: 2750 },
+    recipient: null,
+  };
+  const people = [amane, barnatt, sam];
+  assert.deepEqual(expenseMessage(groceries, amane, barnatt, people), {
+    title: "Amane logged a purchase",
+    lines: ["“Groceries” $82.50 — your share $27.50"],
+  });
+  // Never to whoever logged it; the payer hears when someone else logs it
+  // for them, and the others hear who paid; someone with no share hears
+  // nothing.
+  assert.equal(expenseMessage(groceries, amane, amane, people), null);
+  assert.deepEqual(expenseMessage(groceries, barnatt, amane, people), {
+    title: "Barnatt logged a purchase you paid for",
+    lines: ["“Groceries” $82.50 — the others owe you their shares"],
+  });
+  assert.deepEqual(expenseMessage(groceries, barnatt, sam, people)!.lines, [
+    "“Groceries” $82.50, paid by Amane — your share $27.50",
+  ]);
+  assert.equal(
+    expenseMessage(
+      { ...groceries, shares: { a: 4125, b: 4125 } },
+      amane,
+      sam,
+      people,
+    ),
+    null,
+  );
+  const repayment = {
+    kind: "settlement" as const,
+    title: "Paid back",
+    amount_cents: 4000,
+    paid_by: "b",
+    shares: {},
+    recipient: "a",
+  };
+  assert.deepEqual(expenseMessage(repayment, barnatt, amane, people), {
+    title: "Barnatt paid you back",
+    lines: ["$40.00 — “Paid back”, recorded on the ledger"],
+  });
+  // The bookkeeping done by a third housemate still names who paid.
+  assert.deepEqual(expenseMessage(repayment, sam, amane, people), {
+    title: "Barnatt paid you back",
+    lines: ["$40.00 — “Paid back”, recorded on the ledger by Sam"],
+  });
+  assert.equal(expenseMessage(repayment, barnatt, sam, people), null);
 });
