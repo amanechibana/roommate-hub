@@ -75,13 +75,16 @@ Screen; Android and desktop Chrome offer their own install prompts.
 ticked within three days of its date, and a count of needed shopping items. When a digest is going out anyway, it ends with what the ledger says
 about you ("You owe Alex $12", "Sam owes you $5", at most two lines); a
 balance on its own doesn't wake anyone.
-Nothing due means no notification. Separately, a new house note is read
+Nothing due means no notification. **Evening heads-ups** go out around
+7–8pm: tomorrow's chores and any bill due tomorrow that person hasn't
+checked off, plus whatever of today's is still open. Nothing tomorrow and
+nothing left today means no notification. Separately, a new house note is read
 out to everyone else's subscribed phones the moment it's pinned ("Sam left
 a note on the fridge — Friends coming over this weekend?…"), except during
 quiet hours, when the note simply waits on the fridge. And when someone
 else ticks off a to-do or picks up an item you added, your phone hears it
 ("Alex took care of “Take out recycling”"), same quiet hours. Each device opts in from **Our household →
-Morning reminders**, which also has a "send today's digest now" button for
+Reminders**, which also has a "send today's digest now" button for
 checking the pipeline end to end. On iOS the app must be installed to the Home
 Screen first; the settings section says so when it detects that state.
 
@@ -94,8 +97,9 @@ Setup needs four server-side pieces:
    `VAPID_SUBJECT`, a `mailto:` address) in Vercel and `.env.local`.
 3. Set `CRON_SECRET` to a random value; Vercel sends it as a bearer token when
    invoking the cron route.
-4. Deploy with `vercel.json`'s cron entry (daily at 12:00 UTC — Vercel's Hobby
-   plan runs crons at most once a day, which suits a morning digest).
+4. Deploy with `vercel.json`'s two cron entries (daily at 12:00 and 00:00
+   UTC — Vercel's Hobby plan runs each cron at most once a day, which suits a
+   morning digest and an evening heads-up).
 
 Subscriptions live in the `push_subscriptions` table behind the same
 token-gated gateway pattern as everything else, tied to the person using the
@@ -225,7 +229,7 @@ Open the localhost address printed by Next.js. Without Supabase environment vari
   alerts and per-station "leave in …" hints.
 - Live cross-device updates over a data-free broadcast channel, with the
   15-second poll as fallback.
-- An installable app with an opt-in morning reminder push per device.
+- An installable app with opt-in morning reminder and evening heads-up pushes per device.
 - Shared house notes. Create, edit, and delete entries through accessible dialogs.
 - `.ics` calendar export and per-event Google Calendar links, which create snapshots/copies. **Subscribe on your phone** in household settings gives a private feed URL instead: Apple, Google, or Outlook Calendar polls it on its own schedule, so plans and dated chores stay current without re-exporting. The feed and the export both carry the household's name, so the phone lists it as "The Maple House" rather than the URL it came from, and the feed asks to be re-read hourly rather than leaving the cadence to the phone. The link is a secret derived from the household code and session secret, so it is never stored, and changing the household code revokes every subscription at once. It reads the calendar only; nothing writes back.
 - Shared household-code authentication and a remembered person picker.
@@ -391,6 +395,7 @@ Suggested order:
 Chore reminders and push notifications shipped as the daily morning digest;
 shared expenses shipped as the Expenses tab. Data amounts are USD, events are
 all-day, and weekly, biweekly, and monthly recurring entries are supported.
-Reminders at arbitrary times are not implemented — the only scheduled job is
-the daily digest cron. The Supabase Data API’s default row cap also means
-households should add pagination before growing beyond roughly 1,000 entries.
+Reminders at arbitrary times are not implemented — the only scheduled jobs
+are the morning digest and evening heads-up crons. The Supabase Data API’s
+default row cap also means households should add pagination before growing
+beyond roughly 1,000 entries.

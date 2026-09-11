@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import {
   balanceLines,
   doneMessage,
+  eveningDigest,
   handoffMessage,
   localDateKey,
   memberDigest,
@@ -322,4 +323,72 @@ test("a check-off by someone else is one line to whoever added it", () => {
     doneMessage({ kind: "note", title: "Hi", done: true }, amane),
     null,
   );
+});
+
+test("the evening heads-up names tomorrow's chores and what's still open today", () => {
+  const today = "2026-09-08";
+  const entries = [
+    entry({ title: "Trash out", date: "2026-09-09", assignee: "a" }),
+    entry({ title: "Plants", date: "2026-09-09", assignee: null }),
+    entry({ title: "Dishes", date: today, assignee: "a" }),
+    entry({ title: "Not mine", date: "2026-09-09", assignee: "b" }),
+    entry({ title: "Old", date: "2026-09-06", assignee: "a" }),
+    entry({ title: "Later", date: "2026-09-10", assignee: "a" }),
+    entry({ title: "Done", date: "2026-09-09", assignee: "a", done: true }),
+  ];
+  const digest = eveningDigest(entries, amane, today)!;
+  assert.equal(digest.title, "Good evening, Amane 🌙");
+  assert.deepEqual(digest.lines, [
+    "Still today: Dishes",
+    "Tomorrow: Trash out",
+    "Tomorrow: Plants",
+  ]);
+  // Overdue from earlier days was the morning's business; tomorrow clear and
+  // today done means no buzz at all.
+  assert.equal(
+    eveningDigest(
+      [entry({ title: "Old", date: "2026-09-06", assignee: "a" })],
+      amane,
+      today,
+    ),
+    null,
+  );
+});
+
+test("the evening heads-up chases a bill due tomorrow, or still unpaid today", () => {
+  const today = "2026-09-08";
+  const bill = (values: Partial<Entry>) =>
+    entry({
+      kind: "event",
+      category: "Rent",
+      title: "Rent",
+      amount: 2400,
+      payment_members: ["a", "b"],
+      paid_by: [],
+      ...values,
+    });
+  const entries = [
+    bill({ date: "2026-09-09" }),
+    bill({ title: "Internet", category: "Bill", amount: null, date: today }),
+    bill({ title: "Paid", date: "2026-09-09", paid_by: ["a"] }),
+    bill({ title: "Soon", date: "2026-09-11" }),
+  ];
+  assert.deepEqual(eveningDigest(entries, amane, today)!.lines, [
+    "Internet — still due today",
+    "Rent ($2,400, your share $1,200) — due tomorrow",
+  ]);
+  assert.deepEqual(eveningDigest(entries, barnatt, today)!.lines, [
+    "Internet — still due today",
+    "Rent ($2,400, your share $1,200) — due tomorrow",
+    "Paid ($2,400, your share $1,200) — due tomorrow",
+  ]);
+});
+
+test("a long evening heads-up folds like the morning one", () => {
+  const entries = Array.from({ length: 8 }, (_, i) =>
+    entry({ title: `Chore ${i}`, date: "2026-09-09" }),
+  );
+  const digest = eveningDigest(entries, amane, "2026-09-08")!;
+  assert.equal(digest.lines.length, 7);
+  assert.equal(digest.lines.at(-1), "…and 2 more");
 });

@@ -5,7 +5,7 @@ import {
   suggestedRepayments,
   type Expense,
 } from "./expenses";
-import { parseDate, type Entry, type Member } from "./model";
+import { parseDate, shiftDay, type Entry, type Member } from "./model";
 
 export type Digest = { title: string; lines: string[] };
 
@@ -45,6 +45,24 @@ function daysBetween(from: string, to: string) {
     (parseDate(to).getTime() - parseDate(from).getTime()) / 86400000,
   );
 }
+
+// A bill the way a reminder names it: the total, and your cut when the
+// two differ ("Rent ($2,400, your share $1,200)").
+function billLine(e: Entry, member: Member) {
+  const share = billShare(e, member.user_id);
+  const amount = e.amount
+    ? share != null && share !== e.amount
+      ? ` (${money(e.amount)}, your share ${shareMoney(share)})`
+      : ` (${money(e.amount)})`
+    : "";
+  return `${e.title}${amount}`;
+}
+// Whether a bill is still waiting on this person's check.
+const unpaidBy = (e: Entry, member: Member) =>
+  isBill(e) &&
+  !!e.date &&
+  !!e.payment_members?.includes(member.user_id) &&
+  !e.paid_by?.includes(member.user_id);
 
 // The morning digest for one person: their chores due or overdue (unassigned
 // chores belong to everyone), bills their check hasn't covered yet, and a
@@ -86,14 +104,7 @@ export function memberDigest(
       e.date! < today ? `Overdue: ${e.title}` : `Today: ${e.title}`,
     );
   const bills = entries
-    .filter(
-      (e) =>
-        isBill(e) &&
-        e.date &&
-        e.payment_members?.includes(member.user_id) &&
-        !e.paid_by?.includes(member.user_id) &&
-        daysBetween(today, e.date) <= 3,
-    )
+    .filter((e) => unpaidBy(e, member) && daysBetween(today, e.date!) <= 3)
     .sort((a, b) => a.date!.localeCompare(b.date!))
     .map((e) => {
       const days = daysBetween(today, e.date!);
@@ -105,13 +116,7 @@ export function memberDigest(
             : days === 1
               ? "due tomorrow"
               : `due in ${days} days`;
-      const share = billShare(e, member.user_id);
-      const amount = e.amount
-        ? share != null && share !== e.amount
-          ? ` (${money(e.amount)}, your share ${shareMoney(share)})`
-          : ` (${money(e.amount)})`
-        : "";
-      return `${e.title}${amount} — ${when}`;
+      return `${billLine(e, member)} — ${when}`;
     });
   if (!chores.length && !bills.length) return null;
   const lines = [...bills, ...chores];
@@ -130,6 +135,46 @@ export function memberDigest(
   // its own is not worth a morning buzz.
   lines.push(...owed.slice(0, 2));
   return { title: `Good morning, ${member.name} ☀️`, lines };
+}
+
+// The evening heads-up for one person: tomorrow's chores and bills, and
+// whatever of today's is still open at eight at night. Older overdue things
+// were in the morning digest and would only nag again here. Null when there
+// is nothing to say; an empty buzz at bedtime is worse than none.
+export function eveningDigest(
+  entries: Entry[],
+  member: Member,
+  today: string,
+): Digest | null {
+  const tomorrow = shiftDay(today, 1);
+  const mine = (e: Entry) =>
+    e.kind === "task" &&
+    !e.done &&
+    (!e.assignee || e.assignee === member.user_id);
+  const chores = entries.filter(
+    (e) => mine(e) && (e.date === today || e.date === tomorrow),
+  );
+  const bills = entries.filter(
+    (e) => unpaidBy(e, member) && (e.date === today || e.date === tomorrow),
+  );
+  if (!chores.length && !bills.length) return null;
+  const byDate = (a: Entry, b: Entry) => a.date!.localeCompare(b.date!);
+  const lines = [
+    ...bills
+      .sort(byDate)
+      .map(
+        (e) =>
+          `${billLine(e, member)} — ${e.date === today ? "still due today" : "due tomorrow"}`,
+      ),
+    ...chores
+      .sort(byDate)
+      .map((e) =>
+        e.date === today ? `Still today: ${e.title}` : `Tomorrow: ${e.title}`,
+      ),
+  ];
+  if (lines.length > 6)
+    lines.splice(6, lines.length, `…and ${lines.length - 6} more`);
+  return { title: `Good evening, ${member.name} 🌙`, lines };
 }
 
 // How the house says when something was or is due, for a nudge: near days
