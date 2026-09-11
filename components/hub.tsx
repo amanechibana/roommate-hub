@@ -244,10 +244,10 @@ export default function Hub() {
             maxLength={160}
           />
         )}
-        <Button
-          className="button small"
-          aria-label={`Quick add ${labels[kind]}`}
-        >
+        {/* Named by the word on it. Labelling it "Quick add to-do" gave it
+            the box's own name on the to-do list, and left a button reading
+            Add that no one could ask for by that name. */}
+        <Button className="button small">
           <Plus size={16} />
           Add
         </Button>
