@@ -1736,6 +1736,7 @@ textarea {
     height: 100%;
   }
   nav button {
+    position: relative;
     flex-direction: column;
     gap: 5px;
     flex: 1;
@@ -1748,8 +1749,20 @@ textarea {
     font-size: 8px;
     white-space: nowrap;
   }
+  /* The count is the reason the badge exists, and the phone is where the
+     house actually reads it. There is no room beside an 8px label, so it
+     rides the corner of the icon; the bar's own badge colours still apply. */
   nav button > span.nav-count {
-    display: none;
+    position: absolute;
+    top: 2px;
+    right: 9px;
+    margin: 0;
+    min-width: 15px;
+    padding: 0 4px;
+    font-size: 9px;
+    line-height: 15px;
+    font-weight: 600;
+    border-radius: 8px;
   }
   nav button.active {
     background: #e7ecdd;
