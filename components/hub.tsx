@@ -180,12 +180,18 @@ export default function Hub() {
                   .filter(Boolean)
               : [raw.trim()].filter(Boolean);
           if (!lines.length) return;
-          if (kind === "request" && lines.length > 1) addItems(lines);
+          // Adding while one category is on show means adding to that list.
+          // A want typed under Want was filed as a need and vanished; the
+          // to-do box already does this with Mine.
+          const category = categories[kind].includes(filter)
+            ? filter
+            : categories[kind][0];
+          if (kind === "request" && lines.length > 1) addItems(lines, category);
           else
             void save({
               kind,
               title: lines[0],
-              category: categories[kind][0],
+              category,
               description: "",
               date: null,
               assignee: kind === "task" && filter === "Mine" ? uid : null,

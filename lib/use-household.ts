@@ -899,13 +899,13 @@ export function useHousehold() {
   }
   // Several items at once, each its own row from the first paint, saved in
   // the order typed so the list reads back the way it was written.
-  function addItems(titles: string[]) {
+  function addItems(titles: string[], category = "Need") {
     if (!household || !uid) return;
     const copies = titles.map((title) => {
       const values: SaveValues = {
         kind: "request",
         title,
-        category: "Need",
+        category,
         description: "",
         date: null,
         assignee: null,

@@ -57,6 +57,18 @@ test("shopping filters, event export, and dialog keyboard support", async ({
   await expect(
     page.getByRole("heading", { name: "Olive oil" }),
   ).not.toBeVisible();
+  // Typed while Want is the list on show, so it belongs on the Want list
+  // rather than filed as a need where it cannot be seen.
+  await page.getByLabel("Add items, one per line").fill("Reading lamp");
+  await page.keyboard.press("Enter");
+  await expect(
+    page.getByRole("heading", { name: "Reading lamp" }),
+  ).toBeVisible();
+  await page
+    .getByLabel("Add items, one per line")
+    .fill("Floor lamp\nSide table");
+  await page.keyboard.press("Enter");
+  await expect(page.getByRole("heading", { name: "Side table" })).toBeVisible();
   await page
     .getByRole("button", { name: "Mark as bought: A softer living room" })
     .click();
