@@ -302,6 +302,11 @@ shopping pages also support typing a title and pressing Enter to add it.
   isn't checked off"). Between 10pm and 8am household time nudges don't go
   out at all; the app says so, and the morning digest at 8 covers what's
   due.
+- **Thanks:** a done to-do that was someone else's, or a bought item they
+  said they'd grab, offers **Thank <name>** in its menu. It sends them one
+  push ("Alex says thanks 💛 — for taking care of “Dishes”"). Like a nudge,
+  the same thanks won't go out again within fifteen minutes, and it keeps
+  the same quiet hours.
 - **Rent and bills:** use an event with category **Rent** or **Bill**. Choose
   **Monthly** for a recurring bill. Open the saved event to see each person’s
   paid check; the current device identity can change only its own check. Each

@@ -301,6 +301,25 @@ export function noteMessage(
     lines: [entry.title, ...(preview ? [preview] : [])],
   };
 }
+// A thank-you for something done: the small thing that keeps a house kind.
+// Only for a finished to-do or a picked-up item that was somebody's.
+export function thanksMessage(
+  entry: Pick<Entry, "kind" | "title" | "done" | "assignee">,
+  from: Member,
+): Digest | null {
+  if (!entry.done || !entry.assignee) return null;
+  if (entry.kind === "task")
+    return {
+      title: `${from.name} says thanks 💛`,
+      lines: [`for taking care of “${entry.title}”`],
+    };
+  if (entry.kind === "request")
+    return {
+      title: `${from.name} says thanks 💛`,
+      lines: [`for picking up “${entry.title}”`],
+    };
+  return null;
+}
 // A chore changing hands from the row menu: the new owner hears about it
 // the moment it lands, in the same voice as a nudge.
 export function handoffMessage(
