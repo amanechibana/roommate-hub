@@ -105,7 +105,9 @@ export default function PushSettings() {
         throw err;
       }
       setState("on");
-      setMessage("This device gets the morning digest now.");
+      setMessage(
+        "This device gets the morning digest and the evening heads-up now.",
+      );
     } catch (err) {
       setMessage(
         typeof Notification !== "undefined" &&
@@ -159,7 +161,7 @@ export default function PushSettings() {
   if (state === "checking") return null;
   return (
     <>
-      <h3>Morning reminders</h3>
+      <h3>Reminders</h3>
       {!KEY ? (
         <p className="subtle">
           Reminders need push keys — see the README’s notifications section.
@@ -173,9 +175,9 @@ export default function PushSettings() {
       ) : (
         <>
           <p className="subtle">
-            A daily notification with the day’s chores, upcoming bills, and
-            needed shopping items — for whoever this device belongs to. Each
-            device opts in separately.
+            A morning notification with the day’s chores, upcoming bills, and
+            needed shopping items, and an evening heads-up about tomorrow — for
+            whoever this device belongs to. Each device opts in separately.
           </p>
           {state === "on" ? (
             <>
