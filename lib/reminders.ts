@@ -145,6 +145,7 @@ export function eveningDigest(
   entries: Entry[],
   member: Member,
   today: string,
+  recap: string[] = [],
 ): Digest | null {
   const tomorrow = shiftDay(today, 1);
   const mine = (e: Entry) =>
@@ -157,7 +158,7 @@ export function eveningDigest(
   const bills = entries.filter(
     (e) => unpaidBy(e, member) && (e.date === today || e.date === tomorrow),
   );
-  if (!chores.length && !bills.length) return null;
+  if (!chores.length && !bills.length && !recap.length) return null;
   const byDate = (a: Entry, b: Entry) => a.date!.localeCompare(b.date!);
   const lines = [
     ...bills
@@ -174,7 +175,52 @@ export function eveningDigest(
   ];
   if (lines.length > 6)
     lines.splice(6, lines.length, `…and ${lines.length - 6} more`);
+  // The week's recap rides along on a Sunday, after tomorrow's business.
+  lines.push(...recap);
   return { title: `Good evening, ${member.name} 🌙`, lines };
+}
+
+// How the week went, for everyone alike: chores done and who did them, and
+// what the house spent together. Done chores are counted by their due day,
+// the one date a chore carries, over the seven days ending today. Empty
+// when the week left no trace.
+export function weekRecap(
+  entries: Entry[],
+  expenses: Expense[],
+  members: Member[],
+  today: string,
+): string[] {
+  const from = shiftDay(today, -6);
+  const inWeek = (date: string | null) =>
+    !!date && date >= from && date <= today;
+  const done = entries.filter(
+    (e) => e.kind === "task" && e.done && inWeek(e.date),
+  );
+  const lines: string[] = [];
+  if (done.length) {
+    const people = members.filter((m) => m.name !== "Housemates");
+    const count = (id: string | null) =>
+      done.filter((e) => (e.assignee ?? null) === id).length;
+    // Nobody's, or somebody the house no longer lists: shared, as the
+    // board reads it.
+    const shared = done.filter(
+      (e) => !people.some((m) => m.user_id === e.assignee),
+    ).length;
+    const who = [
+      ...people
+        .filter((m) => count(m.user_id))
+        .map((m) => `${m.name} ${count(m.user_id)}`),
+      ...(shared ? [`shared ${shared}`] : []),
+    ];
+    lines.push(
+      `${done.length} ${done.length === 1 ? "chore" : "chores"} done this week — ${who.join(", ")}`,
+    );
+  }
+  const spent = expenses
+    .filter((x) => x.kind === "expense" && inWeek(x.date))
+    .reduce((sum, x) => sum + x.amount_cents, 0);
+  if (spent) lines.push(`${expenseMoney(spent)} spent together this week`);
+  return lines;
 }
 
 // How the house says when something was or is due, for a nudge: near days

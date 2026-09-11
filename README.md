@@ -78,7 +78,10 @@ balance on its own doesn't wake anyone.
 Nothing due means no notification. **Evening heads-ups** go out around
 7–8pm: tomorrow's chores and any bill due tomorrow that person hasn't
 checked off, plus whatever of today's is still open. Nothing tomorrow and
-nothing left today means no notification. Separately, a new house note is read
+nothing left today means no notification — except on Sunday, when the
+evening one ends with the week's recap ("4 chores done this week — Alex 2,
+Sam 1, shared 1", "$106.50 spent together this week"), counting done chores
+by their due day. Separately, a new house note is read
 out to everyone else's subscribed phones the moment it's pinned ("Sam left
 a note on the fridge — Friends coming over this weekend?…"), except during
 quiet hours, when the note simply waits on the fridge. And when someone

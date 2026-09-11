@@ -8,9 +8,10 @@ import {
   localDateKey,
   memberDigest,
   quietDigest,
+  weekRecap,
 } from "./reminders";
 import type { Expense } from "./expenses";
-import type { Entry, Member } from "./model";
+import { parseDate, type Entry, type Member } from "./model";
 
 export type Edition = "morning" | "evening";
 
@@ -28,18 +29,21 @@ export function cronAuthorized(request: Request) {
 // so the pipeline stays verifiable.
 export async function sendDigests(edition: Edition, onlyMember: string | null) {
   preparePush();
+  const today = localDateKey(new Date());
+  // Sunday evening looks back over the week as well as at tomorrow.
+  const sunday = edition === "evening" && parseDate(today).getDay() === 0;
   const [home, push, ledger] = await Promise.all([
     sharedDatabase("get"),
     sharedDatabase("get", {}, "shared_push"),
     // The ledger is a nicety here: a digest still goes out if it can't load.
-    edition === "morning"
+    edition === "morning" || sunday
       ? sharedDatabase("get", {}, "shared_expenses").catch(() => null)
       : null,
   ]);
   const entries: Entry[] = home.entries;
   const members: Member[] = home.members;
   const expenses: Expense[] = ledger?.expenses ?? [];
-  const today = localDateKey(new Date());
+  const recap = sunday ? weekRecap(entries, expenses, members, today) : [];
   let sent = 0;
   let pruned = 0;
   for (const sub of push.subscriptions as Subscription[]) {
@@ -56,7 +60,7 @@ export async function sendDigests(edition: Edition, onlyMember: string | null) {
             today,
             balanceLines(expenses, member, members),
           )
-        : eveningDigest(entries, member, today)) ??
+        : eveningDigest(entries, member, today, recap)) ??
       (onlyMember && edition === "morning" ? quietDigest(member.name) : null);
     if (!digest) continue;
     const result = await sendPush(sub, {
