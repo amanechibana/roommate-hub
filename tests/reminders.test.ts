@@ -568,3 +568,50 @@ test("a thank-you names the sender and what it was for", () => {
     null,
   );
 });
+
+test("the house's plans ride along: today's in the morning, tomorrow's at night", () => {
+  const today = "2026-09-08";
+  const plan = (title: string, date: string) =>
+    entry({ kind: "event", category: "Together", title, date });
+  const entries = [
+    plan("House dinner", today),
+    plan("Movie night", "2026-09-09"),
+    plan("Old thing", "2026-09-07"),
+    entry({
+      kind: "event",
+      category: "Rent",
+      title: "Rent",
+      date: today,
+      amount: 2400,
+      payment_members: ["a", "b"],
+      paid_by: ["a"],
+    }),
+    entry({ title: "Dishes", date: today, assignee: "a" }),
+  ];
+  // A plan on its own is worth the morning buzz; a paid bill is not a plan.
+  assert.deepEqual(memberDigest(entries, amane, today)!.lines, [
+    "Plan today: House dinner",
+    "Today: Dishes",
+  ]);
+  assert.deepEqual(
+    memberDigest([plan("House dinner", today)], amane, today)!.lines,
+    ["Plan today: House dinner"],
+  );
+  assert.deepEqual(eveningDigest(entries, amane, today)!.lines, [
+    "Plan tomorrow: Movie night",
+    "Still today: Dishes",
+  ]);
+  assert.deepEqual(
+    eveningDigest([plan("Movie night", "2026-09-09")], amane, today)!.lines,
+    ["Plan tomorrow: Movie night"],
+  );
+  // A plan crossed off is over, like everywhere else on the board.
+  assert.equal(
+    eveningDigest(
+      [{ ...plan("Movie night", "2026-09-09"), done: true }],
+      amane,
+      today,
+    ),
+    null,
+  );
+});

@@ -65,8 +65,9 @@ const unpaidBy = (e: Entry, member: Member) =>
   !e.paid_by?.includes(member.user_id);
 
 // The morning digest for one person: their chores due or overdue (unassigned
-// chores belong to everyone), bills their check hasn't covered yet, and a
-// nudge about needed shopping items. Null when there is nothing to say.
+// chores belong to everyone), bills their check hasn't covered yet, the
+// house's plans for today, and a nudge about needed shopping items. Null
+// when there is nothing to say.
 // What the ledger says about one person, the way the overview says it:
 // "You owe Alex $12", "Sam owes you $5". Nothing when they're square.
 export function balanceLines(
@@ -118,8 +119,15 @@ export function memberDigest(
               : `due in ${days} days`;
       return `${billLine(e, member)} — ${when}`;
     });
-  if (!chores.length && !bills.length) return null;
-  const lines = [...bills, ...chores];
+  // The house's plans are everyone's: a dinner tonight is worth the buzz
+  // even on a day with no chores.
+  const plans = entries
+    .filter(
+      (e) => e.kind === "event" && !isBill(e) && !e.done && e.date === today,
+    )
+    .map((e) => `Plan today: ${e.title}`);
+  if (!chores.length && !bills.length && !plans.length) return null;
+  const lines = [...bills, ...plans, ...chores];
   if (lines.length > 6)
     lines.splice(6, lines.length, `…and ${lines.length - 6} more`);
   const needs = entries.filter(
@@ -137,8 +145,8 @@ export function memberDigest(
   return { title: `Good morning, ${member.name} ☀️`, lines };
 }
 
-// The evening heads-up for one person: tomorrow's chores and bills, and
-// whatever of today's is still open at eight at night. Older overdue things
+// The evening heads-up for one person: tomorrow's chores, bills, and plans,
+// and whatever of today's is still open at eight at night. Older overdue things
 // were in the morning digest and would only nag again here. Null when there
 // is nothing to say; an empty buzz at bedtime is worse than none.
 export function eveningDigest(
@@ -158,7 +166,11 @@ export function eveningDigest(
   const bills = entries.filter(
     (e) => unpaidBy(e, member) && (e.date === today || e.date === tomorrow),
   );
-  if (!chores.length && !bills.length && !recap.length) return null;
+  const plans = entries.filter(
+    (e) => e.kind === "event" && !isBill(e) && !e.done && e.date === tomorrow,
+  );
+  if (!chores.length && !bills.length && !plans.length && !recap.length)
+    return null;
   const byDate = (a: Entry, b: Entry) => a.date!.localeCompare(b.date!);
   const lines = [
     ...bills
@@ -167,6 +179,7 @@ export function eveningDigest(
         (e) =>
           `${billLine(e, member)} — ${e.date === today ? "still due today" : "due tomorrow"}`,
       ),
+    ...plans.map((e) => `Plan tomorrow: ${e.title}`),
     ...chores
       .sort(byDate)
       .map((e) =>
