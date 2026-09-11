@@ -17,6 +17,7 @@ import {
   localDateKey,
   nudgeMessage,
   quietHours,
+  thanksMessage,
 } from "@/lib/reminders";
 import type { Entry, Member } from "@/lib/model";
 
@@ -41,10 +42,11 @@ export async function POST(request: Request) {
   let id: unknown;
   let member: unknown;
   let handoff: unknown;
+  let thanks: unknown;
   try {
     const raw = await request.text();
     if (raw.length > 300) return json({ error: "Invalid request." }, 400);
-    ({ id, member, handoff } = JSON.parse(raw) ?? {});
+    ({ id, member, handoff, thanks } = JSON.parse(raw) ?? {});
   } catch {
     return json({ error: "Invalid request." }, 400);
   }
@@ -69,45 +71,56 @@ export async function POST(request: Request) {
     const target = entry
       ? real(bill ? ((member as string | undefined) ?? null) : entry.assignee)
       : undefined;
-    const nothing = bill
-      ? "That share is already settled."
-      : entry?.kind === "request"
-        ? "Nobody’s picking that one up."
-        : "That to-do isn’t waiting on anyone.";
+    const thanking = thanks === true && !bill;
+    const nothing = thanking
+      ? "Nobody to thank for that one."
+      : bill
+        ? "That share is already settled."
+        : entry?.kind === "request"
+          ? "Nobody’s picking that one up."
+          : "That to-do isn’t waiting on anyone.";
     if (!sender || !entry || !target) return json({ error: nothing }, 400);
     if (target.user_id === sender.user_id)
       return json({ error: "That one’s yours." }, 400);
     // A hand-off tells the new owner once; it is not subject to the nudge
     // cooldown, since nothing stops a second hand-off from being real.
     const handingOff = handoff === true && !bill;
-    const message = handingOff
-      ? handoffMessage(entry, sender, localDateKey(new Date()))
-      : nudgeMessage(
-          entry,
-          sender,
-          localDateKey(new Date()),
-          bill ? target : undefined,
-        );
+    const message = thanking
+      ? thanksMessage(entry, sender)
+      : handingOff
+        ? handoffMessage(entry, sender, localDateKey(new Date()))
+        : nudgeMessage(
+            entry,
+            sender,
+            localDateKey(new Date()),
+            bill ? target : undefined,
+          );
     if (!message) return json({ error: nothing }, 400);
     // Not an error: the nudge was understood, the house is just asleep.
     if (quietHours(new Date()))
       return json({ sent: 0, devices: 0, quiet: true });
     // A hand-off has its own short slot per new owner: a second real
     // hand-off a minute later still goes through, a replayed request doesn't.
-    const slot = handingOff
-      ? `handoff:${entry.id}:${target.user_id}`
-      : bill
-        ? `${entry.id}:${target.user_id}`
-        : entry.id;
+    // A thank-you has its own slot per sender, on the nudge's clock: a
+    // second tap a moment later is not an error, just already said.
+    const slot = thanking
+      ? `thanks:${entry.id}:${sender.user_id}`
+      : handingOff
+        ? `handoff:${entry.id}:${target.user_id}`
+        : bill
+          ? `${entry.id}:${target.user_id}`
+          : entry.id;
     const cooldown = handingOff ? HANDOFF_COOLDOWN : NUDGE_COOLDOWN;
     const last = recent.get(slot);
     if (last && Date.now() - last < cooldown)
-      return handingOff
-        ? json({ sent: 0, devices: 0 })
-        : json(
-            { error: `${target.name} was nudged about that a moment ago.` },
-            429,
-          );
+      return thanking
+        ? json({ sent: 0, devices: 0, again: true })
+        : handingOff
+          ? json({ sent: 0, devices: 0 })
+          : json(
+              { error: `${target.name} was nudged about that a moment ago.` },
+              429,
+            );
     // Claimed before the sends so an overlapping double tap sees it; a nudge
     // that reached nobody gives the slot back so a retry can go through.
     for (const [key, at] of recent)
@@ -124,7 +137,11 @@ export async function POST(request: Request) {
           (await sendPush(sub, {
             title: message.title,
             body: message.lines.join("\n"),
-            tag: `nudge-${entry.id}`,
+            // Two housemates' thanks must not replace each other on the
+            // lock screen.
+            tag: thanking
+              ? `thanks-${entry.id}-${sender.user_id}`
+              : `nudge-${entry.id}`,
             url: "/",
           })) === "sent"
         )

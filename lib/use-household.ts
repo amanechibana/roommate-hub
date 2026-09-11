@@ -721,6 +721,32 @@ export function useHousehold() {
       setError((err as Error).message);
     }
   }
+  // A thank-you goes to whoever the finished thing was assigned to. Like a
+  // nudge it is a push, not a change, so the toast waits for the server.
+  async function thank(entry: Entry) {
+    const name = person(entry.assignee);
+    setError("");
+    try {
+      await writes.current;
+      const result = await homeRequest("/api/nudge", "POST", {
+        id: savedIds.current.get(entry.id) || entry.id,
+        thanks: true,
+      });
+      setNotice(
+        result.sent
+          ? `Thanked ${name} 💛`
+          : result.again
+            ? `You thanked ${name} for that a moment ago`
+            : result.quiet
+              ? "It’s late at home, so no buzz tonight. Say thanks after 8am."
+              : result.devices
+                ? `Couldn’t reach ${name}’s phone right now`
+                : `${name} hasn’t turned on reminders on any device`,
+      );
+    } catch (err) {
+      setError((err as Error).message);
+    }
+  }
   // "I'll grab it" is the shopping list's assignee: a claim says who is
   // picking it up so two people don't both come home with olive oil.
   function claim(entry: Entry) {
@@ -1130,6 +1156,7 @@ export function useHousehold() {
     pushToTomorrow,
     handOff,
     nudge,
+    thank,
     claim,
     toggleBought,
     needAgain,

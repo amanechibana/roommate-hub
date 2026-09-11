@@ -12,6 +12,7 @@ import {
   paidMessage,
   quietDigest,
   quietHours,
+  thanksMessage,
   weekRecap,
 } from "../lib/reminders";
 import type { Entry, Member } from "../lib/model";
@@ -536,4 +537,34 @@ test("a Sunday recap goes out on its own, after tomorrow's business", () => {
     ["Tomorrow: Trash", ...recap],
   );
   assert.equal(eveningDigest([], amane, today), null);
+});
+
+test("a thank-you names the sender and what it was for", () => {
+  assert.deepEqual(
+    thanksMessage(entry({ title: "Dishes", assignee: "b", done: true }), amane),
+    { title: "Amane says thanks 💛", lines: ["for taking care of “Dishes”"] },
+  );
+  assert.deepEqual(
+    thanksMessage(
+      entry({ kind: "request", title: "Olive oil", assignee: "b", done: true }),
+      amane,
+    )!.lines,
+    ["for picking up “Olive oil”"],
+  );
+  // Nothing to thank for: not done, nobody's, or a note.
+  assert.equal(
+    thanksMessage(entry({ title: "Dishes", assignee: "b" }), amane),
+    null,
+  );
+  assert.equal(
+    thanksMessage(entry({ title: "Dishes", done: true }), amane),
+    null,
+  );
+  assert.equal(
+    thanksMessage(
+      entry({ kind: "note", title: "Hi", assignee: "b", done: true }),
+      amane,
+    ),
+    null,
+  );
 });

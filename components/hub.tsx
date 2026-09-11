@@ -103,6 +103,7 @@ export default function Hub() {
     pushToTomorrow,
     handOff,
     nudge,
+    thank,
     claim,
     toggleBought,
     needAgain,
@@ -346,7 +347,14 @@ export default function Hub() {
           onDelete={() => void remove(entry)}
           actions={
             entry.done
-              ? []
+              ? canNudge(entry)
+                ? [
+                    {
+                      label: `Thank ${person(entry.assignee)}`,
+                      onSelect: () => void thank(entry),
+                    },
+                  ]
+                : []
               : [
                   {
                     label:
@@ -961,6 +969,14 @@ export default function Hub() {
                             actions={
                               entry.done
                                 ? [
+                                    ...(canNudge(entry)
+                                      ? [
+                                          {
+                                            label: `Thank ${person(entry.assignee)}`,
+                                            onSelect: () => void thank(entry),
+                                          },
+                                        ]
+                                      : []),
                                     {
                                       label: "Need again",
                                       onSelect: () => needAgain(entry),
