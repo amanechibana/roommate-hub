@@ -122,9 +122,6 @@ export function useHousehold() {
       7,
   );
   useEffect(() => {
-    setAgendaPage(0);
-  }, [month]);
-  useEffect(() => {
     if (tab !== "Calendar" || !agendaRef.current) return;
     const el = agendaRef.current;
     const resize = () =>
@@ -1014,6 +1011,14 @@ export function useHousehold() {
         ["task", "event"].includes(e.kind),
     )
     .sort((a, b) => a.date!.localeCompare(b.date!));
+  // A phone reads the month a page at a time, and the 1st is rarely what it
+  // wants: open on the page holding the first plan that hasn't passed. The
+  // index moves when the month changes or the household finishes loading, so
+  // hand paging afterwards stays put.
+  const agendaStart = monthEntries.findIndex((e) => e.date! >= today);
+  useEffect(() => {
+    setAgendaPage(agendaStart < 0 ? 0 : Math.floor(agendaStart / agendaLimit));
+  }, [month, agendaStart, agendaLimit]);
   const person = (id: string | null) =>
     members.find((m) => m.user_id === id)?.name || "Everyone";
   const friendlyDate = (date: string | null) =>
