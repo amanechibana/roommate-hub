@@ -386,6 +386,14 @@ function ExpenseDialog({
   const [payer, setPayer] = useState(
     draft.entry?.paid_by || draft.from || memberId,
   );
+  // Who received a repayment follows who sent it: picking the recipient as
+  // the sender would otherwise leave the row pointing at one person.
+  const [recipient, setRecipient] = useState(
+    draft.entry?.recipient ||
+      draft.to ||
+      members.find((member) => member.user_id !== payer)?.user_id ||
+      "",
+  );
   const [people, setPeople] = useState(
     draft.entry
       ? Object.keys(draft.entry.shares)
@@ -456,7 +464,6 @@ function ExpenseDialog({
               return;
             }
           }
-          const recipient = settlement ? String(data.get("recipient")) : null;
           if (settlement && (!recipient || recipient === payer)) {
             setError("Choose two different people for a repayment.");
             return;
@@ -468,7 +475,7 @@ function ExpenseDialog({
             amount_cents: cents,
             paid_by: payer,
             shares: settlement ? {} : shares,
-            recipient,
+            recipient: settlement ? recipient : null,
           });
         }}
       >
@@ -527,7 +534,15 @@ function ExpenseDialog({
           <select
             name="paid_by"
             value={payer}
-            onChange={(event) => setPayer(event.target.value)}
+            onChange={(event) => {
+              const sender = event.target.value;
+              if (sender === recipient)
+                setRecipient(
+                  members.find((member) => member.user_id !== sender)
+                    ?.user_id || "",
+                );
+              setPayer(sender);
+            }}
           >
             {members.map((member) => (
               <option key={member.user_id} value={member.user_id}>
@@ -543,11 +558,8 @@ function ExpenseDialog({
               <select
                 name="recipient"
                 required
-                defaultValue={
-                  draft.entry?.recipient ||
-                  draft.to ||
-                  members.find((member) => member.user_id !== payer)?.user_id
-                }
+                value={recipient}
+                onChange={(event) => setRecipient(event.target.value)}
               >
                 {members.map((member) => (
                   <option
