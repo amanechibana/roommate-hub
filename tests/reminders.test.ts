@@ -12,8 +12,10 @@ import {
   paidMessage,
   quietDigest,
   quietHours,
+  weekRecap,
 } from "../lib/reminders";
 import type { Entry, Member } from "../lib/model";
+import type { Expense } from "../lib/expenses";
 
 const amane: Member = { user_id: "a", household_id: "h", name: "Amane" };
 const barnatt: Member = { user_id: "b", household_id: "h", name: "Barnatt" };
@@ -462,4 +464,76 @@ test("a bill check tells each other payer where they stand", () => {
     paidMessage(entry({ ...rent, payment_members: ["a"] }), amane, barnatt),
     null,
   );
+});
+
+test("the week's recap counts done chores by person and what was spent", () => {
+  const today = "2026-09-13"; // a Sunday
+  const entries = [
+    entry({ title: "Dishes", date: "2026-09-07", assignee: "a", done: true }),
+    entry({ title: "Trash", date: "2026-09-10", assignee: "a", done: true }),
+    entry({ title: "Plants", date: "2026-09-13", assignee: "b", done: true }),
+    entry({ title: "Hall", date: "2026-09-12", assignee: null, done: true }),
+    entry({
+      title: "Last week",
+      date: "2026-09-06",
+      assignee: "b",
+      done: true,
+    }),
+    entry({ title: "Not yet", date: "2026-09-11", assignee: "b" }),
+    entry({ kind: "request", title: "Oil", date: "2026-09-11", done: true }),
+  ];
+  const expense = (values: Partial<Expense>): Expense => ({
+    id: crypto.randomUUID(),
+    household_id: "h",
+    kind: "expense",
+    title: "",
+    date: "2026-09-10",
+    amount_cents: 0,
+    paid_by: "a",
+    shares: { a: 0, b: 0 },
+    recipient: null,
+    created_by: "a",
+    created_at: "2026-09-10T00:00:00Z",
+    ...values,
+  });
+  const expenses = [
+    expense({ title: "Groceries", amount_cents: 8250 }),
+    expense({ title: "Wine", amount_cents: 2400, date: "2026-09-13" }),
+    expense({ title: "Old", amount_cents: 9900, date: "2026-09-06" }),
+    expense({ kind: "settlement", amount_cents: 5000, recipient: "b" }),
+  ];
+  assert.deepEqual(weekRecap(entries, expenses, [amane, barnatt], today), [
+    "4 chores done this week — Amane 2, Barnatt 1, shared 1",
+    "$106.50 spent together this week",
+  ]);
+  assert.deepEqual(weekRecap([], [], [amane, barnatt], today), []);
+  // A chore left with someone the house no longer lists reads as shared.
+  assert.deepEqual(
+    weekRecap(
+      [entry({ title: "Old", date: today, assignee: "gone", done: true })],
+      [],
+      [amane, barnatt],
+      today,
+    ),
+    ["1 chore done this week — shared 1"],
+  );
+  assert.deepEqual(weekRecap([entries[0]], [], [amane, barnatt], today), [
+    "1 chore done this week — Amane 1",
+  ]);
+});
+
+test("a Sunday recap goes out on its own, after tomorrow's business", () => {
+  const today = "2026-09-13";
+  const recap = ["3 chores done this week — Amane 3"];
+  assert.deepEqual(eveningDigest([], amane, today, recap)!.lines, recap);
+  assert.deepEqual(
+    eveningDigest(
+      [entry({ title: "Trash", date: "2026-09-14", assignee: "a" })],
+      amane,
+      today,
+      recap,
+    )!.lines,
+    ["Tomorrow: Trash", ...recap],
+  );
+  assert.equal(eveningDigest([], amane, today), null);
 });
