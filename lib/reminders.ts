@@ -370,6 +370,47 @@ export function thanksMessage(
     };
   return null;
 }
+// The ledger changing under someone: a shared purchase tells each other
+// sharer their cut (and the payer, if someone else logged it for them), and
+// a repayment tells the person paid back, naming who paid, since the
+// bookkeeping is often done by a third housemate. Said as ledger entries,
+// never as money moving. Null when this person has nothing in it.
+export function expenseMessage(
+  values: Pick<
+    Expense,
+    "kind" | "title" | "amount_cents" | "paid_by" | "shares" | "recipient"
+  >,
+  from: Member,
+  to: Member,
+  people: Member[],
+): Digest | null {
+  if (to.user_id === from.user_id) return null;
+  const total = expenseMoney(values.amount_cents);
+  const payer = people.find((m) => m.user_id === values.paid_by);
+  const byProxy = payer && payer.user_id !== from.user_id;
+  if (values.kind === "settlement")
+    return values.recipient === to.user_id
+      ? {
+          title: `${payer?.name ?? from.name} paid you back`,
+          lines: [
+            `${total} — “${values.title}”, recorded on the ledger${byProxy ? ` by ${from.name}` : ""}`,
+          ],
+        }
+      : null;
+  const share = values.shares[to.user_id] ?? 0;
+  if (to.user_id === values.paid_by)
+    return {
+      title: `${from.name} logged a purchase you paid for`,
+      lines: [`“${values.title}” ${total} — the others owe you their shares`],
+    };
+  if (!share) return null;
+  return {
+    title: `${from.name} logged a purchase`,
+    lines: [
+      `“${values.title}” ${total}${byProxy ? `, paid by ${payer.name}` : ""} — your share ${expenseMoney(share)}`,
+    ],
+  };
+}
 // A chore landing on someone: handed over from the row menu or the editor,
 // or `fresh` — added with their name on it. The new owner hears about it
 // the moment it lands, in the same voice as a nudge.
