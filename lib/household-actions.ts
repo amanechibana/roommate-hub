@@ -361,3 +361,12 @@ export function shareDraft(
   const title = (words(field("title")) || words(field("text"))).slice(0, 160);
   return url || title ? { title, url } : null;
 }
+
+// A pinned note stays at the top of the fridge, the notes board, and the
+// wall; the rest keep their order. "Pinned" is a note's category, so it
+// needs no new column and the editor can set it too.
+export const isPinned = (entry: Pick<Entry, "kind" | "category">) =>
+  entry.kind === "note" && entry.category === "Pinned";
+export function pinnedFirst(notes: Entry[]): Entry[] {
+  return [...notes.filter(isPinned), ...notes.filter((e) => !isPinned(e))];
+}

@@ -63,7 +63,7 @@ export const categories: Record<Kind, string[]> = {
   task: ["Chore", "To-do"],
   event: ["Together", "Rent", "Bill", "Other"],
   request: ["Need", "Want"],
-  note: ["Note"],
+  note: ["Note", "Pinned"],
 };
 export const kindTabs: Record<Kind, Tab> = {
   task: "To-dos",
