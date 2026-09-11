@@ -383,6 +383,27 @@ export function hasDeparted(departure: Departure, now: number): boolean {
   return departure.at !== null && departure.at < now - 45;
 }
 
+/**
+ * What a station still has to offer, best first. Trains that have gone drop
+ * off, and where a walk time says one can no longer be reached it sorts
+ * behind the ones that can: a walk time is there to answer "can I make it?",
+ * so a train you cannot make must not take the place of one you can. It stays
+ * on the list rather than being dropped, so a station whose next few are all
+ * out of reach still shows something instead of going blank.
+ */
+export function catchableFirst(
+  departures: Departure[],
+  now: number,
+): Departure[] {
+  const missed = (departure: Departure) => {
+    const leave = leaveInMinutes(departure, now);
+    return Number(leave !== null && leave < 0);
+  };
+  return departures
+    .filter((departure) => !hasDeparted(departure, now))
+    .sort((a, b) => missed(a) - missed(b));
+}
+
 function minutesFrom(seconds: number): number {
   return Math.max(0, Math.round(seconds / 60));
 }
