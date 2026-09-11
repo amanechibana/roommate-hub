@@ -8,6 +8,7 @@ import {
   eventMessage,
   expenseMessage,
   handoffMessage,
+  houseNudgeMessage,
   localDateKey,
   memberDigest,
   noteMessage,
@@ -791,4 +792,44 @@ test("a ledger entry is read out to the people in it", () => {
     lines: ["$40.00 — “Paid back”, recorded on the ledger by Sam"],
   });
   assert.equal(expenseMessage(repayment, barnatt, sam, people), null);
+});
+
+test("a shared chore or an unclaimed item can be nudged at the whole house", () => {
+  const today = "2026-09-08";
+  assert.deepEqual(
+    houseNudgeMessage(
+      entry({ title: "Trash", date: "2026-09-07" }),
+      amane,
+      today,
+    ),
+    {
+      title: "Amane nudged the house",
+      lines: ["“Trash” was due yesterday — it’s nobody’s yet"],
+    },
+  );
+  assert.deepEqual(
+    houseNudgeMessage(entry({ title: "Trash" }), amane, today)!.lines,
+    ["“Trash” is waiting for someone"],
+  );
+  assert.deepEqual(
+    houseNudgeMessage(
+      entry({ kind: "request", title: "Olive oil" }),
+      amane,
+      today,
+    )!.lines,
+    ["“Olive oil” is on the list — nobody’s grabbing it yet"],
+  );
+  // Somebody's, done, or not a thing to do: no house nudge.
+  assert.equal(
+    houseNudgeMessage(entry({ title: "Trash", assignee: "b" }), amane, today),
+    null,
+  );
+  assert.equal(
+    houseNudgeMessage(entry({ title: "Trash", done: true }), amane, today),
+    null,
+  );
+  assert.equal(
+    houseNudgeMessage(entry({ kind: "note", title: "Hi" }), amane, today),
+    null,
+  );
 });

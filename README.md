@@ -308,7 +308,10 @@ shopping pages also support typing a title and pressing Enter to add it.
   someone else. It sends one push notification to that person's subscribed
   devices ("Alex gave you a nudge — “Dishes” was due yesterday"), and says
   so if they haven't turned reminders on anywhere. A to-do can be nudged once
-  every fifteen minutes. Needs the push setup below. Open a rent or bill
+  every fifteen minutes. A to-do that is nobody's, or an item nobody has
+  said they'd grab, offers **Nudge the house** instead: everyone else's
+  phones hear it ("Alex nudged the house — “Trash” was due yesterday, it's
+  nobody's yet"), on the same clock. Needs the push setup below. Open a rent or bill
   event and each unpaid housemate's check gets a **Nudge <name>** link that
   does the same for their share ("“Rent” ($2,400) is due today — your share
   isn't checked off"). Between 10pm and 8am household time nudges don't go

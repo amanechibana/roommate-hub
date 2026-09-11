@@ -14,6 +14,7 @@ import {
 import { isBill } from "@/lib/household-actions";
 import {
   handoffMessage,
+  houseNudgeMessage,
   localDateKey,
   nudgeMessage,
   quietHours,
@@ -79,6 +80,56 @@ export async function POST(request: Request) {
         : entry?.kind === "request"
           ? "Nobody’s picking that one up."
           : "That to-do isn’t waiting on anyone.";
+    // A shared chore or an unclaimed item has nobody in particular to poke,
+    // so the whole house hears it, on the same clock as any nudge.
+    if (
+      sender &&
+      entry &&
+      !bill &&
+      !thanking &&
+      handoff === undefined &&
+      !real(entry.assignee)
+    ) {
+      const message = houseNudgeMessage(
+        { ...entry, assignee: null },
+        sender,
+        localDateKey(new Date()),
+      );
+      if (!message) return json({ error: nothing }, 400);
+      if (quietHours(new Date()))
+        return json({ sent: 0, devices: 0, quiet: true });
+      const slot = `house:${entry.id}`;
+      const last = recent.get(slot);
+      if (last && Date.now() - last < NUDGE_COOLDOWN)
+        return json(
+          { error: "The house was nudged about that a moment ago." },
+          429,
+        );
+      for (const [key, at] of recent)
+        if (Date.now() - at >= NUDGE_COOLDOWN) recent.delete(key);
+      recent.set(slot, Date.now());
+      // Sent from the roster already in hand, like a personal nudge: no
+      // second fetch to fail between claiming the slot and sending.
+      const devices = (push.subscriptions as Subscription[]).filter(
+        (sub) => sub.member !== sender.user_id,
+      );
+      let sent = 0;
+      if (devices.length) {
+        preparePush();
+        for (const sub of devices)
+          if (
+            (await sendPush(sub, {
+              title: message.title,
+              body: message.lines.join("\n"),
+              tag: `nudge-${entry.id}`,
+              url: "/",
+            })) === "sent"
+          )
+            sent++;
+      }
+      if (!sent) recent.delete(slot);
+      return json({ sent, devices: devices.length, house: true });
+    }
     if (!sender || !entry || !target) return json({ error: nothing }, 400);
     if (target.user_id === sender.user_id)
       return json({ error: "That one’s yours." }, 400);

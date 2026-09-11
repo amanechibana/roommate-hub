@@ -767,7 +767,6 @@ export function useHousehold() {
   // A nudge is a push to the assignee's phones, not a change to the entry,
   // so nothing here is optimistic: the toast waits for the server's word.
   async function nudge(entry: Entry, member?: Member) {
-    const name = member ? member.name : person(entry.assignee);
     setError("");
     try {
       // A hand-off or a fresh to-do may still be in the queue; the server
@@ -777,14 +776,26 @@ export function useHousehold() {
         id: savedIds.current.get(entry.id) || entry.id,
         member: member?.user_id,
       });
+      // The server says whether it poked a person or the house: this row
+      // may be a moment behind a claim or an unclaim on another phone.
+      const house = result.house === true;
+      const name = member
+        ? member.name
+        : house
+          ? "the house"
+          : person(entry.assignee);
       setNotice(
         result.sent
           ? `Nudged ${name}`
           : result.quiet
             ? "It’s late at home, so no buzz tonight. Nudges go out after 8am."
             : result.devices
-              ? `Couldn’t reach ${name}’s phone right now`
-              : `${name} hasn’t turned on reminders on any device`,
+              ? house
+                ? "Couldn’t reach anyone’s phone right now"
+                : `Couldn’t reach ${name}’s phone right now`
+              : house
+                ? "Nobody else has turned on reminders on any device"
+                : `${name} hasn’t turned on reminders on any device`,
       );
     } catch (err) {
       setError((err as Error).message);
