@@ -308,6 +308,11 @@ shopping pages also support typing a title and pressing Enter to add it.
   whole bill. Existing Rent events gain checks for Amane and
   Barnatt when migration 005 runs. Overdue unpaid bills stay on the home board. When your own share is unpaid, the board's bill row carries **I paid**, one tap for the same check-off as in the dialog.
   Payment check-offs record status only; the amount remains the bill amount.
+  Ticking your check tells the other payers' phones ("Alex paid their share
+  of “Rent” — your $1,200 share isn't checked off yet", or "“Rent” is all
+  paid up" when yours was the last), and covering the whole bill tells them
+  their share is on the Expenses tab. Same quiet hours as a nudge; unticking
+  says nothing.
 - **Undo:** deleting an entry or series shows an **Undo** notice for eight
   seconds. Multiple deletions have separate notices. Undo restores original
   IDs, dates, turns, and payments. The server retains the deleted snapshot for

@@ -1,4 +1,4 @@
-import { billShare, isBill, shareMoney } from "./household-actions";
+import { billPaid, billShare, isBill, shareMoney } from "./household-actions";
 import {
   expenseBalances,
   expenseMoney,
@@ -206,6 +206,40 @@ export function doneMessage(
   if (entry.kind === "request")
     return { title: `${by.name} picked up “${entry.title}”`, lines: [] };
   return null;
+}
+// Someone ticked their check on a bill you're on — the one bill moment a
+// housemate actually wants to hear about — said to each other payer in
+// their own terms. `ledger` means the one tap that checked everyone off and
+// booked the whole bill to Expenses, so the others now owe their shares.
+export function paidMessage(
+  entry: Entry,
+  by: Member,
+  to: Member,
+  ledger = false,
+): Digest | null {
+  if (
+    !isBill(entry) ||
+    !entry.payment_members?.includes(to.user_id) ||
+    to.user_id === by.user_id
+  )
+    return null;
+  const share = billShare(entry, to.user_id);
+  const yours = share != null ? `${shareMoney(share)} share` : "share";
+  if (ledger)
+    return {
+      title: `${by.name} covered “${entry.title}”`,
+      lines: [`Your ${yours} is on the Expenses tab now`],
+    };
+  return {
+    title: `${by.name} paid their share of “${entry.title}”`,
+    lines: [
+      billPaid(entry)
+        ? `“${entry.title}” is all paid up ♡`
+        : !entry.paid_by?.includes(to.user_id)
+          ? `Your ${yours} isn’t checked off yet`
+          : "Still waiting on someone else’s share",
+    ],
+  };
 }
 // A note pinned to the fridge, read out to the rest of the house. The body
 // is the note's first line or so; the rest is on the fridge.
