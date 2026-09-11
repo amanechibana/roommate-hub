@@ -76,12 +76,13 @@ from anywhere, and an add waits for you to be signed in as a housemate.
 **Morning reminders** send one push notification per subscribed device around
 7–8am New York time: the day's chores for whoever the device belongs to
 (unassigned chores go to both people), any bill whose check that person hasn't
-ticked within three days of its date, and a count of needed shopping items. When a digest is going out anyway, it ends with what the ledger says
+ticked within three days of its date, the house's plans for the day, and a
+count of needed shopping items. When a digest is going out anyway, it ends with what the ledger says
 about you ("You owe Alex $12", "Sam owes you $5", at most two lines); a
 balance on its own doesn't wake anyone.
 Nothing due means no notification. **Evening heads-ups** go out around
-7–8pm: tomorrow's chores and any bill due tomorrow that person hasn't
-checked off, plus whatever of today's is still open. Nothing tomorrow and
+7–8pm: tomorrow's chores and plans and any bill due tomorrow that person
+hasn't checked off, plus whatever of today's is still open. Nothing tomorrow and
 nothing left today means no notification — except on Sunday, when the
 evening one ends with the week's recap ("4 chores done this week — Alex 2,
 Sam 1, shared 1", "$106.50 spent together this week"), counting done chores

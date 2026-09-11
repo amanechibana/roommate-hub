@@ -175,9 +175,9 @@ export default function PushSettings() {
       ) : (
         <>
           <p className="subtle">
-            A morning notification with the day’s chores, upcoming bills, and
-            needed shopping items, and an evening heads-up about tomorrow — for
-            whoever this device belongs to. Each device opts in separately.
+            A morning notification with the day’s chores, plans, upcoming bills,
+            and needed shopping items, and an evening heads-up about tomorrow —
+            for whoever this device belongs to. Each device opts in separately.
           </p>
           {state === "on" ? (
             <>
