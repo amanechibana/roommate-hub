@@ -235,9 +235,9 @@ export function handoffMessage(
     lines: [`“${entry.title}”${when}`],
   };
 }
-// One housemate poking another: about an open to-do of theirs, or about a
-// bill share they haven't checked off (`to` says whose share). Null when a
-// nudge makes no sense (done, nobody's, already paid).
+// One housemate poking another: about an open to-do of theirs, a shopping
+// item they claimed, or a bill share they haven't checked off (`to` says
+// whose share). Null when a nudge makes no sense (done, nobody's, paid).
 export function nudgeMessage(
   entry: Entry,
   from: Member,
@@ -264,7 +264,17 @@ export function nudgeMessage(
       lines: [`“${entry.title}”${amount}${when} — ${yours} isn’t checked off`],
     };
   }
-  if (entry.kind !== "task" || entry.done || !entry.assignee) return null;
+  if (entry.done || !entry.assignee) return null;
+  // "I'll grab it" is a promise to the other person, and the shopping list
+  // has no due date to lean on, so the nudge is about the claim itself.
+  if (entry.kind === "request")
+    return {
+      title,
+      lines: [
+        `“${entry.title}” is still on the shopping list — you said you’d grab it`,
+      ],
+    };
+  if (entry.kind !== "task") return null;
   const line = entry.date
     ? `“${entry.title}” ${dueWhen(entry.date, today)}`
     : `“${entry.title}” is waiting on you`;

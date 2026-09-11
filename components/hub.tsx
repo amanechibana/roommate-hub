@@ -965,7 +965,14 @@ export default function Hub() {
                                       onSelect: () => needAgain(entry),
                                     },
                                   ]
-                                : []
+                                : canNudge(entry)
+                                  ? [
+                                      {
+                                        label: `Nudge ${person(entry.assignee)}`,
+                                        onSelect: () => void nudge(entry),
+                                      },
+                                    ]
+                                  : []
                             }
                           />
                         )}
