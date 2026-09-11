@@ -126,7 +126,6 @@ export default function HubSkeleton() {
                   {line("6em")}
                 </p>
                 <h1>{line("7.5em")}</h1>
-                <p className="board-summary">{line("16em")}</p>
                 <div className="board-balance">
                   <Wallet size={14} aria-hidden="true" />
                   <span>{line("8em")}</span>
@@ -200,6 +199,7 @@ export default function HubSkeleton() {
                 </div>
               </section>
               <section className="board-card fridge-card">
+                <span className="board-tape" aria-hidden="true" />
                 <div className="board-card-heading">
                   <h2>
                     <StickyNote size={19} />
@@ -207,8 +207,15 @@ export default function HubSkeleton() {
                   </h2>
                   <Heart size={18} />
                 </div>
-                <div className="board-rows">
-                  {[0, 1, 2].map((i) => ghostRow("board-task", i))}
+                <div className="fridge-stack">
+                  <div className="fridge-message">
+                    <h3>{line("8em")}</h3>
+                    <p>
+                      {line("100%")}
+                      {line("70%")}
+                    </p>
+                    <span>{line("9em")}</span>
+                  </div>
                 </div>
               </section>
             </div>
