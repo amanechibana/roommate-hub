@@ -71,7 +71,9 @@ export async function POST(request: Request) {
       : undefined;
     const nothing = bill
       ? "That share is already settled."
-      : "That to-do isn’t waiting on anyone.";
+      : entry?.kind === "request"
+        ? "Nobody’s picking that one up."
+        : "That to-do isn’t waiting on anyone.";
     if (!sender || !entry || !target) return json({ error: nothing }, 400);
     if (target.user_id === sender.user_id)
       return json({ error: "That one’s yours." }, 400);

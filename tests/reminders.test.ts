@@ -151,7 +151,19 @@ test("a nudge names the sender and says when the chore was due", () => {
   );
 });
 
-test("only an open, assigned to-do can be nudged", () => {
+test("a nudge about a claimed shopping item names the claim, not a date", () => {
+  const today = "2026-09-08";
+  assert.deepEqual(
+    nudgeMessage(
+      entry({ kind: "request", title: "Olive oil", assignee: "b" }),
+      amane,
+      today,
+    )!.lines,
+    ["“Olive oil” is still on the shopping list — you said you’d grab it"],
+  );
+});
+
+test("only an open, claimed or assigned entry can be nudged", () => {
   const today = "2026-09-08";
   assert.equal(
     nudgeMessage(
@@ -162,9 +174,23 @@ test("only an open, assigned to-do can be nudged", () => {
     null,
   );
   assert.equal(nudgeMessage(entry({ title: "Dishes" }), amane, today), null);
+  // Bought, or on the list but nobody's: nothing to chase either way.
   assert.equal(
     nudgeMessage(
-      entry({ kind: "request", title: "Olive oil", assignee: "b" }),
+      entry({ kind: "request", title: "Olive oil", assignee: "b", done: true }),
+      amane,
+      today,
+    ),
+    null,
+  );
+  assert.equal(
+    nudgeMessage(entry({ kind: "request", title: "Olive oil" }), amane, today),
+    null,
+  );
+  // A note is nobody's errand, even addressed to someone.
+  assert.equal(
+    nudgeMessage(
+      entry({ kind: "note", title: "Cake in the fridge", assignee: "b" }),
       amane,
       today,
     ),
