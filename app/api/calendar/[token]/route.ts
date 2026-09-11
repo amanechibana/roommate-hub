@@ -1,6 +1,6 @@
 import { configured, sharedDatabase } from "@/lib/shared-server";
 import { calendarFeedToken, equalSecret } from "@/lib/session-token";
-import { calendarFile, type Entry } from "@/lib/model";
+import { calendarFile, type Entry, type Member } from "@/lib/model";
 
 export const runtime = "nodejs";
 // A subscription feed for phone calendars: dated plans and chores, refreshed
@@ -26,7 +26,11 @@ export async function GET(
   try {
     const data = await sharedDatabase("get");
     return new Response(
-      calendarFile(data.entries as Entry[], data.household?.name),
+      calendarFile(
+        data.entries as Entry[],
+        data.household?.name,
+        data.members as Member[],
+      ),
       {
         headers: {
           "Content-Type": "text/calendar; charset=utf-8",
