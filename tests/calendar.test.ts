@@ -6,6 +6,7 @@ import {
   googleCalendarUrl,
   safeUrl,
   type Entry,
+  type Member,
 } from "../lib/model";
 
 const entry: Entry = {
@@ -109,5 +110,132 @@ test("store links reject executable protocols and malformed URLs", () => {
   assert.equal(
     safeUrl("https://www.amazon.com/dp/example"),
     "https://www.amazon.com/dp/example",
+  );
+});
+
+test("a phone's calendar says whose chore it is and what a bill costs", () => {
+  const members: Member[] = [
+    { user_id: "a", household_id: "home", name: "Amane" },
+    { user_id: "b", household_id: "home", name: "Barnatt" },
+    { user_id: "h", household_id: "home", name: "Housemates" },
+  ];
+  const body = (text: string) => text.replaceAll("\r\n ", "");
+  const chore = body(
+    calendarFile(
+      [{ ...entry, kind: "task", title: "Dishes", assignee: "a" }],
+      "",
+      members,
+    ),
+  );
+  assert.ok(chore.includes("SUMMARY:Dishes — Amane\r\n"));
+  assert.ok(
+    body(
+      calendarFile(
+        [{ ...entry, kind: "task", title: "Dishes", done: true }],
+        "",
+        members,
+      ),
+    ).includes("SUMMARY:✓ Dishes\r\n"),
+  );
+  // Done keeps the name: it says who did it.
+  assert.ok(
+    body(
+      calendarFile(
+        [
+          {
+            ...entry,
+            kind: "task",
+            title: "Dishes",
+            assignee: "b",
+            done: true,
+          },
+        ],
+        "",
+        members,
+      ),
+    ).includes("SUMMARY:✓ Dishes — Barnatt\r\n"),
+  );
+  // The shared identity is nobody in particular.
+  assert.ok(
+    body(
+      calendarFile(
+        [{ ...entry, kind: "task", title: "Dishes", assignee: "h" }],
+        "",
+        members,
+      ),
+    ).includes("SUMMARY:Dishes\r\n"),
+  );
+  const rent = body(
+    calendarFile(
+      [
+        {
+          ...entry,
+          title: "Rent",
+          category: "Rent",
+          description: "",
+          amount: 2400,
+          payment_members: ["a", "b"],
+          paid_by: ["a"],
+        },
+      ],
+      "",
+      members,
+    ),
+  );
+  assert.ok(rent.includes("SUMMARY:Rent — $2\\,400\r\n"));
+  assert.ok(
+    rent.includes(
+      "DESCRIPTION:$1\\,200 each\\nPaid: Amane\\nWaiting on: Barnatt\r\n",
+    ),
+  );
+  assert.ok(
+    body(
+      calendarFile(
+        [
+          {
+            ...entry,
+            title: "Rent",
+            category: "Rent",
+            description: "Due the 1st",
+            amount: 1000,
+            payment_members: ["a", "b", "h"],
+            paid_by: ["a", "b"],
+          },
+        ],
+        "",
+        members,
+      ),
+    ).includes("DESCRIPTION:Due the 1st\\n$500 each\\nAll paid\r\n"),
+  );
+  // Odd cents split the way the board says "each".
+  assert.ok(
+    body(
+      calendarFile(
+        [
+          {
+            ...entry,
+            title: "Internet",
+            category: "Bill",
+            description: "",
+            amount: 2.01,
+            payment_members: ["a", "b"],
+            paid_by: [],
+          },
+        ],
+        "",
+        members,
+      ),
+    ).includes("DESCRIPTION:$1.01 each\\nWaiting on: Amane\\, Barnatt\r\n"),
+  );
+  // A plan, and an export without the house's list, read as before.
+  assert.ok(
+    body(calendarFile([entry], "", members)).includes("SUMMARY:Dinner"),
+  );
+  assert.ok(
+    body(
+      calendarFile([
+        { ...entry, kind: "task", title: "Dishes", assignee: "a" },
+      ]),
+    ).includes("SUMMARY:Dishes\r\n"),
   );
 });

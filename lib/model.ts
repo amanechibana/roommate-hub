@@ -87,7 +87,59 @@ function foldLine(line: string): string {
   lines.push(part);
   return lines.join("\r\n");
 }
-export function calendarFile(entries: Entry[], name = ""): string {
+const usd = (value: number, cents = false) =>
+  new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    minimumFractionDigits: 0,
+    maximumFractionDigits: cents ? 2 : 0,
+  }).format(value);
+// Rent and bills, without reaching into household-actions, which imports
+// this module.
+const billLike = (entry: Entry) =>
+  entry.kind === "event" && ["Rent", "Bill"].includes(entry.category);
+// What a phone's calendar shows for an entry: a chore says whose turn it is
+// and whether it is done, a bill says how much, and the notes say who has
+// paid. Names come from the house's list; the legacy shared identity is
+// nobody, so it never appears.
+function calendarSummary(entry: Entry, people: Member[]): string {
+  const who = people.find((m) => m.user_id === entry.assignee)?.name;
+  if (entry.kind === "task")
+    return `${entry.done ? "✓ " : ""}${entry.title}${who ? ` — ${who}` : ""}`;
+  if (billLike(entry) && entry.amount)
+    return `${entry.title} — ${usd(entry.amount)}`;
+  return entry.title;
+}
+function calendarNotes(entry: Entry, people: Member[]): string {
+  const notes = entry.description ? [entry.description] : [];
+  if (billLike(entry)) {
+    const payers = (entry.payment_members ?? []).filter((id) =>
+      people.some((m) => m.user_id === id),
+    );
+    // Cents first, then the split, the way billShare says "each" on the
+    // board: $2.01 between two is $1.01, not the float's $1.
+    if (entry.amount && payers.length > 1)
+      notes.push(
+        `${usd(Math.round(Math.round(entry.amount * 100) / payers.length) / 100, true)} each`,
+      );
+    const name = (id: string) => people.find((m) => m.user_id === id)!.name;
+    const paid = payers.filter((id) => entry.paid_by?.includes(id));
+    const waiting = payers.filter((id) => !entry.paid_by?.includes(id));
+    if (payers.length && !waiting.length) notes.push("All paid");
+    else {
+      if (paid.length) notes.push(`Paid: ${paid.map(name).join(", ")}`);
+      if (waiting.length)
+        notes.push(`Waiting on: ${waiting.map(name).join(", ")}`);
+    }
+  }
+  return notes.join("\n");
+}
+export function calendarFile(
+  entries: Entry[],
+  name = "",
+  members: Member[] = [],
+): string {
+  const people = members.filter((m) => m.name !== "Housemates");
   const lines = [
     "BEGIN:VCALENDAR",
     "VERSION:2.0",
@@ -120,8 +172,8 @@ export function calendarFile(entries: Entry[], name = ""): string {
         .replace(/\.\d{3}/, "")}`,
       `DTSTART;VALUE=DATE:${entry.date!.replaceAll("-", "")}`,
       `DTEND;VALUE=DATE:${dateKey(end).replaceAll("-", "")}`,
-      `SUMMARY:${escapeICS(entry.title)}`,
-      `DESCRIPTION:${escapeICS(entry.description)}`,
+      `SUMMARY:${escapeICS(calendarSummary(entry, people))}`,
+      `DESCRIPTION:${escapeICS(calendarNotes(entry, people))}`,
       "END:VEVENT",
     );
   }
