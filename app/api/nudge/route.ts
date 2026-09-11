@@ -84,11 +84,18 @@ export async function POST(request: Request) {
       return json({ error: "That one’s yours." }, 400);
     // A hand-off tells the new owner once; it is not subject to the nudge
     // cooldown, since nothing stops a second hand-off from being real.
-    const handingOff = handoff === true && !bill;
+    // "new" is a to-do added with someone's name on it; true is one that
+    // changed hands.
+    const handingOff = (handoff === true || handoff === "new") && !bill;
     const message = thanking
       ? thanksMessage(entry, sender)
       : handingOff
-        ? handoffMessage(entry, sender, localDateKey(new Date()))
+        ? handoffMessage(
+            entry,
+            sender,
+            localDateKey(new Date()),
+            handoff === "new",
+          )
         : nudgeMessage(
             entry,
             sender,

@@ -548,7 +548,34 @@ export function useHousehold() {
           return e;
         });
       });
-      persist("update", { ...values, id: entry.id });
+      let failed = false;
+      persist("update", { ...values, id: entry.id }, [], () => {
+        failed = true;
+      });
+      // A note or a claimed item turned into a to-do lands fresh on whoever
+      // is named, even if the name was already there. A whole-series edit
+      // moves every open turn, so the push is about an open turn that
+      // actually changed hands, not whichever row the editor was opened on.
+      const wasTask = entry.kind === "task";
+      const moved = (e: Entry) =>
+        !e.done && (!wasTask || e.assignee !== rest.assignee);
+      const target =
+        scope === "series" && entry.series_id && !entry.rotation_members?.length
+          ? entries
+              .filter((e) => e.series_id === entry.series_id && moved(e))
+              .sort((a, b) => (a.date ?? "").localeCompare(b.date ?? ""))[0]
+          : moved(entry)
+            ? entry
+            : undefined;
+      if (
+        target &&
+        landsOn(
+          rest.kind ?? entry.kind,
+          rest.assignee,
+          wasTask ? target.assignee : null,
+        )
+      )
+        tellNewOwner(target.id, () => failed, !wasTask);
       if (values.kind && values.kind !== entry.kind)
         setNotice(
           `Turned “${values.title || entry.title}” into a ${labels[values.kind]}. It now lives under ${kindTabs[values.kind]}.`,
@@ -609,16 +636,18 @@ export function useHousehold() {
       // dropped create can't silently lose the entry; a failed delete leaves
       // a visible duplicate the recovery refresh surfaces instead.
       const conversion = { failed: false };
-      persist(
-        "create",
-        createValues,
-        copies,
-        converting
-          ? () => {
-              conversion.failed = true;
-            }
-          : undefined,
-      );
+      persist("create", createValues, copies, () => {
+        conversion.failed = true;
+      });
+      // One push for a series: the first turn is enough to say it's yours.
+      if (
+        landsOn(
+          createValues.kind,
+          copies[0]?.assignee,
+          converting ? entry!.assignee : null,
+        )
+      )
+        tellNewOwner(copies[0].id, () => conversion.failed, !converting);
       if (converting) {
         persist(
           "delete",
@@ -695,24 +724,40 @@ export function useHousehold() {
         e.id === entry.id ? { ...e, assignee: member.user_id } : e,
       ),
     );
-    // Their phone hears about it once the write has landed, and only if it
-    // did: a failed save would otherwise announce a hand-off that never
-    // happened, to the person who still has the chore. Best effort after
-    // that; the hand-off itself is done, so a lost push is not an error.
     let failed = false;
     persist("update", { id: entry.id, assignee: member.user_id }, [], () => {
       failed = true;
     });
-    if (!demo && process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY)
-      void (async () => {
-        await writes.current;
-        if (failed) return;
-        await homeRequest("/api/nudge", "POST", {
-          id: savedIds.current.get(entry.id) || entry.id,
-          handoff: true,
-        }).catch(() => {});
-      })();
+    tellNewOwner(entry.id, () => failed);
   }
+  // Their phone hears about a to-do landing on them once the write has
+  // landed, and only if it did: a failed save would otherwise announce a
+  // hand-off that never happened, to the person who still has the chore.
+  // Best effort after that; the chore itself is theirs, so a lost push is
+  // not an error. `fresh` is a to-do added with their name on it.
+  function tellNewOwner(id: string, failed: () => boolean, fresh = false) {
+    if (demo || !process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY) return;
+    void (async () => {
+      await writes.current;
+      if (failed()) return;
+      await homeRequest("/api/nudge", "POST", {
+        id: savedIds.current.get(id) || id,
+        handoff: fresh ? "new" : true,
+      }).catch(() => {});
+    })();
+  }
+  // A to-do that lands on someone else — assigned in the editor, or added
+  // with their name on it — is a hand-off as much as the row menu's is.
+  const landsOn = (
+    kind: Kind | undefined,
+    assignee: string | null | undefined,
+    before: string | null,
+  ) =>
+    kind === "task" &&
+    !!assignee &&
+    assignee !== uid &&
+    assignee !== before &&
+    members.some((m) => m.user_id === assignee && m.name !== "Housemates");
   // A nudge is a push to the assignee's phones, not a change to the entry,
   // so nothing here is optimistic: the toast waits for the server's word.
   async function nudge(entry: Entry, member?: Member) {

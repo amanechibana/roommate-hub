@@ -293,6 +293,17 @@ test("the digest says who owes whom, only alongside something due", () => {
   assert.equal(digest.lines.at(-1), "You owe Amane $12.00");
 });
 
+test("a to-do added with someone's name on it says so", () => {
+  const dishes = entry({ title: "Dishes", date: "2026-09-09", assignee: "b" });
+  assert.deepEqual(handoffMessage(dishes, amane, "2026-09-08", true), {
+    title: "Amane added a to-do for you",
+    lines: ["“Dishes” is due tomorrow"],
+  });
+  assert.equal(
+    handoffMessage(dishes, amane, "2026-09-08")!.title,
+    "Amane handed you a to-do",
+  );
+});
 test("a hand-off tells the new owner what landed and when", () => {
   const today = "2026-09-08";
   const chore = entry({
