@@ -31,8 +31,11 @@ export function useListOrder(key: string) {
     touched: ids.length > 0,
     sort: <T extends { id: string }>(items: T[]) =>
       [...items].sort((a, b) => {
-        const rank = (id: string) =>
-          ids.includes(id) ? ids.indexOf(id) : ids.length;
+        // One drag records the whole visible list, so anything without a
+        // place here arrived after the arranging: it goes on top, newest
+        // first, where a just-added thing lands before the list is touched.
+        // Sending it to the bottom instead hides it the moment you add it.
+        const rank = (id: string) => (ids.includes(id) ? ids.indexOf(id) : -1);
         return rank(a.id) - rank(b.id);
       }),
     move: (visible: { id: string }[], from: number, to: number) => {
