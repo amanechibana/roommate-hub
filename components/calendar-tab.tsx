@@ -131,6 +131,14 @@ export default function CalendarTab({
                 </strong>
                 <small>
                   {entry.category}, {person(entry.assignee)}
+                  {/* Rent is the thing on a shared calendar you most want to
+                      be told about, and the grid and the day list both say
+                      it. The phone only ever got this row. */}
+                  {isBill(entry)
+                    ? billPaid(entry)
+                      ? ", paid"
+                      : ", payment due"
+                    : ""}
                 </small>
               </span>
               <ChevronRight size={17} />
