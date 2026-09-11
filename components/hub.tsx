@@ -1106,7 +1106,11 @@ export default function Hub() {
         </main>
       </div>
       {toasts}
-      <AnimatePresence>
+      {/* One dialog at a time. A crowded day hands straight off to an editor,
+          and an overlapping exit stays a dismissable layer that Radix ranks
+          above the editor: Escape reached the leaving dialog, whose close is
+          already done, and the editor sat there. */}
+      <AnimatePresence mode="wait">
         {selectedDay && (
           <DayDialog
             key="day"
