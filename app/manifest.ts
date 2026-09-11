@@ -14,6 +14,24 @@ export default function manifest(): MetadataRoute.Manifest {
       { src: "/icon-192.png", sizes: "192x192", type: "image/png" },
       { src: "/icon-512.png", sizes: "512x512", type: "image/png" },
     ],
+    // A long press on the installed icon: straight to the box you wanted.
+    shortcuts: [
+      {
+        name: "Add a to-do",
+        url: "/?tab=To-dos&add=task",
+        icons: [{ src: "/icon-192.png", sizes: "192x192", type: "image/png" }],
+      },
+      {
+        name: "Shopping list",
+        url: "/?tab=Shopping%20list",
+        icons: [{ src: "/icon-192.png", sizes: "192x192", type: "image/png" }],
+      },
+      {
+        name: "Wall display",
+        url: "/?display=1",
+        icons: [{ src: "/icon-192.png", sizes: "192x192", type: "image/png" }],
+      },
+    ],
     // Lets the installed app appear in the phone's share sheet, so a product
     // page goes straight onto the shopping list.
     share_target: {

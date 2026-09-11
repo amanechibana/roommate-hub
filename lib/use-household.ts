@@ -67,11 +67,14 @@ export function useHousehold() {
     date?: string;
     draft?: { title: string; url: string };
   } | null>(null);
-  // A product page handed over from the phone's share sheet, held until the
-  // house is loaded and the shopping dialog can open with it.
-  const [shared, setShared] = useState<{ title: string; url: string } | null>(
-    null,
-  );
+  // Something the app was opened to do — a home-screen shortcut's "add", or
+  // a product page from the phone's share sheet — held until the house is
+  // loaded and the dialog can open on it.
+  const [arrival, setArrival] = useState<{
+    kind?: Kind;
+    tab: Tab;
+    draft?: { title: string; url: string };
+  } | null>(null);
   const [showShortcuts, setShowShortcuts] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -147,23 +150,38 @@ export function useHousehold() {
       );
     sync();
     window.addEventListener("popstate", sync);
-    setShared(shareDraft(new URLSearchParams(window.location.search)));
+    // A home-screen shortcut lands on a tab, and may ask for the add
+    // dialog; a share is an add with the item filled in.
+    const params = new URLSearchParams(window.location.search);
+    const wanted = tabs.find((t) => t.name === params.get("tab"))?.name;
+    if (wanted) setTab(wanted);
+    const draft = shareDraft(params);
+    const kind = (["task", "request", "event", "note"] as Kind[]).find(
+      (k) => k === params.get("add"),
+    );
+    if (draft) setArrival({ kind: "request", tab: "Shopping list", draft });
+    else if (kind) setArrival({ kind, tab: wanted ?? kindTabs[kind] });
+    else if (wanted) setArrival({ tab: wanted });
     return () => window.removeEventListener("popstate", sync);
   }, []);
-  // Waits for a housemate, not just a session: a signed-out share survives
-  // the code screen and the person picker, and the kitchen screen's identity
-  // cannot add things, so there it never opens.
+  // Waits for the house, and for an add, for a housemate: a signed-out
+  // arrival survives the code screen and the person picker. The kitchen
+  // screen's identity cannot add things, so there an add is dropped rather
+  // than left waiting for whoever picks themselves on that device later.
   useEffect(() => {
-    if (!shared || !uid || !(demo || loaded)) return;
-    setShared(null);
+    if (!arrival || !(demo || loaded)) return;
+    if (arrival.kind && !uid && !sharedScreen) return;
+    setArrival(null);
     // The query was the only copy until now; a reload must not offer the
-    // same item twice.
+    // same thing twice.
     const url = new URL(window.location.href);
-    for (const key of ["title", "text", "url"]) url.searchParams.delete(key);
+    for (const key of ["title", "text", "url", "tab", "add"])
+      url.searchParams.delete(key);
     window.history.replaceState(null, "", url);
-    setTab("Shopping list");
-    setEditing({ kind: "request", draft: shared });
-  }, [shared, uid, demo, loaded]);
+    if (sharedScreen && arrival.kind) return;
+    setTab(arrival.tab);
+    if (arrival.kind) setEditing({ kind: arrival.kind, draft: arrival.draft });
+  }, [arrival, uid, sharedScreen, demo, loaded]);
   function changeDisplay(value: boolean) {
     const url = new URL(window.location.href);
     if (value) url.searchParams.set("display", "1");

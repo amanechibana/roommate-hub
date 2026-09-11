@@ -67,7 +67,11 @@ screen.
 
 The site is an installable web app: `manifest.webmanifest` plus home-screen
 icons rendered from the house cat. On iPhone or iPad use Share → Add to Home
-Screen; Android and desktop Chrome offer their own install prompts.
+Screen; Android and desktop Chrome offer their own install prompts. A long
+press on the installed icon (Android and desktop Chrome) offers **Add a
+to-do**, **Shopping list**, and **Wall display**; the links behind them,
+`/?tab=To-dos&add=task`, `/?tab=Shopping%20list`, and `/?display=1`, work
+from anywhere, and an add waits for you to be signed in as a housemate.
 
 **Morning reminders** send one push notification per subscribed device around
 7–8am New York time: the day's chores for whoever the device belongs to
