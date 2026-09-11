@@ -54,6 +54,7 @@ export function useHousehold() {
   const [ready, setReady] = useState(false);
   const [loaded, setLoaded] = useState(false);
   const [session, setSession] = useState(false);
+  const [signingIn, setSigningIn] = useState(false);
   const [demo, setDemo] = useState(false);
   const [household, setHousehold] = useState<Household | null>(null);
   const [members, setMembers] = useState<Member[]>([]);
@@ -183,6 +184,7 @@ export function useHousehold() {
     setUndoDeletes([]);
     needsRecovery.current = false;
     setSession(false);
+    setSigningIn(false);
     setHousehold(null);
     setEntries([]);
     setActivity([]);
@@ -253,6 +255,13 @@ export function useHousehold() {
       window.removeEventListener("household-signed-out", clearSession);
     };
   }, [clearSession]);
+  // The code was just accepted on this device, so what comes next is "Who's
+  // this?", not the house. Says so, since the wait would otherwise wear the
+  // home shell and read as the house opening and then being taken away.
+  function signIn() {
+    setSigningIn(true);
+    setSession(true);
+  }
   async function signOut() {
     try {
       await writes.current;
@@ -1067,7 +1076,8 @@ export function useHousehold() {
     ready,
     loaded,
     session,
-    setSession,
+    signingIn,
+    signIn,
     demo,
     household,
     members,

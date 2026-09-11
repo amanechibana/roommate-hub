@@ -57,7 +57,8 @@ export default function Hub() {
     ready,
     loaded,
     session,
-    setSession,
+    signingIn,
+    signIn,
     demo,
     household,
     members,
@@ -387,9 +388,9 @@ export default function Hub() {
     ) : (
       <HubSkeleton />
     );
-  if (!demo && !session) return <Auth onSuccess={() => setSession(true)} />;
+  if (!demo && !session) return <Auth onSuccess={signIn} />;
   if (!demo && !loaded)
-    return display ? (
+    return display || signingIn ? (
       <main className="auth-wrap">
         <Leaf size={36} />
         <p>Opening your home…</p>
