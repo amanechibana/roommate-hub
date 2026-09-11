@@ -269,6 +269,15 @@ export default function Hub() {
     members.some(
       (m) => m.user_id === entry.assignee && m.name !== "Housemates",
     );
+  // Nobody's in particular: a shared chore or an unclaimed item can be
+  // nudged at the whole house instead.
+  const canNudgeHouse = (entry: Entry) =>
+    !demo &&
+    Boolean(process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY) &&
+    !entry.done &&
+    !members.some(
+      (m) => m.user_id === entry.assignee && m.name !== "Housemates",
+    );
   // Phones hand the list to Messages; a laptop just copies it.
   const shareList = async () => {
     const text = shoppingListText(shopping, members, household!.name);
@@ -373,10 +382,12 @@ export default function Hub() {
                         : "Push to tomorrow",
                     onSelect: () => pushToTomorrow(entry),
                   },
-                  ...(canNudge(entry)
+                  ...(canNudge(entry) || canNudgeHouse(entry)
                     ? [
                         {
-                          label: `Nudge ${person(entry.assignee)}`,
+                          label: canNudge(entry)
+                            ? `Nudge ${person(entry.assignee)}`
+                            : "Nudge the house",
                           onSelect: () => void nudge(entry),
                         },
                       ]
@@ -992,10 +1003,12 @@ export default function Hub() {
                                       onSelect: () => needAgain(entry),
                                     },
                                   ]
-                                : canNudge(entry)
+                                : canNudge(entry) || canNudgeHouse(entry)
                                   ? [
                                       {
-                                        label: `Nudge ${person(entry.assignee)}`,
+                                        label: canNudge(entry)
+                                          ? `Nudge ${person(entry.assignee)}`
+                                          : "Nudge the house",
                                         onSelect: () => void nudge(entry),
                                       },
                                     ]

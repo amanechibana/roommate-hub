@@ -429,6 +429,30 @@ export function handoffMessage(
     lines: [`“${entry.title}”${when}`],
   };
 }
+// A nudge at the whole house: a shared chore nobody has picked up, or an
+// item nobody is grabbing. Everyone but the sender hears it, once.
+export function houseNudgeMessage(
+  entry: Entry,
+  from: Member,
+  today: string,
+): Digest | null {
+  if (entry.done || entry.assignee || !["task", "request"].includes(entry.kind))
+    return null;
+  const title = `${from.name} nudged the house`;
+  if (entry.kind === "request")
+    return {
+      title,
+      lines: [`“${entry.title}” is on the list — nobody’s grabbing it yet`],
+    };
+  return {
+    title,
+    lines: [
+      entry.date
+        ? `“${entry.title}” ${dueWhen(entry.date, today)} — it’s nobody’s yet`
+        : `“${entry.title}” is waiting for someone`,
+    ],
+  };
+}
 // One housemate poking another: about an open to-do of theirs, a shopping
 // item they claimed, or a bill share they haven't checked off (`to` says
 // whose share). Null when a nudge makes no sense (done, nobody's, paid).
