@@ -236,21 +236,58 @@ export function weekRecap(
   return lines;
 }
 
-// How the house says when something was or is due, for a nudge: near days
-// get a weekday, farther ones a date, matching the board's own voice.
-function dueWhen(date: string, today: string) {
+// How the house names a day: near days get a word or a weekday, farther
+// ones a date, matching the board's own voice.
+export function dayWord(date: string, today: string) {
   const days = daysBetween(today, date);
-  if (days === 0) return "is due today";
-  if (days === -1) return "was due yesterday";
-  if (days === 1) return "is due tomorrow";
-  const when =
-    Math.abs(days) < 7
-      ? parseDate(date).toLocaleDateString("en-US", { weekday: "long" })
-      : parseDate(date).toLocaleDateString("en-US", {
-          month: "short",
-          day: "numeric",
-        });
-  return days < 0 ? `was due ${when}` : `is due ${when}`;
+  if (days === 0) return "today";
+  if (days === -1) return "yesterday";
+  if (days === 1) return "tomorrow";
+  return Math.abs(days) < 7
+    ? parseDate(date).toLocaleDateString("en-US", { weekday: "long" })
+    : parseDate(date).toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
+      });
+}
+// When something was or is due, for a nudge.
+function dueWhen(date: string, today: string) {
+  return `${daysBetween(today, date) < 0 ? "was" : "is"} due ${dayWord(date, today)}`;
+}
+
+// A plan or a bill going onto the calendar, read out to the rest of the
+// house the way a new note is. A bill says what it costs and what each
+// person's cut is, since that is what a housemate wants to know first;
+// a repeating one is announced once, for its first date.
+export function eventMessage(
+  entry: Pick<Entry, "kind" | "title" | "category" | "amount" | "date">,
+  from: Member,
+  today: string,
+  payers: number,
+  repeats = false,
+): Digest | null {
+  if (entry.kind !== "event" || !entry.date) return null;
+  // A backdated one is said in the past tense, like a nudge would.
+  const past = daysBetween(today, entry.date) < 0;
+  const day = dayWord(entry.date, today);
+  const when = `${day}${repeats ? ", and repeats" : ""}`;
+  if (!isBill(entry))
+    return {
+      title: `${from.name} put a plan on the calendar`,
+      // "is today", "is on Saturday": the day words carry their own "on".
+      lines: [
+        `“${entry.title}” ${past ? "was" : "is"}${/^(today|tomorrow|yesterday)$/.test(day) ? "" : " on"} ${when}`,
+      ],
+    };
+  const each =
+    entry.amount && payers > 1
+      ? `, ${shareMoney(Math.round(Math.round(entry.amount * 100) / payers) / 100)} each`
+      : "";
+  const amount = entry.amount ? ` (${money(entry.amount)}${each})` : "";
+  return {
+    title: `${from.name} added a bill`,
+    lines: [`“${entry.title}”${amount} ${past ? "was" : "is"} due ${when}`],
+  };
 }
 
 // Something you added got done by someone else: the one line that closes

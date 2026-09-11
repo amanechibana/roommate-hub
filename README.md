@@ -89,7 +89,10 @@ Sam 1, shared 1", "$106.50 spent together this week"), counting done chores
 by their due day. Separately, a new house note is read
 out to everyone else's subscribed phones the moment it's pinned ("Sam left
 a note on the fridge — Friends coming over this weekend?…"), except during
-quiet hours, when the note simply waits on the fridge. And when someone
+quiet hours, when the note simply waits on the fridge. A plan or a bill
+going onto the calendar is read out the same way ("Sam put a plan on the
+calendar — “House dinner” is on Saturday", "Sam added a bill — “Internet”
+($80, $40 each) is due Sep 15"), once for a repeating one. And when someone
 else ticks off a to-do or picks up an item you added, your phone hears it
 ("Alex took care of “Take out recycling”"), same quiet hours. Each device opts in from **Our household →
 Reminders**, which also has a "send today's digest now" button for

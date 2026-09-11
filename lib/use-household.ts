@@ -636,9 +636,15 @@ export function useHousehold() {
       // dropped create can't silently lose the entry; a failed delete leaves
       // a visible duplicate the recovery refresh surfaces instead.
       const conversion = { failed: false };
-      persist("create", createValues, copies, () => {
-        conversion.failed = true;
-      });
+      // The server reads out a new plan or bill; a recreated one is not new.
+      persist(
+        "create",
+        converting ? { ...createValues, converting: true } : createValues,
+        copies,
+        () => {
+          conversion.failed = true;
+        },
+      );
       // One push for a series: the first turn is enough to say it's yours.
       if (
         landsOn(
