@@ -2,8 +2,10 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
   balanceLines,
+  dayWord,
   doneMessage,
   eveningDigest,
+  eventMessage,
   handoffMessage,
   localDateKey,
   memberDigest,
@@ -625,4 +627,112 @@ test("the house's plans ride along: today's in the morning, tomorrow's at night"
     ),
     null,
   );
+});
+
+test("a new plan or bill is read out with its day and, for a bill, its cost", () => {
+  const today = "2026-09-08";
+  assert.deepEqual(
+    eventMessage(
+      {
+        kind: "event",
+        title: "House dinner",
+        category: "Together",
+        amount: null,
+        date: "2026-09-12",
+      },
+      amane,
+      today,
+      2,
+    ),
+    {
+      title: "Amane put a plan on the calendar",
+      lines: ["“House dinner” is on Saturday"],
+    },
+  );
+  assert.deepEqual(
+    eventMessage(
+      {
+        kind: "event",
+        title: "Internet",
+        category: "Bill",
+        amount: 80.99,
+        date: "2026-09-15",
+      },
+      amane,
+      today,
+      2,
+      true,
+    ),
+    {
+      title: "Amane added a bill",
+      lines: ["“Internet” ($81, $40.5 each) is due Sep 15, and repeats"],
+    },
+  );
+  // No amount, one payer, or a date-less or non-event thing.
+  assert.deepEqual(
+    eventMessage(
+      {
+        kind: "event",
+        title: "Rent",
+        category: "Rent",
+        amount: 2400,
+        date: today,
+      },
+      amane,
+      today,
+      1,
+    )!.lines,
+    ["“Rent” ($2,400) is due today"],
+  );
+  assert.equal(
+    eventMessage(
+      {
+        kind: "task",
+        title: "Dishes",
+        category: "Chore",
+        amount: null,
+        date: today,
+      },
+      amane,
+      today,
+      2,
+    ),
+    null,
+  );
+  assert.deepEqual(
+    eventMessage(
+      {
+        kind: "event",
+        title: "Rent",
+        category: "Rent",
+        amount: null,
+        date: "2026-09-07",
+      },
+      amane,
+      today,
+      2,
+    )!.lines,
+    ["“Rent” was due yesterday"],
+  );
+  // Near days carry their own "on"; a past weekday is not this coming one.
+  const plan = (date: string) =>
+    eventMessage(
+      {
+        kind: "event",
+        title: "Dinner",
+        category: "Together",
+        amount: null,
+        date,
+      },
+      amane,
+      today,
+      2,
+    )!.lines[0];
+  assert.equal(plan(today), "“Dinner” is today");
+  assert.equal(plan("2026-09-09"), "“Dinner” is tomorrow");
+  assert.equal(plan("2026-09-07"), "“Dinner” was yesterday");
+  assert.equal(plan("2026-09-05"), "“Dinner” was on Saturday");
+  assert.equal(dayWord("2026-09-09", today), "tomorrow");
+  assert.equal(dayWord("2026-09-07", today), "yesterday");
+  assert.equal(dayWord("2026-10-01", today), "Oct 1");
 });

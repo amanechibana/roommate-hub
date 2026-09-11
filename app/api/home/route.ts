@@ -6,6 +6,8 @@ import {
 } from "@/lib/push-server";
 import {
   doneMessage,
+  eventMessage,
+  localDateKey,
   noteMessage,
   paidMessage,
   quietHours,
@@ -229,6 +231,51 @@ export async function POST(request: Request) {
           });
         } catch (err) {
           console.error("note push failed", (err as Error).name);
+        }
+      });
+    // A plan or a bill going onto the calendar is read out the same way.
+    // Making an existing one repeat recreates it as a series, and the house
+    // has already heard about that one.
+    if (
+      operation === "create" &&
+      values.kind === "event" &&
+      typeof values.date === "string" &&
+      payload.converting !== true &&
+      pushConfigured() &&
+      !quietHours(new Date())
+    )
+      after(async () => {
+        try {
+          const home = await sharedDatabase("get");
+          const people = (home.members as Member[]).filter(
+            (m) => m.name !== "Housemates",
+          );
+          const from = people.find((m) => m.user_id === actor);
+          const message =
+            from &&
+            eventMessage(
+              {
+                kind: "event",
+                title: String(values.title ?? ""),
+                category: String(values.category ?? ""),
+                amount:
+                  typeof values.amount === "number" ? values.amount : null,
+                date: values.date as string,
+              },
+              from,
+              localDateKey(new Date()),
+              people.length,
+              !!values.repeat,
+            );
+          if (!message) return;
+          await pushToHousemates(actor, {
+            title: message.title,
+            body: message.lines.join("\n"),
+            tag: `event-${Date.now()}`,
+            url: "/",
+          });
+        } catch (err) {
+          console.error("event push failed", (err as Error).name);
         }
       });
     // A covered bill writes to the ledger too, so other screens' expense

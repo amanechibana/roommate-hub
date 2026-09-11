@@ -21,6 +21,8 @@ export type SaveValues = Partial<Entry> & {
   undo_token?: string;
   scope?: "series";
   expense?: ExpenseValues & { id: string };
+  // A create that recreates an existing entry as a series, not a new thing.
+  converting?: boolean;
 };
 
 export type Tab =
