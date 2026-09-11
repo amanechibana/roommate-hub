@@ -158,10 +158,17 @@ test("mobile navigation and layout fit the screen", async ({ page }) => {
     path: "test-results/mobile-overview.png",
     fullPage: true,
   });
+  // The waiting counts ride the icons here, as they do in the sidebar, so a
+  // tab's name carries its badge: "To-dos 1 due", not "To-dos".
+  await expect(
+    page
+      .getByRole("navigation")
+      .getByRole("button", { name: /^To-dos \d+ due$/ }),
+  ).toBeVisible();
   for (const tab of ["Calendar", "To-dos", "Shopping list", "House notes"]) {
     await page
       .getByRole("navigation")
-      .getByRole("button", { name: tab, exact: tab !== "Shopping list" })
+      .getByRole("button", { name: tab })
       .click();
     await expect(
       page.getByRole("heading", { level: 1, name: tab }),
