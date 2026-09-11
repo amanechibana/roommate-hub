@@ -49,7 +49,7 @@ export default function HubSkeleton() {
           <span className="brand-icon">
             <Leaf size={24} />
           </span>
-          <span>
+          <span className="brand-text">
             common
             <br />
             ground<span className="brand-dot">.</span>
@@ -75,16 +75,20 @@ export default function HubSkeleton() {
           ))}
         </nav>
         <div className="sidebar-bottom">
-          <HouseCompanion />
+          <div className="rail-companion">
+            <HouseCompanion />
+          </div>
           <button type="button" className="ui-button settings-link">
             <Settings size={18} /> Our household
           </button>
           <div className="sidebar-profile">
-            <span className="skeleton skeleton-avatar" />
-            <div>
-              {line("5em")}
-              <small>Right at home</small>
-            </div>
+            <span className="profile-switch">
+              <span className="skeleton skeleton-avatar" />
+              <span className="profile-copy">
+                {line("5em")}
+                <small>Right at home</small>
+              </span>
+            </span>
             <span className="icon-button">
               <LogOut size={17} />
             </span>
