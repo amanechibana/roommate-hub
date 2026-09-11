@@ -4,7 +4,12 @@ import {
   pushToHousemates,
   pushToMember,
 } from "@/lib/push-server";
-import { doneMessage, noteMessage, quietHours } from "@/lib/reminders";
+import {
+  doneMessage,
+  noteMessage,
+  paidMessage,
+  quietHours,
+} from "@/lib/reminders";
 import type { Entry, Member } from "@/lib/model";
 import type { HouseActivity } from "@/lib/activity";
 import {
@@ -138,6 +143,57 @@ export async function POST(request: Request) {
           });
         } catch (err) {
           console.error("done push failed", (err as Error).name);
+        }
+      });
+    // A bill check landing is news to the other payers: their own share is
+    // still open, or the bill is finally settled. The proof is a fresh 'paid'
+    // activity row by this actor: the gateway writes one only when a check
+    // was actually added. The feed is the house's latest rows, not this
+    // request's, so the untick a moment after a tick is gated out by the
+    // payload and a housemate's row landing in between is looked past.
+    const paid =
+      operation === "payment" &&
+      (values.paid === true || values.cover === true) &&
+      typeof values.id === "string" &&
+      (result?.activity as HouseActivity[] | undefined)?.find(
+        (a) =>
+          a.actor === actor &&
+          a.action === "paid" &&
+          Date.now() - Date.parse(a.created_at) < 15000,
+      );
+    if (paid && pushConfigured() && !quietHours(new Date()))
+      after(async () => {
+        try {
+          const home = await sharedDatabase("get");
+          const members = home.members as Member[];
+          const entry = (home.entries as Entry[]).find(
+            (e) => e.id === values.id && e.title === paid.title,
+          );
+          const by = members.find(
+            (m) => m.user_id === actor && m.name !== "Housemates",
+          );
+          // A check undone again before this ran is nothing to announce.
+          if (!entry || !by || !entry.paid_by?.includes(by.user_id)) return;
+          for (const id of entry.payment_members ?? []) {
+            const to = members.find(
+              (m) => m.user_id === id && m.name !== "Housemates",
+            );
+            const message =
+              to &&
+              paidMessage(entry, by, to, !!values.cover && !!values.expense);
+            if (!message) continue;
+            // One payer's dead endpoint must not cost the next their line.
+            await pushToMember(to.user_id, {
+              title: message.title,
+              body: message.lines.join("\n"),
+              tag: `paid-${entry.id}`,
+              url: "/",
+            }).catch((err) =>
+              console.error("paid push failed", (err as Error).name),
+            );
+          }
+        } catch (err) {
+          console.error("paid push failed", (err as Error).name);
         }
       });
     // A new note on the fridge is read out to the rest of the house, after

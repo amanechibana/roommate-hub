@@ -9,6 +9,7 @@ import {
   memberDigest,
   noteMessage,
   nudgeMessage,
+  paidMessage,
   quietDigest,
   quietHours,
 } from "../lib/reminders";
@@ -391,4 +392,48 @@ test("a long evening heads-up folds like the morning one", () => {
   const digest = eveningDigest(entries, amane, "2026-09-08")!;
   assert.equal(digest.lines.length, 7);
   assert.equal(digest.lines.at(-1), "…and 2 more");
+});
+
+test("a bill check tells each other payer where they stand", () => {
+  const rent = entry({
+    kind: "event",
+    category: "Rent",
+    title: "Rent",
+    amount: 2400,
+    payment_members: ["a", "b"],
+    paid_by: ["a"],
+  });
+  const toBarnatt = paidMessage(rent, amane, barnatt)!;
+  assert.equal(toBarnatt.title, "Amane paid their share of “Rent”");
+  assert.deepEqual(toBarnatt.lines, [
+    "Your $1,200 share isn’t checked off yet",
+  ]);
+  // The last check in: the bill is settled.
+  assert.deepEqual(
+    paidMessage(entry({ ...rent, paid_by: ["a", "b"] }), amane, barnatt)!.lines,
+    ["“Rent” is all paid up ♡"],
+  );
+  // A third payer still out: the recipient who has paid hears that.
+  const three = entry({
+    ...rent,
+    payment_members: ["a", "b", "c"],
+    paid_by: ["a", "b"],
+  });
+  assert.deepEqual(paidMessage(three, amane, barnatt)!.lines, [
+    "Still waiting on someone else’s share",
+  ]);
+  // Covering the bill books the shares to the ledger.
+  assert.deepEqual(
+    paidMessage(entry({ ...rent, paid_by: ["a", "b"] }), amane, barnatt, true),
+    {
+      title: "Amane covered “Rent”",
+      lines: ["Your $1,200 share is on the Expenses tab now"],
+    },
+  );
+  // Never to the payer themselves, never to someone not on the bill.
+  assert.equal(paidMessage(rent, amane, amane), null);
+  assert.equal(
+    paidMessage(entry({ ...rent, payment_members: ["a"] }), amane, barnatt),
+    null,
+  );
 });
