@@ -198,6 +198,10 @@ export default function Hub() {
               amount: null,
               url: "",
             });
+          // A list of things already finished can never hold something new,
+          // so the filter moves to where the row actually went rather than
+          // swallowing it.
+          if (filter === "Done" || filter === "Bought") setFilter("All");
           form.reset();
           const box = form.elements.namedItem("title") as HTMLElement | null;
           if (box) box.style.height = "";

@@ -77,6 +77,13 @@ test("shopping filters, event export, and dialog keyboard support", async ({
   await expect(
     page.getByRole("heading", { name: "A softer living room" }),
   ).toBeVisible();
+  // Bought holds only what is finished, so adding here moves to the list
+  // the new row actually went to instead of swallowing it.
+  await page
+    .getByRole("textbox", { name: "Add items, one per line" })
+    .fill("Milk");
+  await page.keyboard.press("Enter");
+  await expect(page.getByRole("heading", { name: "Milk" })).toBeVisible();
   await page
     .getByRole("navigation")
     .getByRole("button", { name: "Calendar", exact: true })
