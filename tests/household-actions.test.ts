@@ -11,6 +11,7 @@ import {
   houseHeadline,
   isSharedScreen,
   remoteActivity,
+  shareDraft,
   collapseSeries,
   dayOrder,
   shoppingListText,
@@ -387,5 +388,53 @@ test("the headline names a title's own list by its heading", () => {
   assert.equal(
     houseHeadline(grouped, today, "you"),
     "One thing to do, rent in 5 days, and olive oil and household supplies to grab.",
+  );
+});
+
+test("a shared product page becomes a shopping draft", () => {
+  // A browser shares title + url; a store app usually puts both in the text.
+  assert.deepEqual(
+    shareDraft(
+      new URLSearchParams({
+        title: "Olive oil, 1L",
+        url: "https://www.amazon.com/dp/B000",
+      }),
+    ),
+    { title: "Olive oil, 1L", url: "https://www.amazon.com/dp/B000" },
+  );
+  assert.deepEqual(
+    shareDraft(
+      new URLSearchParams({
+        text: "Olive oil, 1L  https://a.co/d/abc  ",
+      }),
+    ),
+    { title: "Olive oil, 1L", url: "https://a.co/d/abc" },
+  );
+  // Plain words with no link are still an item; an unsafe link is dropped.
+  assert.deepEqual(shareDraft(new URLSearchParams({ text: "Paper towels" })), {
+    title: "Paper towels",
+    url: "",
+  });
+  assert.deepEqual(
+    shareDraft(new URLSearchParams({ url: "javascript:alert(1)" })),
+    null,
+  );
+  assert.equal(shareDraft(new URLSearchParams({ text: "   " })), null);
+  // Android now and then puts the link in the title; the name still comes
+  // from wherever it was, and a sentence's punctuation stays out of the link.
+  assert.deepEqual(
+    shareDraft(
+      new URLSearchParams({
+        title: "https://www.amazon.com/dp/B000",
+        text: "Olive oil",
+      }),
+    ),
+    { title: "Olive oil", url: "https://www.amazon.com/dp/B000" },
+  );
+  assert.deepEqual(
+    shareDraft(
+      new URLSearchParams({ text: "Get https://a.co/abc123, it’s cheap" }),
+    ),
+    { title: "Get, it’s cheap", url: "https://a.co/abc123" },
   );
 });

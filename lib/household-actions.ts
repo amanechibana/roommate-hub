@@ -1,5 +1,5 @@
 import { splitEvenly } from "./expenses";
-import type { Entry, Member } from "./model";
+import { safeUrl, type Entry, type Member } from "./model";
 
 export const UNDO_DURATION = 8000;
 export function isBill(entry: Pick<Entry, "kind" | "category">) {
@@ -335,4 +335,29 @@ export function editEntries(
         : {}),
     };
   });
+}
+
+// A link as shared text carries it: stopping short of the comma or period
+// that follows it in a sentence.
+const LINK = /https?:\/\/\S*[^\s.,;:!?)\]]/;
+// What a phone's share sheet hands the app. Chrome on Android leaves `url`
+// empty and puts the link in `text` with the product's name around it, now
+// and then in `title`; a browser sends the page title as `title`. Null when
+// nothing shareable came through.
+export function shareDraft(
+  params: URLSearchParams,
+): { title: string; url: string } | null {
+  const field = (key: string) => params.get(key) ?? "";
+  const url =
+    ["url", "text", "title"]
+      .map((key) => safeUrl(field(key).match(LINK)?.[0] ?? ""))
+      .find(Boolean) ?? "";
+  const words = (value: string) =>
+    value
+      .replace(new RegExp(LINK.source, "g"), "")
+      .replace(/\s+([.,;:!?])/g, "$1")
+      .replace(/\s+/g, " ")
+      .trim();
+  const title = (words(field("title")) || words(field("text"))).slice(0, 160);
+  return url || title ? { title, url } : null;
 }

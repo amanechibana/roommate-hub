@@ -19,6 +19,7 @@ import {
   isSharedScreen,
   occurrenceAssignee,
   yoursFirst,
+  shareDraft,
 } from "@/lib/household-actions";
 import {
   calendarFile,
@@ -63,7 +64,13 @@ export function useHousehold() {
     kind: Kind;
     entry?: Entry;
     date?: string;
+    draft?: { title: string; url: string };
   } | null>(null);
+  // A product page handed over from the phone's share sheet, held until the
+  // house is loaded and the shopping dialog can open with it.
+  const [shared, setShared] = useState<{ title: string; url: string } | null>(
+    null,
+  );
   const [showShortcuts, setShowShortcuts] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -139,8 +146,23 @@ export function useHousehold() {
       );
     sync();
     window.addEventListener("popstate", sync);
+    setShared(shareDraft(new URLSearchParams(window.location.search)));
     return () => window.removeEventListener("popstate", sync);
   }, []);
+  // Waits for a housemate, not just a session: a signed-out share survives
+  // the code screen and the person picker, and the kitchen screen's identity
+  // cannot add things, so there it never opens.
+  useEffect(() => {
+    if (!shared || !uid || !(demo || loaded)) return;
+    setShared(null);
+    // The query was the only copy until now; a reload must not offer the
+    // same item twice.
+    const url = new URL(window.location.href);
+    for (const key of ["title", "text", "url"]) url.searchParams.delete(key);
+    window.history.replaceState(null, "", url);
+    setTab("Shopping list");
+    setEditing({ kind: "request", draft: shared });
+  }, [shared, uid, demo, loaded]);
   function changeDisplay(value: boolean) {
     const url = new URL(window.location.href);
     if (value) url.searchParams.set("display", "1");

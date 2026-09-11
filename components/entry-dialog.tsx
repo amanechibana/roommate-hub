@@ -23,7 +23,7 @@ import {
   Trash2,
   X,
 } from "lucide-react";
-import { useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 
 import {
   SaveValues,
@@ -48,7 +48,12 @@ export default function EntryDialog({
   onPayment: (entry: Entry) => void;
   onCover: (entry: Entry) => void;
   onNudge?: (entry: Entry, member: Member) => void;
-  editing: { kind: Kind; entry?: Entry; date?: string };
+  editing: {
+    kind: Kind;
+    entry?: Entry;
+    date?: string;
+    draft?: { title: string; url: string };
+  };
   members: Member[];
   busy: boolean;
   error: string;
@@ -82,6 +87,7 @@ export default function EntryDialog({
     editing.entry?.category || categories[editing.kind][0],
   );
   const entry = editing.entry;
+  const formRef = useRef<HTMLFormElement>(null);
   // Fill only fields the person hasn't typed in; their words always win.
   async function fillFromLink(input: HTMLInputElement) {
     const url = safeUrl(input.value.trim());
@@ -102,6 +108,13 @@ export default function EntryDialog({
       setLookup("failed");
     }
   }
+  // A link that arrived from the share sheet is looked up straight away, as
+  // if it had just been pasted.
+  useEffect(() => {
+    const input = formRef.current?.elements.namedItem("url");
+    if (editing.draft?.url && input instanceof HTMLInputElement)
+      void fillFromLink(input);
+  }, []);
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const data = new FormData(event.currentTarget);
@@ -191,7 +204,7 @@ export default function EntryDialog({
           onNudge={onNudge}
         />
       )}
-      <form onSubmit={submit}>
+      <form onSubmit={submit} ref={formRef}>
         {(!entry || entry.kind === "note") && (
           <div className="filters kind-picker">
             {(["task", "event", "request", "note"] as Kind[]).map((value) => (
@@ -224,7 +237,7 @@ export default function EntryDialog({
                 ? "e.g. Coffee for the kitchen"
                 : "Give it a little title"
             }
-            defaultValue={entry?.title}
+            defaultValue={entry?.title ?? editing.draft?.title}
             maxLength={160}
             required
             autoFocus
@@ -405,7 +418,7 @@ export default function EntryDialog({
                 type="url"
                 maxLength={2048}
                 placeholder="https://www.amazon.com/…"
-                defaultValue={entry?.url}
+                defaultValue={entry?.url ?? editing.draft?.url}
                 onBlur={(event) => void fillFromLink(event.currentTarget)}
                 onPaste={(event) => {
                   const input = event.currentTarget;
