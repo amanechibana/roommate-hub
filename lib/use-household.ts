@@ -25,6 +25,7 @@ import {
   calendarFile,
   dateKey,
   demoData,
+  nextSaturday,
   parseDate,
   seriesDates,
   shiftDay,
@@ -724,6 +725,17 @@ export function useHousehold() {
     );
     persist("update", { id: entry.id, date });
   }
+  // Later than tomorrow but not "someday": the coming Saturday, counted
+  // from the chore's own day when that is still ahead.
+  function pushToWeekend(entry: Entry) {
+    const date = nextSaturday(
+      entry.date && entry.date > today ? entry.date : today,
+    );
+    setEntries((current) =>
+      current.map((e) => (e.id === entry.id ? { ...e, date } : e)),
+    );
+    persist("update", { id: entry.id, date });
+  }
   function handOff(entry: Entry, member: Member) {
     setEntries((current) =>
       current.map((e) =>
@@ -1234,6 +1246,7 @@ export function useHousehold() {
     save,
     toggle,
     pushToTomorrow,
+    pushToWeekend,
     handOff,
     nudge,
     thank,

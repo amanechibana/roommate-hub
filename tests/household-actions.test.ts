@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { demoData, shiftDay } from "../lib/model";
+import { demoData, nextSaturday, shiftDay } from "../lib/model";
 import {
   occurrenceAssignee,
   markPaid,
@@ -437,4 +437,13 @@ test("a shared product page becomes a shopping draft", () => {
     ),
     { title: "Get, it’s cheap", url: "https://a.co/abc123" },
   );
+});
+
+test("the weekend is the first Saturday strictly after a day", () => {
+  // 2026-09-08 is a Tuesday; 2026-09-12 the Saturday after.
+  assert.equal(nextSaturday("2026-09-08"), "2026-09-12");
+  assert.equal(nextSaturday("2026-09-11"), "2026-09-12");
+  assert.equal(nextSaturday("2026-09-12"), "2026-09-19");
+  assert.equal(nextSaturday("2026-09-13"), "2026-09-19");
+  assert.equal(nextSaturday("2026-12-30"), "2027-01-02");
 });
