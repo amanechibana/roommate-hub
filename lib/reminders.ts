@@ -333,17 +333,21 @@ export function thanksMessage(
     };
   return null;
 }
-// A chore changing hands from the row menu: the new owner hears about it
+// A chore landing on someone: handed over from the row menu or the editor,
+// or `fresh` — added with their name on it. The new owner hears about it
 // the moment it lands, in the same voice as a nudge.
 export function handoffMessage(
   entry: Entry,
   from: Member,
   today: string,
+  fresh = false,
 ): Digest | null {
   if (entry.kind !== "task" || entry.done || !entry.assignee) return null;
   const when = entry.date ? ` ${dueWhen(entry.date, today)}` : "";
   return {
-    title: `${from.name} handed you a to-do`,
+    title: fresh
+      ? `${from.name} added a to-do for you`
+      : `${from.name} handed you a to-do`,
     lines: [`“${entry.title}”${when}`],
   };
 }

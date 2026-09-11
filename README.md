@@ -296,7 +296,11 @@ shopping pages also support typing a title and pressing Enter to add it.
   background like a check-off, and show up on the other phone live. A
   hand-off also sends the new owner one push ("Alex handed you a to-do —
   “Take out recycling” is due tomorrow"), with the same quiet hours as a
-  nudge and no cooldown.
+  nudge and no cooldown. Reassigning in the editor does the same (for a
+  whole series, about the next open turn that changed hands), and a to-do
+  added with someone else's name on it tells them too ("Alex added a to-do
+  for you"), as does a note or shopping item turned into a to-do for them;
+  a repeating one says so once, for its first turn.
 - **Nudge:** the same menu offers **Nudge <name>** on a to-do assigned to
   someone else. It sends one push notification to that person's subscribed
   devices ("Alex gave you a nudge — “Dishes” was due yesterday"), and says
