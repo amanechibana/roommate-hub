@@ -16,7 +16,7 @@ Controls use Radix UI primitives and Motion, styled to match the house: sliding 
 
 Lists and undo notices animate out while writes continue in the background. Surviving rows move into place; dialog closes preserve focus and keyboard dismissal. Notes and expense editors share a transition with their source card or row. Reduced motion removes these transitions.
 
-The To-dos and Shopping lists open with whatever is waiting on you — your own unfinished chores and the items you said you'd grab — the way the overview already puts your chores first. Anything done, or belonging to your housemate, keeps the order it had, and a shared screen with nobody signed in reorders nothing. To-dos and shopping rows have drag handles: use a pointer or focus the handle and press Up/Down (Home/End also work). Arranging a list by hand replaces that opening order for good on this device. Order is remembered **on this device, per household**, including across reloads. It does not change the household's due dates or synchronize a new order to other devices. Row menus offer edit and delete; the usual undo still works. House notes have a quick composer, member-colored paper, individual tilts, and crumpling exits. A note's menu offers **Take down**: it leaves the fridge, the notes board, and the wall, and waits under "Taken down" at the foot of House notes, where it can be put back up or thrown out. In household settings, hover or focus a member magnet for their open chore count and balance; a repeating chore counts once there, as it does on the overview.
+The To-dos and Shopping lists open with whatever is waiting on you — your own unfinished chores and the items you said you'd grab — the way the overview already puts your chores first. Anything done, or belonging to your housemate, keeps the order it had, and a shared screen with nobody signed in reorders nothing. To-dos and shopping rows have drag handles: use a pointer or focus the handle and press Up/Down (Home/End also work). Arranging a list by hand replaces that opening order for good on this device. Order is remembered **on this device, per household**, including across reloads. It does not change the household's due dates or synchronize a new order to other devices. Row menus offer edit and delete; the usual undo still works. House notes have a quick composer, member-colored paper, individual tilts, and crumpling exits. A note's menu offers **Pin to the top**: a pinned note stays first on the fridge card, the notes board, and the wall, so the Wi-Fi password or the house rules never scroll away under newer notes (it is the note's category, so the editor can set it too). The menu also offers **Take down**: it leaves the fridge, the notes board, and the wall, and waits under "Taken down" at the foot of House notes, where it can be put back up or thrown out. In household settings, hover or focus a member magnet for their open chore count and balance; a repeating chore counts once there, as it does on the overview.
 
 The home greeting highlights a recent action by another housemate. “Lately at
 home” in household settings shows the latest 20 completed chores, purchases,
@@ -264,9 +264,12 @@ For a fresh database, apply migrations in order: `001_household.sql`,
 `003_recurring_entries.sql`, `004_device_identity.sql`, `005_chores_bills_undo.sql`,
 `006_expenses.sql`, `007_covered_bills_note_conversion.sql`,
 `008_push_subscriptions.sql`, `009_cover_expense_and_attempt_clear.sql`,
-`010_push_subscribe_hardening.sql`, `011_revoke_legacy_multi_user.sql`, and
-`012_house_activity.sql`.
+`010_push_subscribe_hardening.sql`, `011_revoke_legacy_multi_user.sql`,
+`012_house_activity.sql`, and `013_pinned_notes.sql`.
 For an existing installation, apply only the migrations newer than the last installed migration.
+Migration 013 lets a note's category be “Pinned”. Apply it before deploying
+pinned notes; without it a pin is refused and the note stays where it was.
+Verify it with `supabase/tests/pinned-notes.sql` in a disposable database.
 Migration 012 adds the private “Lately at home” feed and records the actual actor
 and completion time from successful changes. Apply it before deploying this
 frontend. Existing entries are untouched; activity starts with new actions.

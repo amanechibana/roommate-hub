@@ -10,7 +10,7 @@ import { expenseBalances } from "@/lib/expenses";
 import ExpensesTab from "./expenses-tab";
 import styles from "./hub.module.css";
 
-import { shoppingListText } from "@/lib/household-actions";
+import { isPinned, shoppingListText } from "@/lib/household-actions";
 import { AnimatedCheck } from "@/components/ui/animated-check";
 import { Button } from "@/components/ui/button";
 import { AnimatePresence, m } from "motion/react";
@@ -28,6 +28,7 @@ import {
   Home,
   Leaf,
   LogOut,
+  Pin,
   Plus,
   Settings,
   Share2,
@@ -121,6 +122,7 @@ export default function Hub() {
     notes,
     takenDown,
     takeDown,
+    pin,
     person,
     friendlyDate,
   } = house;
@@ -1078,6 +1080,12 @@ export default function Hub() {
                           onDelete={() => void remove(entry)}
                           actions={[
                             {
+                              label: isPinned(entry)
+                                ? "Unpin"
+                                : "Pin to the top",
+                              onSelect: () => pin(entry, !isPinned(entry)),
+                            },
+                            {
                               label: "Take down",
                               onSelect: () => takeDown(entry, true),
                             },
@@ -1089,7 +1097,12 @@ export default function Hub() {
                         disabled={readOnly}
                         onClick={() => setEditing({ kind: "note", entry })}
                       >
-                        <h3>{entry.title}</h3>
+                        <h3>
+                          {isPinned(entry) && (
+                            <Pin size={14} aria-label="Pinned" />
+                          )}{" "}
+                          {entry.title}
+                        </h3>
                         <p>{entry.description}</p>
                         <span>
                           {person(entry.assignee || entry.created_by)},{" "}

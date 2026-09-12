@@ -20,6 +20,7 @@ import {
   Maximize,
   Minimize,
   Pause,
+  Pin,
   Play,
   Plus,
   ShoppingBasket,
@@ -43,6 +44,8 @@ import {
   collapseSeries,
   houseHeadline,
   isBill,
+  isPinned,
+  pinnedFirst,
   shareMoney,
   titleGroup,
 } from "@/lib/household-actions";
@@ -229,7 +232,9 @@ export default function HomeBoard({
     .sort(
       (a, b) => Number(b.category === "Need") - Number(a.category === "Need"),
     );
-  const notes = entries.filter((e) => e.kind === "note" && !e.done);
+  const notes = pinnedFirst(
+    entries.filter((e) => e.kind === "note" && !e.done),
+  );
   const lately = activity.map((item) => ({
     member: person(item.actor),
     line: `${person(item.actor)} ${activityVerb(item.action)} ${item.title}`,
@@ -844,6 +849,7 @@ export default function HomeBoard({
                 (note) => (
                   <div className="fridge-message" key={note.id}>
                     <h3>
+                      {isPinned(note) && <Pin size={14} aria-label="Pinned" />}{" "}
                       {display || readOnly ? (
                         note.title
                       ) : (

@@ -20,6 +20,7 @@ import {
   occurrenceAssignee,
   yoursFirst,
   shareDraft,
+  pinnedFirst,
 } from "@/lib/household-actions";
 import {
   calendarFile,
@@ -971,6 +972,19 @@ export function useHousehold() {
       down ? `Took down “${entry.title}”` : `“${entry.title}” is back up`,
     );
   }
+  // Pinning is the note's category, so it saves like any other edit.
+  function pin(entry: Entry, pinned: boolean) {
+    const category = pinned ? "Pinned" : "Note";
+    setEntries((current) =>
+      current.map((e) => (e.id === entry.id ? { ...e, category } : e)),
+    );
+    persist("update", { id: entry.id, category });
+    setNotice(
+      pinned
+        ? `Pinned “${entry.title}” to the top`
+        : `Unpinned “${entry.title}”`,
+    );
+  }
   function togglePayment(entry: Entry) {
     if (!uid) return;
     const paid = !entry.paid_by?.includes(uid);
@@ -1151,7 +1165,9 @@ export function useHousehold() {
   );
   // A note comes down off the fridge without being thrown away: done is
   // "taken down", and it can go back up.
-  const notes = entries.filter((e) => e.kind === "note" && !e.done);
+  const notes = pinnedFirst(
+    entries.filter((e) => e.kind === "note" && !e.done),
+  );
   const takenDown = entries.filter((e) => e.kind === "note" && e.done);
   const monthEntries = entries
     .filter(
@@ -1268,6 +1284,7 @@ export function useHousehold() {
     notes,
     takenDown,
     takeDown,
+    pin,
     monthEntries,
     person,
     friendlyDate,

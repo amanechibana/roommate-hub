@@ -10,6 +10,7 @@ import {
   editEntries,
   houseHeadline,
   isSharedScreen,
+  pinnedFirst,
   remoteActivity,
   shareDraft,
   collapseSeries,
@@ -437,6 +438,22 @@ test("a shared product page becomes a shopping draft", () => {
     ),
     { title: "Get, it’s cheap", url: "https://a.co/abc123" },
   );
+});
+
+test("pinned notes come first and everything else keeps its order", () => {
+  const note = (id: string, category = "Note") =>
+    ({ ...demoData().entries[0], id, kind: "note", category }) as const;
+  const notes = [
+    note("a"),
+    note("b", "Pinned"),
+    note("c"),
+    note("d", "Pinned"),
+  ];
+  assert.deepEqual(
+    pinnedFirst(notes as never).map((e) => e.id),
+    ["b", "d", "a", "c"],
+  );
+  assert.deepEqual(pinnedFirst([]), []);
 });
 
 test("the weekend is the first Saturday strictly after a day", () => {
