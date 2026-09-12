@@ -294,9 +294,11 @@ shopping pages also support typing a title and pressing Enter to add it.
   other person. Each occurrence gets its own assignee. Shared series edits
   preserve those turns; a single occurrence can be reassigned independently.
 - **Quick moves:** a to-do row's menu offers **Push to tomorrow** (or **Push
-  back a day** for something already scheduled ahead) and **Hand to …** for
-  each housemate. Both change that one occurrence only, save in the
-  background like a check-off, and show up on the other phone live. A
+  back a day** for something already scheduled ahead), **Push to the
+  weekend** (the coming Saturday, counted from the chore's own day when that
+  is still ahead), and **Hand to …** for each housemate. All change that one
+  occurrence only, save in the background like a check-off, and show up on
+  the other phone live. A
   hand-off also sends the new owner one push ("Alex handed you a to-do —
   “Take out recycling” is due tomorrow"), with the same quiet hours as a
   nudge and no cooldown. Reassigning in the editor does the same (for a

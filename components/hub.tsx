@@ -101,6 +101,7 @@ export default function Hub() {
     save,
     toggle,
     pushToTomorrow,
+    pushToWeekend,
     handOff,
     nudge,
     thank,
@@ -381,6 +382,10 @@ export default function Hub() {
                         ? "Push back a day"
                         : "Push to tomorrow",
                     onSelect: () => pushToTomorrow(entry),
+                  },
+                  {
+                    label: "Push to the weekend",
+                    onSelect: () => pushToWeekend(entry),
                   },
                   ...(canNudge(entry) || canNudgeHouse(entry)
                     ? [

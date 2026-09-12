@@ -33,6 +33,12 @@ export function shiftDay(date: string, days: number): string {
   next.setDate(next.getDate() + days);
   return dateKey(next);
 }
+// The first Saturday strictly after a day: "the weekend" as a chore hears
+// it, so a Saturday chore pushed to the weekend goes a week, not nowhere.
+export function nextSaturday(date: string): string {
+  const day = parseDate(date).getDay();
+  return shiftDay(date, ((6 - day + 6) % 7) + 1);
+}
 // Mirrors the server's expansion: monthly steps clamp to shorter months the
 // way Postgres date + interval does (Jan 31 -> Feb 28 -> Mar 31).
 export function seriesDates(
