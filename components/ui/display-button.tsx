@@ -80,9 +80,10 @@ export function AmbientToggle() {
             : "Bring back a little background motion."
       }
     >
+      {/* Named by the words on it; aria-pressed carries the state and the
+          tooltip says what pressing does. */}
       <Button
         className="ambient-toggle"
-        aria-label={ambient ? "Pause ambient motion" : "Resume ambient motion"}
         aria-pressed={ambient && !reduced}
         onClick={toggleAmbient}
         disabled={reduced}

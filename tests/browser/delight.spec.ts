@@ -90,7 +90,7 @@ test("night weather stays legible and ambient pause stops every decorative loop"
   await expect(
     page.getByRole("button", { name: "Pet the house cat" }),
   ).toHaveAttribute("data-night", "true");
-  await page.getByRole("button", { name: "Pause ambient motion" }).click();
+  await page.getByRole("button", { name: "Motion on", exact: true }).click();
   await expect(page.locator("html")).toHaveAttribute("data-ambient", "off");
   await expect(page.locator(".wall-particles span").first()).toHaveCSS(
     "animation-name",
