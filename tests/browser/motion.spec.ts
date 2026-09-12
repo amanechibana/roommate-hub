@@ -28,7 +28,7 @@ test("ambient pause persists through reload and also stops the TV button", async
   page,
 }) => {
   await page.goto("/?display=1");
-  await page.getByRole("button", { name: "Pause ambient motion" }).click();
+  await page.getByRole("button", { name: "Motion on", exact: true }).click();
   await expect(page.locator("html")).toHaveAttribute("data-ambient", "off");
   await expect(page.locator(".wall-ambient i").first()).toHaveCSS(
     "animation-name",
@@ -36,7 +36,7 @@ test("ambient pause persists through reload and also stops the TV button", async
   );
   await page.reload();
   await expect(
-    page.getByRole("button", { name: "Resume ambient motion" }),
+    page.getByRole("button", { name: "Motion off", exact: true }),
   ).toBeVisible();
   await expect(page.locator("html")).toHaveAttribute("data-ambient", "off");
   await page.getByRole("button", { name: "Exit display" }).click();
@@ -60,7 +60,7 @@ test("reduced motion disables idle effects and keeps the controls usable", async
     "none",
   );
   await expect(
-    page.getByRole("button", { name: "Pause ambient motion" }),
+    page.getByRole("button", { name: "Motion off", exact: true }),
   ).toBeDisabled();
 });
 
@@ -126,9 +126,9 @@ test("house cat has real idle motion, reacts to keyboard and completed tasks", a
     }),
   ).toHaveAttribute("aria-pressed", "true");
   await page.getByRole("button", { name: "Open household settings" }).click();
-  await page.getByRole("button", { name: "Pause ambient motion" }).click();
+  await page.getByRole("button", { name: "Motion on", exact: true }).click();
   await expect.poll(running).toBe(0);
-  await page.getByRole("button", { name: "Resume ambient motion" }).click();
+  await page.getByRole("button", { name: "Motion off", exact: true }).click();
   await expect.poll(running).toBeGreaterThan(3);
 });
 
