@@ -26,7 +26,7 @@ import {
   MAX_STATIONS,
   defaultStations,
   filterDepartures,
-  hasDeparted,
+  catchableFirst,
   leaveInMinutes,
   minutesUntil,
   parseStoredStations,
@@ -384,11 +384,7 @@ export default function CommuteStrip({
     // Never show fewer slots than there are stations: a stop you deliberately
     // added should appear even if that means narrower chips.
     const limit = Math.max(capacity, Math.min(boards.length, MAX_STATIONS));
-    const lists = boards.map((board) =>
-      // A train that has already gone should leave the board even if the next
-      // poll has not landed yet.
-      board.departures.filter((departure) => !hasDeparted(departure, now)),
-    );
+    const lists = boards.map((board) => catchableFirst(board.departures, now));
     const mixed: Departure[] = [];
     for (let round = 0; mixed.length < limit && round < 12; round += 1)
       for (const list of lists) {

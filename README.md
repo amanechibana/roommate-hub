@@ -30,7 +30,7 @@ The cat window follows local device time and the commute strip's weather reading
 
 ## Expenses
 
-The Expenses tab records shared purchases, who paid, and even splits among selected housemates. Amounts are calculated in whole cents; any remainder is assigned consistently so shares always add up to the total. **Adjust shares** in the split box turns the even amounts into inputs, for the night one person had the wine: type each share (0 is allowed), the hint says what is left to assign, and the save is refused until they add up. An expense saved that way reopens with its shares as typed (unless they happen to be the even split, which reopens as one). Balances show who owes whom, and repayments reduce the balance without increasing monthly spending. Purchases and repayments can be edited or deleted from Activity. Entries save optimistically and refresh across devices.
+The Expenses tab records shared purchases, who paid, and even splits among selected housemates. Amounts are calculated in whole cents; any remainder is assigned consistently so shares always add up to the total. **Adjust shares** in the split box turns the even amounts into inputs, for the night one person had the wine: type each share (0 is allowed), the hint says what is left to assign, and the save is refused until they add up. An expense saved that way reopens with its shares as typed (unless they happen to be the even split, which reopens as one). Balances show who owes whom, and repayments reduce the balance without increasing monthly spending. A new entry is read out to the people in it ("Alex logged a purchase — “Groceries” $82.50, your share $27.50"; "Sam paid you back — $40.00, recorded on the ledger"), with the same quiet hours as a nudge; edits and deletions stay quiet. Purchases and repayments can be edited or deleted from Activity. Entries save optimistically and refresh across devices.
 
 Expenses use migration `006_expenses.sql` and a separate household-scoped gateway. Calendar rent/bill checks remain reminders when each person pays their own share; those payments are not posted as expenses. When nobody has paid yet, a bill with an amount offers **I covered the whole bill** — one tap checks off every payer and logs the full amount to Expenses as an even split paid by you, so housemates owe you their shares. The home board greeting shows who owes whom from the ledger, with a shortcut to settle up. Recording a repayment does not send money.
 
@@ -297,9 +297,11 @@ shopping pages also support typing a title and pressing Enter to add it.
   other person. Each occurrence gets its own assignee. Shared series edits
   preserve those turns; a single occurrence can be reassigned independently.
 - **Quick moves:** a to-do row's menu offers **Push to tomorrow** (or **Push
-  back a day** for something already scheduled ahead) and **Hand to …** for
-  each housemate. Both change that one occurrence only, save in the
-  background like a check-off, and show up on the other phone live. A
+  back a day** for something already scheduled ahead), **Push to the
+  weekend** (the coming Saturday, counted from the chore's own day when that
+  is still ahead), and **Hand to …** for each housemate. All change that one
+  occurrence only, save in the background like a check-off, and show up on
+  the other phone live. A
   hand-off also sends the new owner one push ("Alex handed you a to-do —
   “Take out recycling” is due tomorrow"), with the same quiet hours as a
   nudge and no cooldown. Reassigning in the editor does the same (for a
@@ -311,7 +313,10 @@ shopping pages also support typing a title and pressing Enter to add it.
   someone else. It sends one push notification to that person's subscribed
   devices ("Alex gave you a nudge — “Dishes” was due yesterday"), and says
   so if they haven't turned reminders on anywhere. A to-do can be nudged once
-  every fifteen minutes. Needs the push setup below. Open a rent or bill
+  every fifteen minutes. A to-do that is nobody's, or an item nobody has
+  said they'd grab, offers **Nudge the house** instead: everyone else's
+  phones hear it ("Alex nudged the house — “Trash” was due yesterday, it's
+  nobody's yet"), on the same clock. Needs the push setup below. Open a rent or bill
   event and each unpaid housemate's check gets a **Nudge <name>** link that
   does the same for their share ("“Rent” ($2,400) is due today — your share
   isn't checked off"). Between 10pm and 8am household time nudges don't go

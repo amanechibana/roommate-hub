@@ -370,6 +370,47 @@ export function thanksMessage(
     };
   return null;
 }
+// The ledger changing under someone: a shared purchase tells each other
+// sharer their cut (and the payer, if someone else logged it for them), and
+// a repayment tells the person paid back, naming who paid, since the
+// bookkeeping is often done by a third housemate. Said as ledger entries,
+// never as money moving. Null when this person has nothing in it.
+export function expenseMessage(
+  values: Pick<
+    Expense,
+    "kind" | "title" | "amount_cents" | "paid_by" | "shares" | "recipient"
+  >,
+  from: Member,
+  to: Member,
+  people: Member[],
+): Digest | null {
+  if (to.user_id === from.user_id) return null;
+  const total = expenseMoney(values.amount_cents);
+  const payer = people.find((m) => m.user_id === values.paid_by);
+  const byProxy = payer && payer.user_id !== from.user_id;
+  if (values.kind === "settlement")
+    return values.recipient === to.user_id
+      ? {
+          title: `${payer?.name ?? from.name} paid you back`,
+          lines: [
+            `${total} — “${values.title}”, recorded on the ledger${byProxy ? ` by ${from.name}` : ""}`,
+          ],
+        }
+      : null;
+  const share = values.shares[to.user_id] ?? 0;
+  if (to.user_id === values.paid_by)
+    return {
+      title: `${from.name} logged a purchase you paid for`,
+      lines: [`“${values.title}” ${total} — the others owe you their shares`],
+    };
+  if (!share) return null;
+  return {
+    title: `${from.name} logged a purchase`,
+    lines: [
+      `“${values.title}” ${total}${byProxy ? `, paid by ${payer.name}` : ""} — your share ${expenseMoney(share)}`,
+    ],
+  };
+}
 // A chore landing on someone: handed over from the row menu or the editor,
 // or `fresh` — added with their name on it. The new owner hears about it
 // the moment it lands, in the same voice as a nudge.
@@ -386,6 +427,30 @@ export function handoffMessage(
       ? `${from.name} added a to-do for you`
       : `${from.name} handed you a to-do`,
     lines: [`“${entry.title}”${when}`],
+  };
+}
+// A nudge at the whole house: a shared chore nobody has picked up, or an
+// item nobody is grabbing. Everyone but the sender hears it, once.
+export function houseNudgeMessage(
+  entry: Entry,
+  from: Member,
+  today: string,
+): Digest | null {
+  if (entry.done || entry.assignee || !["task", "request"].includes(entry.kind))
+    return null;
+  const title = `${from.name} nudged the house`;
+  if (entry.kind === "request")
+    return {
+      title,
+      lines: [`“${entry.title}” is on the list — nobody’s grabbing it yet`],
+    };
+  return {
+    title,
+    lines: [
+      entry.date
+        ? `“${entry.title}” ${dueWhen(entry.date, today)} — it’s nobody’s yet`
+        : `“${entry.title}” is waiting for someone`,
+    ],
   };
 }
 // One housemate poking another: about an open to-do of theirs, a shopping

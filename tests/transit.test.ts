@@ -10,6 +10,7 @@ import {
   parseStoredStations,
   pathStation,
   filterDepartures,
+  catchableFirst,
   hasDeparted,
   leaveInMinutes,
   minutesUntil,
@@ -680,6 +681,44 @@ test("drops a train only once it is properly gone", () => {
   assert.equal(hasDeparted(train(now - 120), now), true);
   // Without a time there is nothing to judge, so it stays.
   assert.equal(hasDeparted(train(null), now), false);
+});
+
+test("a train you cannot walk to in time waits behind the ones you can", () => {
+  const now = 1_000_000;
+  const train = (id: string, minutes: number, walk?: number) => ({
+    ...board[0],
+    id,
+    walk,
+    minutes,
+    at: now + minutes * 60,
+  });
+  // Walk seven minutes: the two about to leave are gone for you, so the ones
+  // you can still make take the board's places.
+  const list = [
+    train("now", 0, 7),
+    train("soon", 2, 7),
+    train("catchable", 9, 7),
+    train("later", 16, 7),
+  ];
+  assert.deepEqual(
+    catchableFirst(list, now).map((departure) => departure.id),
+    ["catchable", "later", "now", "soon"],
+  );
+  // Order within each group is the order the feed gave.
+  assert.deepEqual(
+    catchableFirst([train("b", 2, 7), train("a", 1, 7)], now).map((d) => d.id),
+    ["b", "a"],
+  );
+  // Without a walk time nothing is out of reach, so nothing moves.
+  assert.deepEqual(
+    catchableFirst([train("x", 0), train("y", 9)], now).map((d) => d.id),
+    ["x", "y"],
+  );
+  // A train properly gone still leaves the board.
+  assert.deepEqual(
+    catchableFirst([{ ...train("gone", 0, 7), at: now - 120 }], now),
+    [],
+  );
 });
 
 test("PATH departures carry an absolute arrival time", () => {

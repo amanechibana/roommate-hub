@@ -650,7 +650,7 @@ export default function HomeBoard({
                       <Button
                         className="board-pay"
                         onClick={() => onPay(entry)}
-                        aria-label={`Mark my share of ${entry.title} paid`}
+                        aria-label={`I paid my share of ${entry.title}`}
                       >
                         <Check size={14} />
                         <span>I paid</span>
@@ -937,7 +937,7 @@ export default function HomeBoard({
             <AmbientToggle />
             <Button
               onClick={() => void fullscreen()}
-              aria-label={full ? "Leave fullscreen" : "Enter fullscreen"}
+              aria-label={full ? "Leave full screen" : "Enter full screen"}
             >
               {full ? <Minimize size={17} /> : <Maximize size={17} />}
               <span>Full screen</span>

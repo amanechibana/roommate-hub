@@ -102,6 +102,7 @@ export default function Hub() {
     save,
     toggle,
     pushToTomorrow,
+    pushToWeekend,
     handOff,
     nudge,
     thank,
@@ -200,6 +201,10 @@ export default function Hub() {
               amount: null,
               url: "",
             });
+          // A list of things already finished can never hold something new,
+          // so the filter moves to where the row actually went rather than
+          // swallowing it.
+          if (filter === "Done" || filter === "Bought") setFilter("All");
           form.reset();
           const box = form.elements.namedItem("title") as HTMLElement | null;
           if (box) box.style.height = "";
@@ -242,10 +247,10 @@ export default function Hub() {
             maxLength={160}
           />
         )}
-        <Button
-          className="button small"
-          aria-label={`Quick add ${labels[kind]}`}
-        >
+        {/* Named by the word on it. Labelling it "Quick add to-do" gave it
+            the box's own name on the to-do list, and left a button reading
+            Add that no one could ask for by that name. */}
+        <Button className="button small">
           <Plus size={16} />
           Add
         </Button>
@@ -265,6 +270,15 @@ export default function Hub() {
     !!entry.assignee &&
     entry.assignee !== uid &&
     members.some(
+      (m) => m.user_id === entry.assignee && m.name !== "Housemates",
+    );
+  // Nobody's in particular: a shared chore or an unclaimed item can be
+  // nudged at the whole house instead.
+  const canNudgeHouse = (entry: Entry) =>
+    !demo &&
+    Boolean(process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY) &&
+    !entry.done &&
+    !members.some(
       (m) => m.user_id === entry.assignee && m.name !== "Housemates",
     );
   // Phones hand the list to Messages; a laptop just copies it.
@@ -371,10 +385,16 @@ export default function Hub() {
                         : "Push to tomorrow",
                     onSelect: () => pushToTomorrow(entry),
                   },
-                  ...(canNudge(entry)
+                  {
+                    label: "Push to the weekend",
+                    onSelect: () => pushToWeekend(entry),
+                  },
+                  ...(canNudge(entry) || canNudgeHouse(entry)
                     ? [
                         {
-                          label: `Nudge ${person(entry.assignee)}`,
+                          label: canNudge(entry)
+                            ? `Nudge ${person(entry.assignee)}`
+                            : "Nudge the house",
                           onSelect: () => void nudge(entry),
                         },
                       ]
@@ -990,10 +1010,12 @@ export default function Hub() {
                                       onSelect: () => needAgain(entry),
                                     },
                                   ]
-                                : canNudge(entry)
+                                : canNudge(entry) || canNudgeHouse(entry)
                                   ? [
                                       {
-                                        label: `Nudge ${person(entry.assignee)}`,
+                                        label: canNudge(entry)
+                                          ? `Nudge ${person(entry.assignee)}`
+                                          : "Nudge the house",
                                         onSelect: () => void nudge(entry),
                                       },
                                     ]
