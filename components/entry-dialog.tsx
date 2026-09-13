@@ -4,6 +4,7 @@ import { PaperDialog } from "./ui/dialog";
 import { Button } from "@/components/ui/button";
 
 import BillChecks from "@/components/bill-checks";
+import GymLog from "@/components/gym-log";
 import { homeRequest } from "@/lib/home-client";
 import {
   dateKey,
@@ -203,6 +204,16 @@ export default function EntryDialog({
           onCover={onCover}
           onNudge={onNudge}
         />
+      )}
+      {entry?.category === "Gym" && (
+        <>
+          {entry.time_of_day && (
+            <p className="subtle">
+              Scheduled for {entry.time_of_day.replace(/^0/, "")}
+            </p>
+          )}
+          <GymLog entry={entry} members={members} uid={uid} />
+        </>
       )}
       <form onSubmit={submit} ref={formRef}>
         {(!entry || entry.kind === "note") && (

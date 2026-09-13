@@ -1,0 +1,357 @@
+/* Agreements: settings-page framing, with the contract itself rendered as
+   paper like the House notes cards (cream in both themes, like the notes). */
+
+.section {
+  grid-column: 1 / -1;
+}
+.rows {
+  display: grid;
+  gap: 10px;
+  margin-top: 16px;
+}
+.row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  text-align: left;
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--paper);
+  color: var(--ink);
+}
+.row:hover {
+  background: var(--sage);
+}
+.rowCopy {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.rowCopy strong {
+  font-size: 14px;
+}
+.chip {
+  flex-shrink: 0;
+  font-size: 11px;
+  padding: 3px 10px;
+  border-radius: 20px;
+  border: 1px solid var(--line);
+  color: var(--muted);
+  background: transparent;
+  white-space: nowrap;
+}
+.chipWaiting {
+  color: var(--terracotta);
+  border-color: currentColor;
+}
+.chipActive {
+  color: var(--green);
+  border-color: currentColor;
+}
+.count {
+  flex-shrink: 0;
+  min-width: 18px;
+  text-align: center;
+  padding: 2px 6px;
+  border-radius: 10px;
+  font-size: 10px;
+  font-weight: 600;
+  background: var(--terracotta);
+  color: #fff;
+}
+.backBar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 14px 0 16px;
+}
+
+/* The document. */
+.paper {
+  background: #fdf5dd;
+  border: 1px solid #e7d9ad;
+  border-radius: 12px;
+  padding: 26px 28px 30px;
+  color: #56492e;
+  box-shadow:
+    0 4px 0 #bca36b0b,
+    0 12px 24px #57492306;
+}
+.paper h3 {
+  margin: 26px 0 10px;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+  color: #57492c;
+}
+.paper > section:first-child h3 {
+  margin-top: 0;
+  font-family: Georgia, serif;
+  font-weight: 400;
+  font-size: 21px;
+  letter-spacing: -0.3px;
+}
+.paper p {
+  margin: 0 0 10px;
+  font-size: 13px;
+  line-height: 1.75;
+  color: #5b5138;
+}
+.paper ul {
+  margin: 0 0 12px;
+  padding-left: 20px;
+}
+.paper li {
+  font-size: 13px;
+  line-height: 1.7;
+  color: #5b5138;
+}
+
+/* Draft-time elected-parameter editors, inline under their article. */
+.editors {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 12px;
+  margin: 10px 0 18px;
+  padding: 14px;
+  border: 1px dashed #cbbd8d;
+  border-radius: 10px;
+  background: #fffdf3;
+}
+.editors label {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  font-size: 11px;
+  color: #6d6142;
+}
+.editors input,
+.editors select,
+.editors textarea {
+  background: #fffefa;
+  border-color: #ddd0a6;
+  color: #453a22;
+  font-size: 13px;
+}
+.wide {
+  grid-column: 1 / -1;
+}
+.editors label.choice {
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+}
+.choice input {
+  width: auto;
+}
+.template {
+  display: grid;
+  gap: 8px;
+  grid-column: 1 / -1;
+}
+.templateRow {
+  display: grid;
+  grid-template-columns: 110px 1fr 1fr;
+  gap: 8px;
+  align-items: center;
+}
+.checkTextarea {
+  width: 100%;
+  min-height: 150px;
+  margin-bottom: 12px;
+  resize: vertical;
+  background: #fffdf3;
+  border: 1px dashed #cbbd8d;
+  border-radius: 10px;
+  color: #453a22;
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 20px;
+}
+.signatures {
+  display: flex;
+  gap: 44px;
+  flex-wrap: wrap;
+  margin-top: 24px;
+  padding-top: 16px;
+  border-top: 1px solid #86734a33;
+}
+.signatures > div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.signatures strong {
+  font-family: Georgia, serif;
+  font-style: italic;
+  font-weight: 400;
+  font-size: 21px;
+  color: #4a3d22;
+}
+.signatures small {
+  font-size: 11px;
+  color: #857748;
+}
+
+/* Amendments and relief, panels under the paper. */
+.subPanel {
+  margin-top: 20px;
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--paper);
+}
+.subPanel h4 {
+  margin: 0 0 4px;
+  font-size: 14px;
+  color: var(--ink);
+}
+.subPanel h5 {
+  margin: 18px 0 4px;
+  font-size: 12px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+.item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 10px 0;
+  border-top: 1px solid var(--line);
+  font-size: 13px;
+}
+.item:first-of-type {
+  border-top: 0;
+}
+.itemCopy {
+  flex: 1;
+  min-width: 180px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.itemCopy small {
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.5;
+}
+.itemCopy p {
+  margin: 2px 0 0;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--muted);
+}
+.itemActions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-left: auto;
+}
+.inlineForm {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.inlineForm input,
+.inlineForm select {
+  font-size: 13px;
+}
+.hoursInput {
+  width: 72px;
+}
+.amendForm {
+  display: grid;
+  gap: 10px;
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+}
+.amendForm label {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  font-size: 11px;
+  color: var(--muted);
+}
+.numbersRow {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 10px;
+}
+.statLine {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin: 4px 0 0;
+  font-size: 13px;
+}
+.statLine small {
+  color: var(--muted);
+  font-size: 11px;
+}
+.history {
+  list-style: none;
+  margin: 4px 0 0;
+  padding: 0;
+}
+.history li {
+  padding: 6px 0;
+  border-top: 1px solid var(--line);
+  font-size: 12px;
+  color: var(--muted);
+}
+.history li:first-child {
+  border-top: 0;
+}
+
+/* Nav badges. The sidebar rail positions .nav-count absolutely against the
+   nav button; the settings link needs the same anchor. The topbar badge
+   overrides the rail's placement (tripled for specificity over
+   `.shell .nav-count`) to ride the avatar button's corner. */
+.badgeHost {
+  position: relative;
+}
+.topbarBadge.topbarBadge.topbarBadge {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  margin: 0;
+  min-width: 17px;
+  text-align: center;
+  padding: 1px 5px;
+  font-size: 9px;
+  line-height: 14px;
+  font-weight: 600;
+  border-radius: 9px;
+  background: var(--terracotta);
+  color: #fff;
+}
+
+@media (max-width: 650px) {
+  .paper {
+    padding: 18px 16px 22px;
+  }
+  .templateRow {
+    grid-template-columns: 90px 1fr 1fr;
+  }
+  .signatures {
+    gap: 24px;
+  }
+}

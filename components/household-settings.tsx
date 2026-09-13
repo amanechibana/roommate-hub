@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 
 import PushSettings from "@/components/push-settings";
 import CalendarFeed from "@/components/calendar-feed";
+import AgreementsSection from "@/components/agreements-section";
 import { AmbientToggle } from "@/components/ui/display-button";
 import { type Member } from "@/lib/model";
 import { ArrowDownToLine, Plus, ShieldCheck, Users } from "lucide-react";
@@ -14,6 +15,7 @@ type Props = Pick<
   | "demo"
   | "household"
   | "members"
+  | "entries"
   | "busy"
   | "live"
   | "exportCalendar"
@@ -21,11 +23,13 @@ type Props = Pick<
   | "sharedScreen"
   | "uid"
   | "setChoosingPerson"
+  | "refresh"
 > & { avatar: (member: Member, index: number) => import("react").ReactNode };
 export default function HouseholdSettings({
   demo,
   household,
   members,
+  entries,
   busy,
   live,
   exportCalendar,
@@ -34,6 +38,7 @@ export default function HouseholdSettings({
   avatar,
   uid,
   setChoosingPerson,
+  refresh,
 }: Props) {
   if (!household) return null;
   return (
@@ -145,6 +150,12 @@ export default function HouseholdSettings({
           isn’t connected.
         </p>
       </section>
+      <AgreementsSection
+        members={members}
+        uid={uid}
+        entries={entries}
+        refreshHousehold={refresh}
+      />
     </div>
   );
 }

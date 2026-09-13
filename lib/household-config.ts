@@ -61,10 +61,18 @@ export const labels: Record<Kind, string> = {
 };
 export const categories: Record<Kind, string[]> = {
   task: ["Chore", "To-do", "Personal"],
-  event: ["Together", "Rent", "Bill", "Other"],
+  event: ["Together", "Rent", "Bill", "Gym", "Other"],
   request: ["Need", "Want"],
   note: ["Note", "Pinned"],
 };
+// Calendar chips take their colors from the globals.css palette (sage by
+// default, peach for rent); Gym gets the remaining paper tone. Declared here
+// because the chip color is applied inline — globals.css belongs to another
+// surface.
+export const gymEventColors = {
+  background: "var(--lilac)",
+  color: "#8d7aa8",
+} as const;
 export const kindTabs: Record<Kind, Tab> = {
   task: "To-dos",
   event: "Calendar",

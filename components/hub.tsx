@@ -50,6 +50,9 @@ import {
   tabs,
 } from "@/lib/household-config";
 import { useHousehold } from "@/lib/use-household";
+import { useAgreements } from "@/lib/use-agreements";
+import { AgreementsProvider } from "./agreements-context";
+import agreementStyles from "./agreements.module.css";
 import ActivityFeed from "./activity-feed";
 import CalendarTab from "./calendar-tab";
 import EntryDialog from "./entry-dialog";
@@ -131,6 +134,13 @@ export default function Hub() {
     person,
     friendlyDate,
   } = house;
+  const agreements = useAgreements({
+    enabled: session && !demo,
+    memberId: uid,
+    members,
+    householdId: household?.id,
+    demo,
+  });
   // The shared screen reads the house but is nobody in particular, so nothing
   // that needs an author is offered. The gateway refuses that identity anyway.
   const readOnly = sharedScreen;
@@ -622,6 +632,8 @@ export default function Hub() {
     );
 
   return (
+    // The provider wraps the shell without re-indenting six hundred lines.
+    <AgreementsProvider value={agreements}>
     <div
       className={`${styles.shell} app-shell ${tab === "Overview" || tab === "Calendar" ? "fitted-app" : ""}`}
     >
@@ -679,10 +691,18 @@ export default function Hub() {
             <HouseCompanion />
           </div>
           <Button
-            className={`settings-link ${tab === "Our household" ? "selected" : ""}`}
+            className={`settings-link ${tab === "Our household" ? "selected" : ""} ${agreementStyles.badgeHost}`}
             onClick={() => setTab("Our household")}
           >
             <Settings size={18} /> Our household
+            {agreements.pendingCount > 0 && (
+              <span
+                className="nav-count"
+                aria-label={`${agreements.pendingCount} agreement ${agreements.pendingCount === 1 ? "action" : "actions"} waiting`}
+              >
+                {agreements.pendingCount}
+              </span>
+            )}
           </Button>
           <div className="sidebar-profile">
             <Button
@@ -737,7 +757,7 @@ export default function Hub() {
               {demo ? "Demo home" : "Private household"}
             </span>
             <Button
-              className="icon-button avatar-stack"
+              className={`icon-button avatar-stack ${agreementStyles.badgeHost}`}
               aria-label="Open household settings"
               onClick={() => setTab("Our household")}
             >
@@ -751,6 +771,14 @@ export default function Hub() {
                     {member.name.slice(0, 1).toUpperCase()}
                   </span>
                 ),
+              )}
+              {agreements.pendingCount > 0 && (
+                <span
+                  className={`nav-count ${agreementStyles.topbarBadge}`}
+                  aria-label={`${agreements.pendingCount} agreement ${agreements.pendingCount === 1 ? "action" : "actions"} waiting`}
+                >
+                  {agreements.pendingCount}
+                </span>
               )}
             </Button>
             {!demo && (
@@ -1250,5 +1278,6 @@ export default function Hub() {
         )}
       </AnimatePresence>
     </div>
+    </AgreementsProvider>
   );
 }

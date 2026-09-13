@@ -91,6 +91,12 @@ export function DayDialog({
               {entry.series_id ? "↻ " : ""}
               {entry.done ? "✓ " : ""}
               {entry.title}
+              {entry.time_of_day && (
+                <small style={{ fontWeight: 400, color: "var(--muted)" }}>
+                  {" "}
+                  {entry.time_of_day.replace(/^0/, "")}
+                </small>
+              )}
             </strong>
             <small>
               {entry.category}, {person(entry.assignee)}

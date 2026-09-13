@@ -35,7 +35,7 @@ export function sameOrigin(request: Request) {
 export async function sharedDatabase(
   operation: string,
   payload: Record<string, unknown> = {},
-  gateway: "shared_home" | "shared_expenses" | "shared_push" = "shared_home",
+  gateway: "shared_home" | "shared_expenses" | "shared_push" | "shared_agreements" = "shared_home",
 ) {
   const db = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
