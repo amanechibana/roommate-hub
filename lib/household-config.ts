@@ -60,7 +60,7 @@ export const labels: Record<Kind, string> = {
   note: "note",
 };
 export const categories: Record<Kind, string[]> = {
-  task: ["Chore", "To-do"],
+  task: ["Chore", "To-do", "Personal"],
   event: ["Together", "Rent", "Bill", "Other"],
   request: ["Need", "Want"],
   note: ["Note", "Pinned"],

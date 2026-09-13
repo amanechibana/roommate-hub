@@ -64,6 +64,13 @@ test("digest gathers own and unassigned chores, skipping the other person's", ()
       done: true,
     }),
     entry({ title: "Later", date: "2026-09-09", assignee: "a" }),
+    // Yours to do, but not the house's to nag about.
+    entry({
+      title: "Renters insurance",
+      date: "2026-09-08",
+      assignee: "a",
+      category: "Personal",
+    }),
   ];
   const digest = memberDigest(entries, amane, "2026-09-08")!;
   assert.equal(digest.title, "Good morning, Amane ☀️");

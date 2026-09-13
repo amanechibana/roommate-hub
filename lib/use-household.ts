@@ -21,6 +21,7 @@ import {
   yoursFirst,
   shareDraft,
   pinnedFirst,
+  isPersonal,
 } from "@/lib/household-actions";
 import {
   calendarFile,
@@ -1151,12 +1152,16 @@ export function useHousehold() {
       shoppingOrder.touched ? null : uid,
     ),
   );
-  const filteredTasks = tasks.filter(
-    (e) =>
-      filter === "All" ||
-      (filter === "Mine" && e.assignee === uid) ||
-      (filter === "Open" && !e.done) ||
-      (filter === "Done" && e.done),
+  // Personal to-dos only ever show under their own filter: the other lists
+  // are the house's, and that is where someone goes looking for one.
+  const filteredTasks = tasks.filter((e) =>
+    filter === "Personal"
+      ? isPersonal(e)
+      : !isPersonal(e) &&
+        (filter === "All" ||
+          (filter === "Mine" && e.assignee === uid) ||
+          (filter === "Open" && !e.done) ||
+          (filter === "Done" && e.done)),
   );
   const filteredShopping = shopping.filter((e) =>
     filter === "Bought"

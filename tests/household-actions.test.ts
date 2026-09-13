@@ -1,6 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { demoData, nextSaturday, shiftDay } from "../lib/model";
+import type { Entry } from "../lib/model";
 import {
   occurrenceAssignee,
   markPaid,
@@ -9,6 +10,8 @@ import {
   billShare,
   editEntries,
   houseHeadline,
+  houseTasks,
+  isPersonal,
   isSharedScreen,
   pinnedFirst,
   remoteActivity,
@@ -454,6 +457,40 @@ test("pinned notes come first and everything else keeps its order", () => {
     ["b", "d", "a", "c"],
   );
   assert.deepEqual(pinnedFirst([]), []);
+});
+
+test("a personal to-do is the house's business only to the person whose it is", () => {
+  const task = (category: string) =>
+    ({ kind: "task", category }) as Pick<Entry, "kind" | "category">;
+  assert.equal(isPersonal(task("Personal")), true);
+  assert.equal(isPersonal(task("Chore")), false);
+  // Only a to-do can be personal; a note keeps its own categories.
+  assert.equal(isPersonal({ kind: "note", category: "Personal" }), false);
+  assert.deepEqual(
+    houseTasks([task("Chore"), task("Personal"), task("To-do")]).map(
+      (e) => e.category,
+    ),
+    ["Chore", "To-do"],
+  );
+});
+
+test("the house headline counts house to-dos, not personal ones", () => {
+  const today = "2026-09-13";
+  const due = (category: string, assignee: string | null) =>
+    ({
+      ...demoData().entries[0],
+      kind: "task",
+      category,
+      date: today,
+      done: false,
+      assignee,
+    }) as Entry;
+  // A personal to-do due today is not something the house is waiting on.
+  assert.equal(houseHeadline([due("Personal", "you")], today, "you"), "");
+  assert.equal(
+    houseHeadline([due("Chore", "you"), due("Personal", "you")], today, "you"),
+    "One thing to do, and it’s yours.",
+  );
 });
 
 test("the weekend is the first Saturday strictly after a day", () => {

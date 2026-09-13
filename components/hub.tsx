@@ -10,7 +10,12 @@ import { expenseBalances } from "@/lib/expenses";
 import ExpensesTab from "./expenses-tab";
 import styles from "./hub.module.css";
 
-import { isPinned, shoppingListText } from "@/lib/household-actions";
+import {
+  houseTasks,
+  isPersonal,
+  isPinned,
+  shoppingListText,
+} from "@/lib/household-actions";
 import { AnimatedCheck } from "@/components/ui/animated-check";
 import { Button } from "@/components/ui/button";
 import { AnimatePresence, m } from "motion/react";
@@ -197,7 +202,13 @@ export default function Hub() {
               category,
               description: "",
               date: null,
-              assignee: kind === "task" && filter === "Mine" ? uid : null,
+              // A personal to-do is yours by definition, so it carries your
+              // name the way one added under Mine does — that is how the
+              // other person can tell whose it is when they go looking.
+              assignee:
+                kind === "task" && (filter === "Mine" || filter === "Personal")
+                  ? uid
+                  : null,
               amount: null,
               url: "",
             });
@@ -569,8 +580,12 @@ export default function Hub() {
 
   const PageIcon = tabs.find((item) => item.name === tab)?.icon || Settings;
   const now = new Date();
-  const openTasks = tasks.filter((entry) => !entry.done);
-  const doneCount = tasks.length - openTasks.length;
+  // Nav badges and the house's counts are about house to-dos; the progress
+  // bar counts whichever list is on show, so the Personal lane gets its own.
+  const openTasks = houseTasks(tasks).filter((entry) => !entry.done);
+  const listTasks =
+    filter === "Personal" ? tasks.filter(isPersonal) : houseTasks(tasks);
+  const doneCount = listTasks.filter((entry) => entry.done).length;
   const neededItems = shopping.filter((entry) => !entry.done);
   // The legacy shared identity is a row in members, not a person in the house.
   const housemates = members.filter((member) => member.name !== "Housemates");
@@ -836,18 +851,18 @@ export default function Hub() {
               <div className="panel-heading">
                 <SegmentedControl
                   label="To-do filters"
-                  values={["All", "Mine", "Open", "Done"]}
+                  values={["All", "Mine", "Personal", "Open", "Done"]}
                   value={filter}
                   onChange={setFilter}
                 />
                 <div className="list-progress">
                   <span>
-                    {doneCount} of {tasks.length} done
+                    {doneCount} of {listTasks.length} done
                   </span>
                   <progress
                     aria-label="To-do completion"
                     value={doneCount}
-                    max={Math.max(1, tasks.length)}
+                    max={Math.max(1, listTasks.length)}
                   />
                 </div>
               </div>
@@ -855,13 +870,7 @@ export default function Hub() {
               <AnimatePresence initial={false}>
                 {filteredTasks.map(taskRow)}
               </AnimatePresence>
-              {!tasks.filter(
-                (e) =>
-                  filter === "All" ||
-                  (filter === "Mine" && e.assignee === uid) ||
-                  (filter === "Open" && !e.done) ||
-                  (filter === "Done" && e.done),
-              ).length && (
+              {!filteredTasks.length && (
                 <Empty text="Nothing here. A little breathing room." />
               )}
             </section>

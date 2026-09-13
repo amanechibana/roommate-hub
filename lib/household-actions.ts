@@ -97,7 +97,12 @@ export function houseHeadline(
   viewer: string | null,
 ): string {
   const due = entries.filter(
-    (e) => e.kind === "task" && !e.done && e.date && e.date <= today,
+    (e) =>
+      e.kind === "task" &&
+      !isPersonal(e) &&
+      !e.done &&
+      e.date &&
+      e.date <= today,
   );
   const mine = viewer ? due.filter((e) => e.assignee === viewer).length : 0;
   const bill = entries
@@ -370,3 +375,14 @@ export const isPinned = (entry: Pick<Entry, "kind" | "category">) =>
 export function pinnedFirst(notes: Entry[]): Entry[] {
   return [...notes.filter(isPinned), ...notes.filter((e) => !isPinned(e))];
 }
+
+// A personal to-do is yours rather than the house's: renew the renters
+// insurance, chase the landlord about your room. It stays on the shared
+// table so the other person can find it under the Personal filter, but it
+// is not house business, so it keeps off the overview, the wall, and the
+// digest. Like "Pinned", it is a category, so it needs no new column.
+export const isPersonal = (entry: Pick<Entry, "kind" | "category">) =>
+  entry.kind === "task" && entry.category === "Personal";
+export const houseTasks = <T extends Pick<Entry, "kind" | "category">>(
+  entries: T[],
+) => entries.filter((e) => !isPersonal(e));
