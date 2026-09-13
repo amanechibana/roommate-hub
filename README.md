@@ -265,8 +265,15 @@ For a fresh database, apply migrations in order: `001_household.sql`,
 `006_expenses.sql`, `007_covered_bills_note_conversion.sql`,
 `008_push_subscriptions.sql`, `009_cover_expense_and_attempt_clear.sql`,
 `010_push_subscribe_hardening.sql`, `011_revoke_legacy_multi_user.sql`,
-`012_house_activity.sql`, `013_pinned_notes.sql`, and `014_personal_todos.sql`.
+`012_house_activity.sql`, `013_pinned_notes.sql`, `014_personal_todos.sql`, and
+`015_agreements.sql`.
 For an existing installation, apply only the migrations newer than the last installed migration.
+Migration 015 adds the house and gym agreements: the signed documents, amendments,
+relief requests (swaps, skips, reschedules, gym PTO), generated gym sessions with a
+time of day, and per-person workout logs. **Apply it before deploying this
+frontend**; without it the Agreements section cannot load and gym sessions cannot
+be placed on the calendar. Existing entries are untouched. Verify it with
+`supabase/tests/agreements.sql` in a disposable database.
 Migration 014 lets a to-do's category be “Personal”. Apply it before deploying
 personal to-dos; without it the category is refused and the to-do stays a house
 one. Verify it with `supabase/tests/personal-todos.sql` in a disposable database.

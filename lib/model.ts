@@ -7,6 +7,7 @@ export type Entry = {
   description: string;
   category: string;
   date: string | null;
+  time_of_day?: string | null; // "HH:MM"
   assignee: string | null;
   amount: number | null;
   url: string;

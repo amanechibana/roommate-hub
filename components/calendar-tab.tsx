@@ -1,9 +1,11 @@
 "use client";
 import { Empty } from "./house-dialogs";
+import GymStrip from "./gym-strip";
 
 import { Button } from "@/components/ui/button";
 
 import { billPaid, dayOrder, isBill } from "@/lib/household-actions";
+import { gymEventColors } from "@/lib/household-config";
 import { dateKey, parseDate } from "@/lib/model";
 import { ArrowDownToLine, ChevronLeft, ChevronRight } from "lucide-react";
 import { type CSSProperties } from "react";
@@ -13,6 +15,7 @@ type Props = Pick<
   ReturnType<typeof useHousehold>,
   | "members"
   | "entries"
+  | "uid"
   | "setEditing"
   | "sharedScreen"
   | "month"
@@ -32,6 +35,7 @@ type Props = Pick<
 export default function CalendarTab({
   members,
   entries,
+  uid,
   setEditing,
   sharedScreen,
   month,
@@ -89,6 +93,7 @@ export default function CalendarTab({
           </Button>
         </div>
       </div>
+      <GymStrip entries={entries} members={members} uid={uid} today={today} />
       <p className="calendar-help desktop-calendar-help">
         All-day plans and dated chores. Select a day to add a plan, or an entry
         to edit it.
@@ -128,6 +133,12 @@ export default function CalendarTab({
                   {entry.series_id ? "↻ " : ""}
                   {entry.done ? "✓ " : ""}
                   {entry.title}
+                  {entry.time_of_day && (
+                    <small style={{ fontWeight: 400, color: "var(--muted)" }}>
+                      {" "}
+                      {entry.time_of_day.replace(/^0/, "")}
+                    </small>
+                  )}
                 </strong>
                 <small>
                   {entry.category}, {person(entry.assignee)}
@@ -243,6 +254,9 @@ export default function CalendarTab({
                           ),
                         ) % 3
                       } ${entry.category === "Rent" ? "rent" : ""} ${entry.done ? "completed-event" : ""}`}
+                      style={
+                        entry.category === "Gym" ? gymEventColors : undefined
+                      }
                       disabled={sharedScreen}
                       onClick={() => setEditing({ kind: entry.kind, entry })}
                     >
