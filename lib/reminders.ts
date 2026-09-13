@@ -1,4 +1,10 @@
-import { billPaid, billShare, isBill, shareMoney } from "./household-actions";
+import {
+  billPaid,
+  billShare,
+  isBill,
+  isPersonal,
+  shareMoney,
+} from "./household-actions";
 import {
   expenseBalances,
   expenseMoney,
@@ -95,6 +101,7 @@ export function memberDigest(
     .filter(
       (e) =>
         e.kind === "task" &&
+        !isPersonal(e) &&
         !e.done &&
         e.date &&
         e.date <= today &&
@@ -158,6 +165,7 @@ export function eveningDigest(
   const tomorrow = shiftDay(today, 1);
   const mine = (e: Entry) =>
     e.kind === "task" &&
+    !isPersonal(e) &&
     !e.done &&
     (!e.assignee || e.assignee === member.user_id);
   const chores = entries.filter(
@@ -207,7 +215,7 @@ export function weekRecap(
   const inWeek = (date: string | null) =>
     !!date && date >= from && date <= today;
   const done = entries.filter(
-    (e) => e.kind === "task" && e.done && inWeek(e.date),
+    (e) => e.kind === "task" && !isPersonal(e) && e.done && inWeek(e.date),
   );
   const lines: string[] = [];
   if (done.length) {

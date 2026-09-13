@@ -44,6 +44,7 @@ import {
   collapseSeries,
   houseHeadline,
   isBill,
+  isPersonal,
   isPinned,
   pinnedFirst,
   shareMoney,
@@ -193,7 +194,9 @@ export default function HomeBoard({
   // would otherwise fill the card with fifty copies of one title. Collapsing
   // wants date order, so yours-first is applied to what survives.
   const tasks = collapseSeries(
-    entries.filter((e) => e.kind === "task" && !e.done).sort(byDate),
+    entries
+      .filter((e) => e.kind === "task" && !isPersonal(e) && !e.done)
+      .sort(byDate),
     today,
   ).sort(
     (a, b) =>
@@ -202,6 +205,9 @@ export default function HomeBoard({
           Number(a.assignee === viewer.user_id)
         : 0) || byDate(a, b),
   );
+  // "All done" is only true of house to-dos; a personal one left open is not
+  // the house's business either way.
+  const anyHouseTask = entries.some((e) => e.kind === "task" && !isPersonal(e));
   const repayments = suggestedRepayments(expenseBalances(expenses.expenses));
   const balanceSummary = repayments.length
     ? repayments
@@ -460,11 +466,7 @@ export default function HomeBoard({
     <section
       ref={board}
       data-tone={tone}
-      data-all-done={
-        celebration > 0 &&
-        !tasks.length &&
-        entries.some((entry) => entry.kind === "task")
-      }
+      data-all-done={celebration > 0 && !tasks.length && anyHouseTask}
       className={
         display ? "home-board wall-display" : "home-board everyday-board"
       }
@@ -507,7 +509,7 @@ export default function HomeBoard({
           {/* The house's own headline: what today is asking of it. */}
           <h1>
             {houseHeadline(entries, today, viewer?.user_id ?? null) ||
-              (!tasks.length && entries.some((entry) => entry.kind === "task")
+              (!tasks.length && anyHouseTask
                 ? "All done. The cat approves."
                 : "All quiet at home.")}
           </h1>
