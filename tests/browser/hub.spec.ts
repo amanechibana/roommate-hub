@@ -50,6 +50,16 @@ test("shopping filters, event export, and dialog keyboard support", async ({
     .getByRole("navigation")
     .getByRole("button", { name: "Shopping list" })
     .click();
+  await page.getByRole("button", { name: "Personal", exact: true }).click();
+  await expect(
+    page.getByRole("heading", { name: "Olive oil" }),
+  ).not.toBeVisible();
+  await page.getByLabel("Add items, one per line").fill("Coffee just for me");
+  await page.keyboard.press("Enter");
+  const personalItem = page.locator(".shopping-row").filter({
+    has: page.getByRole("heading", { name: "Coffee just for me" }),
+  });
+  await expect(personalItem).toContainText("Personal, for you");
   await page.getByRole("button", { name: "Want", exact: true }).click();
   await expect(
     page.getByRole("heading", { name: "A softer living room" }),

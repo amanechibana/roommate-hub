@@ -43,6 +43,7 @@ import {
   billShare,
   collapseSeries,
   houseHeadline,
+  houseShopping,
   isBill,
   isPersonal,
   isPinned,
@@ -233,7 +234,7 @@ export default function HomeBoard({
       .sort((a, b) => a.date!.localeCompare(b.date!)),
     today,
   );
-  const shopping = entries
+  const shopping = houseShopping(entries)
     .filter((e) => e.kind === "request" && !e.done)
     .sort(
       (a, b) => Number(b.category === "Need") - Number(a.category === "Need"),

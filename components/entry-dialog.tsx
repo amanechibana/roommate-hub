@@ -164,7 +164,7 @@ export default function EntryDialog({
       description: String(data.get("description") || "").trim(),
       category: String(data.get("category") || categories[kind][0]),
       date,
-      assignee: assignee || null,
+      assignee: category === "Personal" ? assignee || uid : assignee || null,
       amount: data.get("amount") ? Number(data.get("amount")) : null,
       url,
       ...(repeating ? { repeat: repeating, repeat_until: until } : {}),
@@ -271,7 +271,11 @@ export default function EntryDialog({
               name="category"
               key={kind}
               value={category}
-              onChange={(event) => setCategory(event.target.value)}
+              onChange={(event) => {
+                const next = event.target.value;
+                setCategory(next);
+                if (next === "Personal" && uid && !assignee) setAssignee(uid);
+              }}
             >
               {categories[kind].map((value) => (
                 <option key={value}>{value}</option>
@@ -279,7 +283,13 @@ export default function EntryDialog({
             </select>
           </label>
           <label>
-            {kind === "note" ? "From" : "Who’s on it?"}
+            {kind === "note"
+              ? "From"
+              : kind === "request"
+                ? category === "Personal"
+                  ? "Who’s it for?"
+                  : "Who’s getting it?"
+                : "Who’s on it?"}
             <select
               name="assignee"
               value={assignee}
