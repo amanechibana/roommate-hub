@@ -33,6 +33,16 @@ test("exports all-day events with exclusive end dates across year boundaries", (
   assert.ok(text.includes("UID:abc@common-ground"));
   assert.ok(text.endsWith("END:VCALENDAR\r\n"));
 });
+test("exports timed plans as local calendar times", () => {
+  const timed = { ...entry, time_of_day: "19:30", end_time: "21:00" };
+  const text = calendarFile([timed]);
+  assert.ok(text.includes("DTSTART:20261231T193000\r\n"));
+  assert.ok(text.includes("DTEND:20261231T210000\r\n"));
+  assert.equal(
+    new URL(googleCalendarUrl(timed)).searchParams.get("dates"),
+    "20261231T193000/20261231T210000",
+  );
+});
 test("a named calendar carries its name for the phone to list it under", () => {
   const text = calendarFile([entry], "The Maple House");
   assert.ok(text.includes("NAME:The Maple House\r\n"));

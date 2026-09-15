@@ -232,7 +232,7 @@ Open the localhost address printed by Next.js. Without Supabase environment vari
 ## What works
 
 - Overview with upcoming plans, chores, rent amounts, shopping requests, and a fridge note.
-- Monthly calendar for all-day events and dated chores, including rent reminders.
+- Monthly calendar for timed or all-day events and dated chores, including rent reminders. Away and guest stays span a start and end date, and quiet-hour plans can carry exact times; the overview and wall display show them with the rest of the household schedule.
 - Assigned to-dos with completion, overdue indicators, and All / Mine / Personal / Open / Done filters.
 - Shopping requests separated into needs, wants, and personal items, with estimated USD prices, store links, and bought status. Personal items stay in their own filter and out of household surfaces. An item titled as its own little list — `Household supplies: toilet paper, soap, paper towels` — is shown as that heading with the things under it laid out beside each other, on the list, the overview, the wall display, and the shared list; the overview's opening sentence names it by its heading alone, so one entry cannot swallow the line; it stays one entry that is ticked off as a unit. A title needs a colon and at least two comma-separated things, so `Costco: olive oil` and `Dinner at 7:30` stay ordinary titles. Tap the hand on a household row to say **I’ll grab it**; the row, the overview, and the wall display then say who is getting it, and tapping again lets it go. Your own claims and chores read as “you” on your screens; the wall display keeps names, since the whole house reads it. **Share list** in the tab heading hands the open household items, with prices and who is getting what, to your phone's share sheet (or copies them on a laptop) for whoever is already at the store; a title written as its own list sends its things one per line under the heading, so they can be bought one at a time. A bought item's menu offers **Need again**, which puts a fresh copy back on the list and leaves the old purchase logged. With the app installed, it also shows up in the phone's share sheet: share a product page from a store app or the browser and the shopping dialog opens with the link and name filled in, ready to save (Android and desktop Chrome; iOS share sheets don't offer web apps). The add box is a notepad: type or paste one thing per line, and Enter adds every line as its own item, exactly as written, while the cursor stays put (Shift+Enter for a new line).
 - Weather and live train departures for PATH and the NYC subway, shown above the
@@ -267,8 +267,13 @@ For a fresh database, apply migrations in order: `001_household.sql`,
 `008_push_subscriptions.sql`, `009_cover_expense_and_attempt_clear.sql`,
 `010_push_subscribe_hardening.sql`, `011_revoke_legacy_multi_user.sql`,
 `012_house_activity.sql`, `013_pinned_notes.sql`, `014_personal_todos.sql`,
-`015_agreements.sql`, and `016_house_handbook.sql`.
+`015_agreements.sql`, `016_house_handbook.sql`, and
+`017_timed_house_status.sql`.
 For an existing installation, apply only the migrations newer than the last installed migration.
+Migration 017 adds event end times and the Away, Guest, and Quiet hours
+categories. It also persists event times through the household gateway and
+expands an away or guest date range into a bounded daily series. Verify it with
+`supabase/tests/timed-house-status.sql` in a disposable database.
 Migration 016 adds structured handbook entries, private attachment metadata, and
 the private `house-handbook` Storage bucket. Set the server-only
 `SUPABASE_SERVICE_ROLE_KEY` to enable uploads and signed downloads; handbook
@@ -437,14 +442,14 @@ Suggested order:
 1. **House handbook:** shipped. Wi-Fi, building contacts, trash collection, appliance details, and manuals now live on a structured page. Attachments use a private Supabase Storage bucket and short-lived signed download URLs; set `SUPABASE_SERVICE_ROLE_KEY` on the server to enable them.
 2. **Meal planner + pantry:** dinner plans, staples running low, and one-click shopping requests.
 3. **Quick polls:** vote on purchases, movie nights, or house rules.
-4. **Guests / quiet hours:** overnight visitors, work-from-home blocks, and a heads-up board.
+4. **Guests / quiet hours:** shipped as calendar categories with date ranges and optional times; they also appear on the overview and wall display.
 5. **Calendar connections:** Google/Microsoft OAuth, server-side encrypted tokens, webhook handling, and conflict resolution for two-way sync. (The read-only subscription feed shipped; its URL is a derived secret revoked by changing the household code.)
 6. **Shopping enrichment:** optional product metadata from approved retailer APIs. Current store links are manual; no Amazon login, price scraping, checkout, or purchase automation.
 7. **Membership management:** owner-controlled removal, leaving a house, ownership transfer, and recovery flows.
 
 Chore reminders and push notifications shipped as the daily morning digest;
-shared expenses shipped as the Expenses tab. Data amounts are USD, events are
-all-day, and weekly, biweekly, and monthly recurring entries are supported.
+shared expenses shipped as the Expenses tab. Data amounts are USD; events can
+be timed or all-day, and weekly, biweekly, and monthly recurring entries are supported.
 Reminders at arbitrary times are not implemented — the only scheduled jobs
 are the morning digest and evening heads-up crons. The Supabase Data API’s
 default row cap also means households should add pagination before growing

@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 
 import { billPaid, dayOrder, isBill } from "@/lib/household-actions";
 import { gymEventColors } from "@/lib/household-config";
-import { dateKey, parseDate } from "@/lib/model";
+import { clockLabel, dateKey, parseDate } from "@/lib/model";
 import { ArrowDownToLine, ChevronLeft, ChevronRight } from "lucide-react";
 import { type CSSProperties } from "react";
 
@@ -136,7 +136,8 @@ export default function CalendarTab({
                   {entry.time_of_day && (
                     <small style={{ fontWeight: 400, color: "var(--muted)" }}>
                       {" "}
-                      {entry.time_of_day.replace(/^0/, "")}
+                      {clockLabel(entry.time_of_day)}
+                      {entry.end_time ? `–${clockLabel(entry.end_time)}` : ""}
                     </small>
                   )}
                 </strong>
@@ -263,6 +264,9 @@ export default function CalendarTab({
                       {entry.series_id ? "↻ " : ""}
                       {entry.done ? "✓ " : ""}
                       {entry.title}
+                      {entry.time_of_day
+                        ? ` · ${clockLabel(entry.time_of_day)}`
+                        : ""}
                       {isBill(entry)
                         ? billPaid(entry)
                           ? ", paid"

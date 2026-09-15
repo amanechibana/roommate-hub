@@ -79,6 +79,8 @@ export async function POST(request: Request) {
                 "description",
                 "category",
                 "date",
+                "time_of_day",
+                "end_time",
                 "assignee",
                 "amount",
                 "url",

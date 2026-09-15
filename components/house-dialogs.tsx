@@ -4,7 +4,7 @@ import { PaperDialog } from "./ui/dialog";
 import { Button } from "@/components/ui/button";
 
 import { billPaid, isBill } from "@/lib/household-actions";
-import { parseDate, type Entry } from "@/lib/model";
+import { clockLabel, parseDate, type Entry } from "@/lib/model";
 import { ChevronRight, Leaf, Plus, X } from "lucide-react";
 
 export function ShortcutsDialog({ onClose }: { onClose: () => void }) {
@@ -94,7 +94,8 @@ export function DayDialog({
               {entry.time_of_day && (
                 <small style={{ fontWeight: 400, color: "var(--muted)" }}>
                   {" "}
-                  {entry.time_of_day.replace(/^0/, "")}
+                  {clockLabel(entry.time_of_day)}
+                  {entry.end_time ? `–${clockLabel(entry.end_time)}` : ""}
                 </small>
               )}
             </strong>

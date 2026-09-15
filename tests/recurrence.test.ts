@@ -2,6 +2,14 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { seriesDates } from "../lib/model";
 
+test("daily series fills every day in an away range", () => {
+  assert.deepEqual(seriesDates("2026-09-18", "daily", "2026-09-20"), [
+    "2026-09-18",
+    "2026-09-19",
+    "2026-09-20",
+  ]);
+});
+
 test("weekly series includes both endpoints and steps by 7 days", () => {
   assert.deepEqual(seriesDates("2026-01-05", "weekly", "2026-01-26"), [
     "2026-01-05",
