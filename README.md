@@ -242,6 +242,7 @@ Open the localhost address printed by Next.js. Without Supabase environment vari
   15-second poll as fallback.
 - An installable app with opt-in morning reminder and evening heads-up pushes per device.
 - Shared house notes. Create, edit, and delete entries through accessible dialogs.
+- A structured house handbook for Wi-Fi, building contacts, trash details, appliances, and other reference information. Optional PDF, image, text, and Word attachments stay in a private Supabase Storage bucket and open through two-minute signed URLs.
 - `.ics` calendar export and per-event Google Calendar links, which create snapshots/copies. **Subscribe on your phone** in household settings gives a private feed URL instead: Apple, Google, or Outlook Calendar polls it on its own schedule, so plans and dated chores stay current without re-exporting. The feed and the export both carry the household's name, so the phone lists it as "The Maple House" rather than the URL it came from, and the feed asks to be re-read hourly rather than leaving the cadence to the phone. The link is a secret derived from the household code and session secret, so it is never stored, and changing the household code revokes every subscription at once. On the phone a chore reads as “Dishes — Alex” (“✓ Dishes — Alex” once done) and a bill as “Rent — $2,400”, with each person's share and who has paid in its notes. It reads the calendar only; nothing writes back.
 - Shared household-code authentication and a remembered person picker.
 - Persistent shared records with database-enforced household isolation. Other housemates’ changes arrive live over the broadcast channel, with a 15-second poll and window-focus refresh as fallback.
@@ -265,9 +266,14 @@ For a fresh database, apply migrations in order: `001_household.sql`,
 `006_expenses.sql`, `007_covered_bills_note_conversion.sql`,
 `008_push_subscriptions.sql`, `009_cover_expense_and_attempt_clear.sql`,
 `010_push_subscribe_hardening.sql`, `011_revoke_legacy_multi_user.sql`,
-`012_house_activity.sql`, `013_pinned_notes.sql`, `014_personal_todos.sql`, and
-`015_agreements.sql`.
+`012_house_activity.sql`, `013_pinned_notes.sql`, `014_personal_todos.sql`,
+`015_agreements.sql`, and `016_house_handbook.sql`.
 For an existing installation, apply only the migrations newer than the last installed migration.
+Migration 016 adds structured handbook entries, private attachment metadata, and
+the private `house-handbook` Storage bucket. Set the server-only
+`SUPABASE_SERVICE_ROLE_KEY` to enable uploads and signed downloads; handbook
+text still works without it. Verify the gateway with
+`supabase/tests/house-handbook.sql` in a disposable database.
 Migration 015 adds the house and gym agreements: the signed documents, amendments,
 relief requests (swaps, skips, reschedules, gym PTO), generated gym sessions with a
 time of day, and per-person workout logs. **Apply it before deploying this
@@ -289,9 +295,10 @@ before deploying this frontend.** It preserves existing entries and members.
 
 Configure the variables listed in `.env.example`: the Supabase URL and
 publishable key, `HOUSEHOLD_ACCESS_CODE`, `HOUSEHOLD_SESSION_SECRET`, and
-`HOUSEHOLD_DATA_TOKEN`. Keep the last three server-only. The data token must
-match the hash supplied to migration 002. Code rotation invalidates existing
-sessions; sign-out clears both authentication and person cookies.
+`HOUSEHOLD_DATA_TOKEN`. Keep the last three server-only. Add the server-only
+`SUPABASE_SERVICE_ROLE_KEY` when handbook attachments are enabled. The data
+token must match the hash supplied to migration 002. Code rotation invalidates
+existing sessions; sign-out clears both authentication and person cookies.
 
 Entry creation, edits, check-offs, and deletion appear immediately. Background
 writes run in order so rapid clicks cannot arrive out of order, and polling
@@ -427,7 +434,7 @@ public Supabase variables empty).
 
 Suggested order:
 
-1. **House handbook:** Wi-Fi, landlord contacts, trash collection, and appliance manuals. Sensitive documents need private object storage and signed download URLs.
+1. **House handbook:** shipped. Wi-Fi, building contacts, trash collection, appliance details, and manuals now live on a structured page. Attachments use a private Supabase Storage bucket and short-lived signed download URLs; set `SUPABASE_SERVICE_ROLE_KEY` on the server to enable them.
 2. **Meal planner + pantry:** dinner plans, staples running low, and one-click shopping requests.
 3. **Quick polls:** vote on purchases, movie nights, or house rules.
 4. **Guests / quiet hours:** overnight visitors, work-from-home blocks, and a heads-up board.

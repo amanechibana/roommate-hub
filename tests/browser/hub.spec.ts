@@ -107,6 +107,35 @@ test("shopping filters, event export, and dialog keyboard support", async ({
   await expect(page.getByRole("dialog")).not.toBeVisible();
 });
 
+test("the house handbook keeps reference details in structured sections", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await page.keyboard.press("6");
+  await expect(
+    page.getByRole("heading", { level: 1, name: "House handbook" }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("heading", { level: 2, name: "Wi-Fi" }),
+  ).toBeVisible();
+  await expect(page.getByText("Network: CommonGround")).toBeVisible();
+
+  const contacts = page.getByRole("region", { name: "Building contacts" });
+  await contacts.getByRole("button", { name: "Add" }).click();
+  await page.getByLabel("Title").fill("Super");
+  await page.getByLabel("Details").fill("Jordan · 555-0100");
+  await page.getByLabel("Extra notes").fill("Text before calling.");
+  await page.getByRole("button", { name: "Save detail" }).click();
+  await expect(page.getByRole("heading", { name: "Super" })).toBeVisible();
+
+  await page.getByRole("button", { name: "Edit Super" }).click();
+  await page.getByLabel("Details").fill("Jordan · 555-0199");
+  await page.getByRole("button", { name: "Save detail" }).click();
+  await expect(page.getByText("Jordan · 555-0199")).toBeVisible();
+  await page.getByRole("button", { name: "Delete Super" }).click();
+  await expect(page.getByRole("heading", { name: "Super" })).not.toBeVisible();
+});
+
 test("a pasted product link fills in the item’s name and price", async ({
   page,
 }) => {

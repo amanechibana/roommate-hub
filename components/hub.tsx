@@ -60,6 +60,7 @@ import EntryDialog from "./entry-dialog";
 import Auth from "./house-auth";
 import { DayDialog, Empty, ShortcutsDialog } from "./house-dialogs";
 import HouseholdSettings from "./household-settings";
+import HandbookTab from "./handbook-tab";
 export default function Hub() {
   const house = useHousehold();
   const {
@@ -846,6 +847,8 @@ export default function Hub() {
                         "To-dos": `${openTasks.length} open, ${openTasks.filter((entry) => entry.assignee === uid).length} assigned to you`,
                         "Shopping list": `${neededItems.length} ${neededItems.length === 1 ? "item" : "items"} to pick up`,
                         "House notes": `${notes.length} ${notes.length === 1 ? "note" : "notes"} shared with your home${takenDown.length ? `, ${takenDown.length} taken down` : ""}`,
+                        "House handbook":
+                          "Wi-Fi, building contacts, trash details, and manuals.",
                         "Our household": `${household.name}, ${housemates.length} ${housemates.length === 1 ? "housemate" : "housemates"}`,
                         Overview: "",
                         Expenses: "",
@@ -855,6 +858,7 @@ export default function Hub() {
                 </div>
               </div>
               {tab !== "Our household" &&
+                tab !== "House handbook" &&
                 addButton(
                   tab === "Calendar"
                     ? "event"
@@ -1200,6 +1204,14 @@ export default function Hub() {
                 </section>
               )}
             </div>
+          )}
+
+          {tab === "House handbook" && (
+            <HandbookTab
+              active={tab === "House handbook"}
+              demo={demo}
+              readOnly={readOnly}
+            />
           )}
 
           {tab === "Our household" && (
