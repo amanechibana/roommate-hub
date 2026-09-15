@@ -1,0 +1,176 @@
+.intro {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.6;
+  margin: -8px 0 18px;
+  max-width: 680px;
+}
+
+.sections {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+  align-items: start;
+}
+
+.section {
+  background: #fffdf7;
+  border: 1px solid var(--line);
+  border-radius: 11px;
+  overflow: hidden;
+  box-shadow: 1px 3px 0 #8f735509;
+}
+
+.section > header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 17px 18px 14px;
+  border-bottom: 1px solid #e8dfd0;
+  background: #f8f3e9;
+}
+
+.section h2,
+.section h3,
+.section p {
+  margin: 0;
+}
+
+.section h2 {
+  font-family: var(--font-display), Georgia, serif;
+  font-size: 17px;
+}
+
+.section header p {
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 9px;
+  line-height: 1.4;
+}
+
+.cards {
+  display: grid;
+}
+
+.card {
+  padding: 17px 18px;
+  border-top: 1px solid #eee7da;
+}
+
+.card:first-child {
+  border-top: 0;
+}
+
+.cardHeading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.cardHeading h3 {
+  font-size: 12px;
+}
+
+.actions {
+  display: flex;
+  gap: 3px;
+}
+
+.value {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  margin-top: 10px !important;
+  font-size: 11px;
+  line-height: 1.7;
+  color: var(--ink);
+}
+
+.notes {
+  margin-top: 9px !important;
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.55;
+}
+
+.empty {
+  padding: 20px 18px;
+  color: var(--muted);
+  font-size: 10px;
+  font-style: italic;
+}
+
+.files {
+  list-style: none;
+  margin: 13px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 5px;
+}
+
+.files li {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.files a {
+  min-width: 0;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--green-dark);
+  font-size: 10px;
+  text-decoration: none;
+}
+
+.files a span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.files a small {
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.attach {
+  margin-top: 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 10px;
+}
+
+.loading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--muted);
+  padding: 30px 0;
+  font-size: 11px;
+}
+
+.loading svg {
+  animation: handbook-spin 0.8s linear infinite;
+}
+
+.dialog {
+  width: min(520px, calc(100vw - 30px));
+}
+
+@keyframes handbook-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (max-width: 760px) {
+  .sections {
+    grid-template-columns: 1fr;
+  }
+}

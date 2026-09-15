@@ -4,6 +4,7 @@ import { type ExpenseValues } from "@/lib/expenses";
 
 import { type Entry, type Kind, type Repeat } from "@/lib/model";
 import {
+  BookOpen,
   CalendarDays,
   ClipboardList,
   Home,
@@ -31,6 +32,7 @@ export type Tab =
   | "To-dos"
   | "Shopping list"
   | "House notes"
+  | "House handbook"
   | "Expenses"
   | "Our household";
 export const tabs = [
@@ -39,6 +41,7 @@ export const tabs = [
   { name: "To-dos", icon: ClipboardList },
   { name: "Shopping list", icon: ShoppingBasket },
   { name: "House notes", icon: StickyNote },
+  { name: "House handbook", icon: BookOpen },
   { name: "Expenses", icon: Wallet },
 ] as const;
 // Day words start sentences capitalised but sit inside them lowercase:

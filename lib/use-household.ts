@@ -329,7 +329,10 @@ export function useHousehold() {
       if (event.key === "?") {
         event.preventDefault();
         setShowShortcuts(true);
-      } else if (event.key >= "1" && event.key <= "6") {
+      } else if (
+        event.key >= "1" &&
+        Number(event.key) <= Math.min(9, tabs.length)
+      ) {
         event.preventDefault();
         setTab(tabs[Number(event.key) - 1].name);
       } else if (event.key.toLowerCase() === "n") {
