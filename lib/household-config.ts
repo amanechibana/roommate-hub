@@ -62,7 +62,7 @@ export const labels: Record<Kind, string> = {
 export const categories: Record<Kind, string[]> = {
   task: ["Chore", "To-do", "Personal"],
   event: ["Together", "Rent", "Bill", "Gym", "Other"],
-  request: ["Need", "Want"],
+  request: ["Need", "Want", "Personal"],
   note: ["Note", "Pinned"],
 };
 // Calendar chips take their colors from the globals.css palette (sage by

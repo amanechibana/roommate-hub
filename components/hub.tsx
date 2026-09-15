@@ -12,6 +12,7 @@ import styles from "./hub.module.css";
 
 import {
   houseTasks,
+  houseShopping,
   isPersonal,
   isPinned,
   shoppingListText,
@@ -201,10 +202,16 @@ export default function Hub() {
           // Adding while one category is on show means adding to that list.
           // A want typed under Want was filed as a need and vanished; the
           // to-do box already does this with Mine.
-          const category = categories[kind].includes(filter)
-            ? filter
-            : categories[kind][0];
-          if (kind === "request" && lines.length > 1) addItems(lines, category);
+          const category =
+            filter === "Personal"
+              ? "Personal"
+              : categories[kind].includes(filter)
+                ? filter
+                : categories[kind][0];
+          const assignee =
+            filter === "Mine" || filter === "Personal" ? uid : null;
+          if (kind === "request" && lines.length > 1)
+            addItems(lines, category, assignee);
           else
             void save({
               kind,
@@ -212,13 +219,9 @@ export default function Hub() {
               category,
               description: "",
               date: null,
-              // A personal to-do is yours by definition, so it carries your
-              // name the way one added under Mine does — that is how the
-              // other person can tell whose it is when they go looking.
-              assignee:
-                kind === "task" && (filter === "Mine" || filter === "Personal")
-                  ? uid
-                  : null,
+              // Personal entries are yours by definition. Shopping's Mine
+              // lane also carries your name because it means you will grab it.
+              assignee,
               amount: null,
               url: "",
             });
@@ -596,7 +599,8 @@ export default function Hub() {
   const listTasks =
     filter === "Personal" ? tasks.filter(isPersonal) : houseTasks(tasks);
   const doneCount = listTasks.filter((entry) => entry.done).length;
-  const neededItems = shopping.filter((entry) => !entry.done);
+  const householdShopping = houseShopping(shopping);
+  const neededItems = householdShopping.filter((entry) => !entry.done);
   // The legacy shared identity is a row in members, not a person in the house.
   const housemates = members.filter((member) => member.name !== "Housemates");
   // What the nav badge counts: to-dos that have come due, the same set the
@@ -869,7 +873,9 @@ export default function Hub() {
               controller={expenseController}
               members={members.filter((member) => member.name !== "Housemates")}
               memberId={uid}
-              pending={shopping.filter((e) => !e.done && e.amount != null)}
+              pending={householdShopping.filter(
+                (e) => !e.done && e.amount != null,
+              )}
             />
           )}
 
@@ -909,7 +915,14 @@ export default function Hub() {
               <div className="panel-heading">
                 <SegmentedControl
                   label="Shopping filters"
-                  values={["All", "Need", "Want", "Bought"]}
+                  values={[
+                    "All",
+                    "Mine",
+                    "Personal",
+                    "Need",
+                    "Want",
+                    "Bought",
+                  ]}
                   value={filter}
                   onChange={setFilter}
                 />
@@ -979,9 +992,11 @@ export default function Hub() {
                           )}
                           <small>
                             {entry.category}
-                            {claimedBy(entry)
-                              ? `, ${claimedBy(entry) === uid ? "you’re" : `${person(entry.assignee)}’s`} getting it`
-                              : ""}
+                            {isPersonal(entry)
+                              ? `, for ${entry.assignee === uid ? "you" : person(entry.assignee)}`
+                              : claimedBy(entry)
+                                ? `, ${claimedBy(entry) === uid ? "you’re" : `${person(entry.assignee)}’s`} getting it`
+                                : ""}
                             {entry.description ? `. ${entry.description}` : ""}
                           </small>
                           {members.some(
@@ -997,7 +1012,7 @@ export default function Hub() {
                             {money(entry.amount)}
                           </strong>
                         )}
-                        {!entry.done && uid && (
+                        {!entry.done && uid && !isPersonal(entry) && (
                           <Button
                             className="icon-button claim-button"
                             aria-pressed={claimedBy(entry) === uid}
@@ -1065,11 +1080,7 @@ export default function Hub() {
                   })}
                 </AnimatePresence>
               </div>
-              {!shopping.filter((e) =>
-                filter === "Bought"
-                  ? e.done
-                  : !e.done && (filter === "All" || e.category === filter),
-              ).length && (
+              {!filteredShopping.length && (
                 <Empty text="Nothing on this list yet. Add something for your home." />
               )}
             </section>

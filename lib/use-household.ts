@@ -22,6 +22,7 @@ import {
   shareDraft,
   pinnedFirst,
   isPersonal,
+  houseShopping,
 } from "@/lib/household-actions";
 import {
   calendarFile,
@@ -855,9 +856,13 @@ export function useHousehold() {
   // The expense reuses the entry id so re-buying can't double-log.
   function logPurchase(entry: Entry) {
     const cents = estimateCents(entry);
-    const payers = members
-      .filter((m) => m.name !== "Housemates")
-      .map((m) => m.user_id);
+    // A personal item belongs entirely to the person it is for. If their
+    // housemate buys it, the ledger records that repayment; buying your own
+    // item nets to zero. House items keep their even household split.
+    const payers =
+      isPersonal(entry) && entry.assignee
+        ? [entry.assignee]
+        : members.filter((m) => m.name !== "Housemates").map((m) => m.user_id);
     if (!uid || !cents || !payers.length) return;
     const logged = expenseController.expenses.find((e) => e.id === entry.id);
     if (logged) {
@@ -908,7 +913,7 @@ export function useHousehold() {
       category: entry.category,
       description: entry.description,
       date: null,
-      assignee: null,
+      assignee: isPersonal(entry) ? entry.assignee : null,
       amount: entry.amount,
       url: entry.url,
     };
@@ -930,7 +935,11 @@ export function useHousehold() {
   }
   // Several items at once, each its own row from the first paint, saved in
   // the order typed so the list reads back the way it was written.
-  function addItems(titles: string[], category = "Need") {
+  function addItems(
+    titles: string[],
+    category = "Need",
+    assignee: string | null = null,
+  ) {
     if (!household || !uid) return;
     const copies = titles.map((title) => {
       const values: SaveValues = {
@@ -939,7 +948,7 @@ export function useHousehold() {
         category,
         description: "",
         date: null,
-        assignee: null,
+        assignee,
         amount: null,
         url: "",
       };
@@ -1163,10 +1172,18 @@ export function useHousehold() {
           (filter === "Open" && !e.done) ||
           (filter === "Done" && e.done)),
   );
+  // Personal shopping mirrors personal to-dos: it has its own lane and stays
+  // out of every household filter, including Bought.
   const filteredShopping = shopping.filter((e) =>
-    filter === "Bought"
-      ? e.done
-      : !e.done && (filter === "All" || e.category === filter),
+    filter === "Personal"
+      ? isPersonal(e)
+      : !isPersonal(e) &&
+        (filter === "Bought"
+          ? e.done
+          : !e.done &&
+            (filter === "All" ||
+              (filter === "Mine" && e.assignee === uid) ||
+              e.category === filter)),
   );
   // A note comes down off the fridge without being thrown away: done is
   // "taken down", and it can go back up.

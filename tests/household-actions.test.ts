@@ -10,6 +10,7 @@ import {
   billShare,
   editEntries,
   houseHeadline,
+  houseShopping,
   houseTasks,
   isPersonal,
   isSharedScreen,
@@ -459,18 +460,27 @@ test("pinned notes come first and everything else keeps its order", () => {
   assert.deepEqual(pinnedFirst([]), []);
 });
 
-test("a personal to-do is the house's business only to the person whose it is", () => {
-  const task = (category: string) =>
-    ({ kind: "task", category }) as Pick<Entry, "kind" | "category">;
+test("personal to-dos and shopping stay out of their household lists", () => {
+  const task = (category: string, kind: Entry["kind"] = "task") =>
+    ({ kind, category }) as Pick<Entry, "kind" | "category">;
   assert.equal(isPersonal(task("Personal")), true);
+  assert.equal(isPersonal(task("Personal", "request")), true);
   assert.equal(isPersonal(task("Chore")), false);
-  // Only a to-do can be personal; a note keeps its own categories.
+  // Notes keep their own categories.
   assert.equal(isPersonal({ kind: "note", category: "Personal" }), false);
   assert.deepEqual(
     houseTasks([task("Chore"), task("Personal"), task("To-do")]).map(
       (e) => e.category,
     ),
     ["Chore", "To-do"],
+  );
+  assert.deepEqual(
+    houseShopping([
+      task("Need", "request"),
+      task("Personal", "request"),
+      task("Want", "request"),
+    ]).map((e) => e.category),
+    ["Need", "Want"],
   );
 });
 
