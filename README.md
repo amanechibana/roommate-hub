@@ -73,15 +73,14 @@ to-do**, **Shopping list**, and **Wall display**; the links behind them,
 `/?tab=To-dos&add=task`, `/?tab=Shopping%20list`, and `/?display=1`, work
 from anywhere, and an add waits for you to be signed in as a housemate.
 
-**Morning reminders** send one push notification per subscribed device around
-7–8am New York time: the day's chores for whoever the device belongs to
+**Morning reminders** send one push notification per subscribed device at the person’s chosen
+morning time in the household timezone: the day's chores for whoever the device belongs to
 (unassigned chores go to both people), any bill whose check that person hasn't
 ticked within three days of its date, the house's plans for the day, and a
 count of needed shopping items. When a digest is going out anyway, it ends with what the ledger says
 about you ("You owe Alex $12", "Sam owes you $5", at most two lines); a
 balance on its own doesn't wake anyone.
-Nothing due means no notification. **Evening heads-ups** go out around
-7–8pm: tomorrow's chores and plans and any bill due tomorrow that person
+Nothing due means no notification. **Evening heads-ups** go out at the selected evening time: tomorrow's chores and plans and any bill due tomorrow that person
 hasn't checked off, plus whatever of today's is still open. Nothing tomorrow and
 nothing left today means no notification — except on Sunday, when the
 evening one ends with the week's recap ("4 chores done this week — Alex 2,
@@ -108,9 +107,13 @@ Setup needs four server-side pieces:
    `VAPID_SUBJECT`, a `mailto:` address) in Vercel and `.env.local`.
 3. Set `CRON_SECRET` to a random value; Vercel sends it as a bearer token when
    invoking the cron route.
-4. Deploy with `vercel.json`'s two cron entries (daily at 12:00 and 00:00
-   UTC — Vercel's Hobby plan runs each cron at most once a day, which suits a
-   morning digest and an evening heads-up).
+4. Apply migration `025_feature_improvements.sql` and deploy with the five-minute
+   `/api/reminders/custom` cron in `vercel.json`. Use a scheduler that supports
+   this frequency; an external scheduler can call the same route with
+   `Authorization: Bearer <CRON_SECRET>`. Do not keep the older daily cron jobs
+   enabled alongside it. Selected times are delivered at the next scheduler tick,
+   within five minutes, and quiet hours always suppress scheduled/automatic pushes.
+   The explicit “send today’s digest now” test ignores the schedule and quiet hours.
 
 Subscriptions live in the `push_subscriptions` table behind the same
 token-gated gateway pattern as everything else, tied to the person using the
@@ -120,15 +123,14 @@ last; choosing the shared screen clears it, since a kitchen display gets no
 personal reminders. Dead endpoints are pruned automatically when a push
 bounces.
 
-Migration 021 persists each scheduled edition's New York date, last attempt,
-delivery counts, safe error category, and per-device successful-delivery hashes.
+Migration 025 persists delivery claims per subscribed device, edition, and household-local date. Interrupted claims expire after five minutes and failed deliveries can be retried.
 **Our household → Household reliability** shows interrupted/failed/partial
 deliveries and lets a housemate retry outside quiet hours. A retry skips devices
 whose success was recorded. A push accepted just before the database fails may
 still be resent; this is not an exactly-once guarantee across the push provider
-and database. There is no automatic second cron on Hobby. Fan-out isolates
+and database. Fan-out isolates
 individual failures and has a bounded concurrency/time budget.
-The same existing daily crons append gym sessions and chore rotations when their
+The five-minute scheduler also appends gym sessions and chore rotations when their
 horizon is within two weeks, even if push is not configured. They preserve
 existing entries, swaps, skips, and workout logs. Nudge/thanks cooldowns are
 stored in SQL, so a cold instance does not reset them.
@@ -494,11 +496,9 @@ Suggested order:
 Chore reminders and push notifications shipped as the daily morning digest;
 shared expenses shipped as the Expenses tab. Data amounts are USD; events can
 be timed or all-day, and weekly, biweekly, and monthly recurring entries are supported.
-Reminders at arbitrary times are not implemented — the only scheduled jobs
-are the morning digest and evening heads-up crons. Home/history now paginate
-the JSON aggregate inside the RPC itself: the risk was an oversized single JSON
-payload, not silent truncation at the Data API's roughly 1,000-row cap.
-Ledger and agreement-log history still need their own pagination as they grow.
+Reminder times, timezone, quiet hours and notification topics are configurable.
+Home/history and ledger/agreements return bounded RPC pages; expenses retain
+full-ledger balance and monthly-summary aggregates while older activity loads on demand.
 
 ## Daily household improvements
 
@@ -530,3 +530,56 @@ Verify with `tests/daily-life-gaps.test.ts`, `supabase/tests/daily-life-gaps.sql
 and `tests/browser/daily-life-gaps.spec.ts`. The older `isolation.sql` targets
 legacy authenticated-user functions revoked by migration 011; gateway isolation
 is exercised by the current SQL tests.
+
+## Feature improvements and rollout
+
+Apply **025_feature_improvements.sql before deploying this release**. It adds
+shared household time settings and chore templates; person-specific reminder
+preferences; shopping quantities, units and stores; checklist progress and effort;
+expense categories, retained percentage splits, receipt metadata and history
+pagination; private entry visibility; coverage approvals; and replay receipts.
+The five-minute cron keeps recurring agreements rolling forward even without push keys.
+Receipt uploads use the private `expense-receipts` bucket and the existing
+`SUPABASE_SERVICE_ROLE_KEY`. Save a purchase, then reopen it to attach PDF,
+JPEG, PNG or WebP receipts (up to 10 MB each). Downloads use two-minute signed URLs.
+Percentages accept up to two decimals, must total 100%, and use deterministic
+largest-remainder rounding so shares always add up to the purchase in cents.
+Repayments never count toward the monthly spending summary. Shopping estimates
+refer to the whole row including its quantity. Bundled `Heading: Item, Item`
+entries split atomically into independently checkable rows; per-item estimates
+start empty rather than inventing prices.
+
+Personal items remain visible to housemates by default. Optional private
+personal chores/shopping items are returned only for their creator’s selected
+identity. Private actions stay out of shared activity, calendar feeds, boards and digests; earlier activity created while an item was shared remains visible.
+The household still uses one shared code and a selectable person, so private
+visibility is **not separate account authentication**: someone with the code can
+select that person. Private shopping purchases are not automatically posted to
+the shared ledger. Shared screens remain read-only and receive no private entries.
+
+Offline support saves previously opened boards, expenses, handbook and agreement
+information on this device for up to 30 days, plus the app shell and static assets.
+Chore/shopping and ledger create/edit/delete changes queue locally, with stable
+IDs, ordered replay and database mutation receipts. Synced expenses update full
+balances and summaries even when history is paginated. Person changes require
+syncing or discarding the current queue first; sign-out clears saved household
+records and queued changes. Unopened information, receipt transfers, payments,
+short-lived Undo actions, settings and agreement/coverage decisions need a
+connection. The banner shows queued changes, retry failures and discard controls.
+An unavailable or rejected replay pauses the queue for review. Existing server
+permissions and validations remain authoritative; ordinary queued edits use the
+same overwrite behavior as online edits.
+
+The search button checks saved records in demo/offline mode and all household
+chores, notes, expenses and handbook records (including older history) online.
+Every search response caps at 51 results; the UI displays 50 and asks for a more
+specific query when needed. Guest visits conflicting with household quiet hours
+or shared calendar plans require a review check before saving. Away-aware coverage
+suggestions never reassign a chore automatically: the two involved housemates
+approve one occurrence, and the server rechecks availability and the original
+assignment before changing it.
+
+Validation: `tests/feature-improvements.test.ts`,
+`supabase/tests/feature-improvements.sql`, and
+`tests/browser/feature-improvements.spec.ts`, alongside existing unit, SQL,
+production-build and household reliability browser checks.

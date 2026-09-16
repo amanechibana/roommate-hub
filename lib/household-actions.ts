@@ -335,6 +335,16 @@ export function editEntries(
     return {
       ...entry,
       ...(entry.id === selected.id ? values : shared),
+      ...(entry.id !== selected.id && values.checklist
+        ? {
+            checklist: values.checklist.map((step) => ({
+              ...step,
+              done:
+                entry.checklist?.find((old) => old.id === step.id)?.done ??
+                false,
+            })),
+          }
+        : {}),
       ...(wholeSeries && entry.rotation_members?.length
         ? { assignee: entry.assignee }
         : {}),

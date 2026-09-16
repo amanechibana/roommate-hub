@@ -17,6 +17,12 @@ export type Entry = {
   rotation_members?: string[];
   payment_members?: string[];
   paid_by?: string[];
+  quantity?: number;
+  unit?: string;
+  store?: string;
+  checklist?: import("./improvements").ChecklistStep[];
+  effort_minutes?: number | null;
+  visibility?: "household" | "private";
   created_by: string;
   created_at: string;
 };
@@ -192,7 +198,10 @@ export function calendarFile(
     "X-PUBLISHED-TTL:PT1H",
   ];
   for (const entry of entries.filter(
-    (e) => e.date && e.category !== 'Personal' && (e.kind === "event" || e.kind === "task"),
+    (e) =>
+      e.date &&
+      e.category !== "Personal" &&
+      (e.kind === "event" || e.kind === "task"),
   )) {
     const end = parseDate(entry.date!);
     end.setDate(end.getDate() + 1);

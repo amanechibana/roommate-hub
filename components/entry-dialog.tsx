@@ -1,4 +1,10 @@
 "use client";
+import {
+  choreTemplates,
+  calendarConflicts,
+  type ChecklistStep,
+} from "@/lib/improvements";
+import type { ImprovementsController } from "@/lib/use-improvements";
 import { PaperDialog } from "./ui/dialog";
 
 import { Button } from "@/components/ui/button";
@@ -34,6 +40,8 @@ import {
 } from "@/lib/household-config";
 export default function EntryDialog({
   editing,
+  entries,
+  improvements,
   members,
   busy,
   error,
@@ -46,6 +54,8 @@ export default function EntryDialog({
   onLogShare,
   onNudge,
 }: {
+  entries: Entry[];
+  improvements: ImprovementsController;
   uid: string | null;
   onPayment: (entry: Entry) => void;
   onCover: (entry: Entry) => void;
@@ -95,6 +105,17 @@ export default function EntryDialog({
     editing.entry?.category || categories[editing.kind][0],
   );
   const entry = editing.entry;
+  const [checklist, setChecklist] = useState<ChecklistStep[]>(
+    entry?.checklist ?? [],
+  );
+  const [effort, setEffort] = useState(String(entry?.effort_minutes ?? ""));
+  const [visibility, setVisibility] = useState(
+    entry?.visibility ?? "household",
+  );
+  const [templateMessage, setTemplateMessage] = useState("");
+  const [conflicts, setConflicts] = useState<string[]>([]);
+  const [confirmedConflicts, setConfirmedConflicts] = useState(false);
+  const templates = [...choreTemplates, ...improvements.household.templates];
   const formRef = useRef<HTMLFormElement>(null);
   // Fill only fields the person hasn't typed in; their words always win.
   async function fillFromLink(input: HTMLInputElement) {
@@ -201,10 +222,59 @@ export default function EntryDialog({
       setValidation("Choose two different people to take turns.");
       return;
     }
+    const warnings =
+      kind === "event" && category === "Guest"
+        ? Array.from(
+            new Set(
+              seriesDates(date!, "daily", rangedEvent ? until : date!).flatMap(
+                (day) =>
+                  calendarConflicts(
+                    {
+                      id: entry?.id ?? "",
+                      category,
+                      date: day,
+                      time_of_day:
+                        String(data.get("time_of_day") || "") || null,
+                      end_time: String(data.get("end_time") || "") || null,
+                    },
+                    entries,
+                    improvements.household,
+                  ),
+              ),
+            ),
+          )
+        : [];
+    if (warnings.length && !confirmedConflicts) {
+      setConflicts(warnings);
+      return;
+    }
+    if (checklist.some((step) => !step.title.trim())) {
+      setValidation("Give every checklist step a title, or remove it.");
+      return;
+    }
     setValidation("");
     await onSave({
       ...(!entry || kind !== entry.kind ? { kind } : {}),
       title,
+      ...(kind === "request"
+        ? {
+            quantity: Number(data.get("quantity") || 1),
+            unit: String(data.get("unit") || "").trim(),
+            store: String(data.get("store") || "").trim(),
+          }
+        : {}),
+      ...(kind === "task"
+        ? {
+            checklist: checklist.map((step) => ({
+              ...step,
+              title: step.title.trim(),
+            })),
+            effort_minutes: effort ? Number(effort) : null,
+          }
+        : {}),
+      ...(["task", "request"].includes(kind)
+        ? { visibility: category === "Personal" ? visibility : "household" }
+        : {}),
       description: String(data.get("description") || "").trim(),
       category: String(data.get("category") || categories[kind][0]),
       date,
@@ -269,7 +339,14 @@ export default function EntryDialog({
           <GymLog entry={entry} members={members} uid={uid} />
         </>
       )}
-      <form onSubmit={submit} ref={formRef}>
+      <form
+        onSubmit={submit}
+        ref={formRef}
+        onChange={() => {
+          setConfirmedConflicts(false);
+          setConflicts([]);
+        }}
+      >
         {(!entry || entry.kind === "note") && (
           <div className="filters kind-picker">
             {(["task", "event", "request", "note"] as Kind[]).map((value) => (
@@ -318,6 +395,226 @@ export default function EntryDialog({
             rows={3}
           />
         </label>
+        {kind === "request" && (
+          <div className="form-grid">
+            <label>
+              Quantity
+              <input
+                name="quantity"
+                type="number"
+                min="0.001"
+                max="100000"
+                step="any"
+                required
+                defaultValue={entry?.quantity ?? 1}
+              />
+            </label>
+            <label>
+              Unit
+              <input
+                name="unit"
+                maxLength={40}
+                placeholder="e.g. bottles, kg, packs"
+                defaultValue={entry?.unit ?? ""}
+              />
+            </label>
+            <label>
+              Store
+              <input
+                name="store"
+                maxLength={100}
+                placeholder="e.g. Trader Joe’s"
+                defaultValue={entry?.store ?? ""}
+              />
+            </label>
+            <p className="subtle">
+              The amount below is the estimate for this whole row, including its
+              quantity.
+            </p>
+          </div>
+        )}
+        {kind === "task" && (
+          <fieldset className="chore-checklist">
+            <legend>Chore checklist</legend>
+            <label>
+              Use a reusable template
+              <select
+                defaultValue=""
+                onChange={(event) => {
+                  const template = templates.find(
+                    (t) => t.id === event.target.value,
+                  );
+                  if (!template) return;
+                  setChecklist(
+                    template.steps.map((title) => ({
+                      id: crypto.randomUUID(),
+                      title,
+                      done: false,
+                    })),
+                  );
+                  setEffort(String(template.effort_minutes));
+                  const title = formRef.current?.elements.namedItem(
+                    "title",
+                  ) as HTMLInputElement | null;
+                  if (title && !title.value) title.value = template.title;
+                }}
+              >
+                <option value="">Choose a template</option>
+                {templates.map((t) => (
+                  <option value={t.id} key={t.id}>
+                    {t.title}
+                  </option>
+                ))}
+              </select>
+            </label>
+            {checklist.map((step, index) => (
+              <div className="checklist-step" key={step.id}>
+                <input
+                  type="checkbox"
+                  aria-label={`Complete checklist step ${index + 1}`}
+                  checked={step.done}
+                  onChange={(event) =>
+                    setChecklist((steps) =>
+                      steps.map((s) =>
+                        s.id === step.id
+                          ? { ...s, done: event.target.checked }
+                          : s,
+                      ),
+                    )
+                  }
+                />
+                <input
+                  aria-label={`Checklist step ${index + 1}`}
+                  maxLength={160}
+                  required
+                  value={step.title}
+                  onChange={(event) =>
+                    setChecklist((steps) =>
+                      steps.map((s) =>
+                        s.id === step.id
+                          ? { ...s, title: event.target.value }
+                          : s,
+                      ),
+                    )
+                  }
+                />
+                <Button
+                  type="button"
+                  className="text-button"
+                  aria-label={`Remove checklist step ${index + 1}`}
+                  onClick={() =>
+                    setChecklist((steps) =>
+                      steps.filter((s) => s.id !== step.id),
+                    )
+                  }
+                >
+                  Remove
+                </Button>
+              </div>
+            ))}
+            <Button
+              type="button"
+              className="text-button"
+              disabled={checklist.length >= 50}
+              onClick={() =>
+                setChecklist((steps) => [
+                  ...steps,
+                  { id: crypto.randomUUID(), title: "", done: false },
+                ])
+              }
+            >
+              Add checklist step
+            </Button>
+            <label>
+              Estimated effort (minutes)
+              <input
+                type="number"
+                min={1}
+                max={1440}
+                value={effort}
+                onChange={(event) => setEffort(event.target.value)}
+              />
+            </label>
+            <Button
+              type="button"
+              className="button secondary small"
+              disabled={
+                improvements.busy ||
+                !improvements.loaded ||
+                !checklist.length ||
+                !effort ||
+                improvements.household.templates.length >= 30
+              }
+              onClick={async () => {
+                const title = (
+                  formRef.current?.elements.namedItem(
+                    "title",
+                  ) as HTMLInputElement
+                ).value.trim();
+                if (
+                  !title ||
+                  checklist.some((step) => !step.title.trim()) ||
+                  Number(effort) < 1 ||
+                  Number(effort) > 1440
+                ) {
+                  setTemplateMessage(
+                    "Add a title, steps and estimated effort before saving a template.",
+                  );
+                  return;
+                }
+                if (
+                  await improvements.saveHousehold({
+                    ...improvements.household,
+                    templates: [
+                      ...improvements.household.templates,
+                      {
+                        id: crypto.randomUUID(),
+                        title,
+                        steps: checklist.map((s) => s.title.trim()),
+                        effort_minutes: Number(effort),
+                      },
+                    ],
+                  })
+                )
+                  setTemplateMessage("Template saved for this household.");
+              }}
+            >
+              Save as reusable template
+            </Button>
+            {templateMessage && <p role="status">{templateMessage}</p>}
+            {improvements.error && (
+              <p className="error" role="alert">
+                {improvements.error}
+              </p>
+            )}
+          </fieldset>
+        )}
+        {category === "Personal" && (
+          <div>
+            <p className="subtle">
+              Personal items are visible to every housemate unless marked
+              private. They stay off the overview, wall display and digests.
+            </p>
+            <label className="checkbox-row">
+              <input
+                type="checkbox"
+                checked={visibility === "private"}
+                disabled={!!entry && entry.created_by !== uid}
+                onChange={(event) => {
+                  setVisibility(event.target.checked ? "private" : "household");
+                  if (event.target.checked && uid) setAssignee(uid);
+                }}
+              />
+              Private for the selected person
+            </label>
+            <p className="subtle">
+              Private items are returned only when their creator is selected on
+              this device. Anyone with the household code can switch people;
+              this is not a separate password-protected account. Earlier shared
+              activity remains visible.
+            </p>
+          </div>
+        )}
         <div className="form-grid">
           <label>
             Category
@@ -656,6 +953,25 @@ export default function EntryDialog({
           <p className="subtle">
             Added by {members.find((m) => m.user_id === entry.created_by)?.name}
           </p>
+        )}
+        {!!conflicts.length && (
+          <div className="conflict-warning" role="alert">
+            <strong>Calendar conflicts</strong>
+            {conflicts.map((warning) => (
+              <p key={warning}>{warning}</p>
+            ))}
+            <label className="checkbox-row">
+              <input
+                type="checkbox"
+                checked={confirmedConflicts}
+                onChange={(event) => {
+                  event.stopPropagation();
+                  setConfirmedConflicts(event.target.checked);
+                }}
+              />
+              I’ve reviewed these conflicts; save this visit anyway
+            </label>
+          </div>
         )}
         <div className="dialog-actions">
           {entry && (

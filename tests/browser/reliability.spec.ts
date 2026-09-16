@@ -274,6 +274,9 @@ test("private file and history endpoints refuse unauthenticated reads", async ({
   for (const path of [
     "/api/handbook/files?id=manual",
     "/api/home/history",
+    "/api/expenses/receipts?id=receipt",
+    "/api/improvements",
+    "/api/search?q=kitchen",
     "/api/household-status",
   ]) {
     const response = await request.get(path);

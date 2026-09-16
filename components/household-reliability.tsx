@@ -21,6 +21,8 @@ export default function HouseholdReliability({
     attachments_enabled: boolean;
     schema_version: string;
     reminders: Run[];
+    custom_reminders?: Run[];
+    timezone?: string;
     schedules: { kind: string; through_date: string }[];
   } | null>(null);
   const [error, setError] = useState("");
@@ -76,13 +78,20 @@ export default function HouseholdReliability({
           )}
           <h3>Scheduled reminders</h3>
           <p className="subtle">
-            Morning: 12:00 UTC (7/8 am New York). Evening: 00:00 UTC (7/8 pm New
-            York). These are daily scheduling windows, not exact delivery times.
+            The scheduler checks every five minutes. Your chosen morning and
+            evening times use the household timezone and respect quiet hours.
+            Delivery can follow the selected time by up to five minutes.
           </p>
-          {!status.reminders.length && (
+          {!status.reminders.length && !status.custom_reminders?.length && (
             <p className="subtle">No scheduled delivery recorded yet.</p>
           )}
-          {status.reminders.map((run) => {
+          {[
+            ...new Map(
+              [...status.reminders, ...(status.custom_reminders ?? [])].map(
+                (run) => [run.edition, run],
+              ),
+            ).values(),
+          ].map((run) => {
             const interrupted =
               run.status === "sending" &&
               Date.now() - Date.parse(run.started_at) > 120000;
@@ -99,9 +108,10 @@ export default function HouseholdReliability({
                   Last attempt:{" "}
                   {new Date(run.finished_at || run.started_at).toLocaleString(
                     "en-US",
-                    { timeZone: "America/New_York" },
+                    { timeZone: status.timezone || "America/New_York" },
                   )}{" "}
-                  New York; {run.attempts} attempt(s).
+                  {status.timezone || "America/New_York"}; {run.attempts}{" "}
+                  attempt(s).
                 </p>
                 {!readOnly &&
                   (["failed", "partial"].includes(run.status) ||

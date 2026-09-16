@@ -1,4 +1,9 @@
 "use client";
+import { useState } from "react";
+import { useImprovements } from "@/lib/use-improvements";
+import ChoreCoverage from "./chore-coverage";
+import GlobalSearch from "./global-search";
+import OfflineStatus from "./offline-status";
 import { SaveStatus } from "./ui/save-status";
 import { EntryMenu, MemberCard, NoteComposer } from "./ui/house-controls";
 import { DraggableRow } from "./ui/list-order";
@@ -64,6 +69,8 @@ import SearchField from "./search-field";
 import HandbookTab from "./handbook-tab";
 export default function Hub() {
   const house = useHousehold();
+  const [groupStores, setGroupStores] = useState(false);
+  const [storeFilter, setStoreFilter] = useState("");
   const {
     reduced,
     ready,
@@ -139,6 +146,16 @@ export default function Hub() {
     person,
     friendlyDate,
   } = house;
+  const shoppingByStore = storeFilter
+    ? filteredShopping.filter(
+        (entry) => (entry.store || "Any store") === storeFilter,
+      )
+    : [...filteredShopping];
+  if (groupStores)
+    shoppingByStore.sort((a, b) =>
+      (a.store || "Any store").localeCompare(b.store || "Any store"),
+    );
+  const improvements = useImprovements(household?.id, uid, demo);
   const agreements = useAgreements({
     enabled: session && !demo,
     memberId: uid,
@@ -165,7 +182,7 @@ export default function Hub() {
       name={member.name}
       balance={
         expenseController.loaded && !expenseController.error
-          ? expenseBalances(expenseController.expenses)[member.user_id] || 0
+          ? expenseController.balances[member.user_id] || 0
           : null
       }
       chores={
@@ -357,6 +374,10 @@ export default function Hub() {
           {entry.title}
           {entry.series_id ? " ↻" : ""}
           {entry.rotation_members?.length ? ", taking turns" : ""}
+          {!!entry.checklist?.length &&
+            ` · ${entry.checklist.filter((s) => s.done).length}/${entry.checklist.length} steps`}
+          {entry.effort_minutes ? ` · ~${entry.effort_minutes} min` : ""}
+          {entry.visibility === "private" ? " · Private" : ""}
         </span>
         <small
           className={
@@ -755,10 +776,17 @@ export default function Hub() {
         <header className="topbar">
           <HouseCompanion variant="compact" />
           <span>
-            <Home size={15} /> {household.name} <span className="slash">/</span>{" "}
-            <strong>{tab}</strong>
+            <Home size={15} /> {household.name}{" "}
+            <span className="slash">/</span> <strong>{tab}</strong>
           </span>
           <div>
+            <GlobalSearch
+              entries={entries}
+              expenses={expenseController.expenses}
+              demo={demo}
+              setTab={setTab}
+              onEntry={(entry) => setEditing({ kind: entry.kind, entry })}
+            />
             <DisplayButton onClick={() => changeDisplay(true)} />
             <span className="private-label">
               <ShieldCheck size={14} />
@@ -804,12 +832,13 @@ export default function Hub() {
           key={tab}
           className={`content ${tab === "Overview" ? "home-content" : tab === "Calendar" ? "calendar-content" : ""}`}
         >
+          <OfflineStatus demo={demo} />
           <SaveStatus demo={demo} />
           {demo && (
             <div className="demo-banner">
               <span>
-                <Sparkles size={15} /> Sample household. Try everything; changes
-                last until you reload.
+                <Sparkles size={15} /> Sample household. Try everything;
+                changes last until you reload.
               </span>
               <Button onClick={() => setTab("Our household")}>
                 Connect your home <ArrowRight size={14} />
@@ -875,13 +904,19 @@ export default function Hub() {
           )}
 
           {["To-dos", "Shopping list", "House notes"].includes(tab) && (
-            <SearchField label={`Search ${tab.toLowerCase()}`} value={search} onChange={setSearch} />
+            <SearchField
+              label={`Search ${tab.toLowerCase()}`}
+              value={search}
+              onChange={setSearch}
+            />
           )}
           {tab === "Overview" && <HomeBoard {...boardProps} />}
           {tab === "Expenses" && (
             <ExpensesTab
               controller={expenseController}
-              members={members.filter((member) => member.name !== "Housemates")}
+              members={members.filter(
+                (member) => member.name !== "Housemates",
+              )}
               memberId={uid}
               householdName={household.name}
               pending={householdShopping.filter(
@@ -911,6 +946,15 @@ export default function Hub() {
                   />
                 </div>
               </div>
+              {!demo && (
+                <ChoreCoverage
+                  entries={entries}
+                  members={members}
+                  uid={uid}
+                  controller={improvements}
+                  refresh={refresh}
+                />
+              )}
               {quickAdd("task")}
               <AnimatePresence initial={false}>
                 {filteredTasks.map(taskRow)}
@@ -964,17 +1008,46 @@ export default function Hub() {
                 </span>
               </div>
               {quickAdd("request")}
+              <label className="house-search">
+                Group shopping by store
+                <select
+                  aria-label="Group shopping by store"
+                  value={storeFilter}
+                  onChange={(event) => setStoreFilter(event.target.value)}
+                >
+                  <option value="">All stores</option>
+                  {[
+                    ...new Set(
+                      filteredShopping.map(
+                        (entry) => entry.store || "Any store",
+                      ),
+                    ),
+                  ]
+                    .sort()
+                    .map((store) => (
+                      <option key={store}>{store}</option>
+                    ))}
+                </select>
+              </label>
+              <label className="checkbox-row">
+                <input
+                  type="checkbox"
+                  checked={groupStores}
+                  onChange={(event) => setGroupStores(event.target.checked)}
+                />
+                Group rows by store
+              </label>
               <div className="shopping-list">
                 <AnimatePresence initial={false}>
-                  {filteredShopping.map((entry, index) => {
+                  {shoppingByStore.map((entry, index) => {
                     const group = titleGroup(entry.title);
                     return (
                       <DraggableRow
                         title={entry.title}
                         index={index}
-                        count={filteredShopping.length}
+                        count={shoppingByStore.length}
                         onMove={(to) =>
-                          shoppingOrder.move(filteredShopping, index, to)
+                          shoppingOrder.move(shoppingByStore, index, to)
                         }
                         className={`task-row shopping-row ${entry.done ? "completed" : ""}`}
                         key={entry.id}
@@ -991,8 +1064,19 @@ export default function Hub() {
                         <Button
                           className="entry-label"
                           disabled={readOnly}
-                          onClick={() => setEditing({ kind: "request", entry })}
+                          onClick={() =>
+                            setEditing({ kind: "request", entry })
+                          }
                         >
+                          {groupStores &&
+                            (index === 0 ||
+                              (shoppingByStore[index - 1].store ||
+                                "Any store") !==
+                                (entry.store || "Any store")) && (
+                              <span className="store-heading">
+                                {entry.store || "Any store"}
+                              </span>
+                            )}
                           <h2>{group?.heading ?? entry.title}</h2>
                           {group && (
                             <span className="row-group">
@@ -1002,13 +1086,20 @@ export default function Hub() {
                             </span>
                           )}
                           <small>
-                            {entry.category}
+                            {entry.quantity ?? 1}
+                            {entry.unit ? ` ${entry.unit}` : ""} ·{" "}
+                            {entry.store || "Any store"} · {entry.category}
+                            {entry.visibility === "private"
+                              ? " · Private"
+                              : ""}
                             {isPersonal(entry)
                               ? `, for ${entry.assignee === uid ? "you" : person(entry.assignee)}`
                               : claimedBy(entry)
                                 ? `, ${claimedBy(entry) === uid ? "you’re" : `${person(entry.assignee)}’s`} getting it`
                                 : ""}
-                            {entry.description ? `. ${entry.description}` : ""}
+                            {entry.description
+                              ? `. ${entry.description}`
+                              : ""}
                           </small>
                           {members.some(
                             (m) =>
@@ -1057,8 +1148,17 @@ export default function Hub() {
                               setEditing({ kind: entry.kind, entry })
                             }
                             onDelete={() => void remove(entry)}
-                            actions={
-                              entry.done
+                            actions={[
+                              ...(group && !entry.done
+                                ? [
+                                    {
+                                      label: "Split into separate items",
+                                      onSelect: () =>
+                                        house.splitShopping(entry),
+                                    },
+                                  ]
+                                : []),
+                              ...(entry.done
                                 ? [
                                     ...(canNudge(entry)
                                       ? [
@@ -1082,8 +1182,8 @@ export default function Hub() {
                                         onSelect: () => void nudge(entry),
                                       },
                                     ]
-                                  : []
-                            }
+                                  : []),
+                            ]}
                           />
                         )}
                       </DraggableRow>
@@ -1091,7 +1191,7 @@ export default function Hub() {
                   })}
                 </AnimatePresence>
               </div>
-              {!filteredShopping.length && (
+              {!shoppingByStore.length && (
                 <Empty text="Nothing on this list yet. Add something for your home." />
               )}
             </section>
@@ -1135,7 +1235,9 @@ export default function Hub() {
                         <EntryMenu
                           title={entry.title}
                           onEdit={() => setEditing({ kind: "note", entry })}
-                          onConvert={() => setEditing({ kind: "note", entry })}
+                          onConvert={() =>
+                            setEditing({ kind: "note", entry })
+                          }
                           onDelete={() => void remove(entry)}
                           actions={[
                             {
@@ -1223,7 +1325,11 @@ export default function Hub() {
 
           {tab === "Our household" && (
             <>
-              <HouseholdSettings {...house} avatar={avatar} />
+              <HouseholdSettings
+                {...house}
+                avatar={avatar}
+                improvements={improvements}
+              />
               <ActivityFeed activity={house.activity} members={members} />
             </>
           )}
@@ -1231,9 +1337,9 @@ export default function Hub() {
       </div>
       {toasts}
       {/* One dialog at a time. A crowded day hands straight off to an editor,
-          and an overlapping exit stays a dismissable layer that Radix ranks
-          above the editor: Escape reached the leaving dialog, whose close is
-          already done, and the editor sat there. */}
+        and an overlapping exit stays a dismissable layer that Radix ranks
+        above the editor: Escape reached the leaving dialog, whose close is
+        already done, and the editor sat there. */}
       <AnimatePresence mode="wait">
         {selectedDay && (
           <DayDialog
@@ -1242,7 +1348,8 @@ export default function Hub() {
             entries={dayOrder(
               entries.filter(
                 (e) =>
-                  e.date === selectedDay && ["task", "event"].includes(e.kind),
+                  e.date === selectedDay &&
+                  ["task", "event"].includes(e.kind),
               ),
             )}
             person={person}
@@ -1279,6 +1386,8 @@ export default function Hub() {
                   ) || editing.entry
                 : undefined,
             }}
+            entries={entries}
+            improvements={improvements}
             uid={uid}
             onPayment={togglePayment}
             onCover={coverBill}

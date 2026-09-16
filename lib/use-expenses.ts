@@ -2,6 +2,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { homeRequest } from "./home-client";
 import { TAB_ID } from "./realtime";
+import { expenseBalances } from "./expenses";
+import { monthlySummary } from "./improvements";
 import type { Expense, ExpenseValues } from "./expenses";
 
 export function useExpenses(
@@ -30,6 +32,23 @@ export function useExpenses(
     return () => clearTimeout(timer);
   }, [undo]);
   useEffect(() => setUndo(null), [memberId]);
+  const [nextCursor, setNextCursor] = useState<string | null>(null);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [serverBalances, setServerBalances] = useState<Record<
+    string,
+    number
+  > | null>(null);
+  const [serverSummaries, setServerSummaries] = useState<
+    | {
+        month: string;
+        category: string;
+        paid_by: string;
+        amount_cents: number;
+      }[]
+    | null
+  >(null);
+  const [baseline, setBaseline] = useState<Expense[]>([]);
+  const pageCount = useRef(1);
   const [loaded, setLoaded] = useState(false);
   const [error, setError] = useState("");
   const pending = useRef(0);
@@ -50,6 +69,19 @@ export function useExpenses(
     const read = ++readSequence.current;
     try {
       const data = await homeRequest("/api/expenses");
+      let items: Expense[] = data.expenses;
+      let cursor = data.next_cursor ?? null;
+      for (let n = 1; n < pageCount.current && cursor; n++) {
+        const page = await homeRequest(
+          `/api/expenses?cursor=${encodeURIComponent(cursor)}`,
+        );
+        items = [
+          ...new Map(
+            [...items, ...page.expenses].map((e: Expense) => [e.id, e]),
+          ).values(),
+        ];
+        cursor = page.next_cursor ?? null;
+      }
       if (
         current !== generation.current ||
         version !== revision.current ||
@@ -57,7 +89,11 @@ export function useExpenses(
         pending.current
       )
         return;
-      setExpenses(data.expenses);
+      setExpenses(items);
+      setBaseline(items);
+      setNextCursor(cursor);
+      setServerBalances(data.balances ?? null);
+      setServerSummaries(data.summaries ?? null);
       setLoaded(true);
       setError((current) =>
         current.startsWith("Could not load") ? "" : current,
@@ -73,6 +109,11 @@ export function useExpenses(
     interested.current = false;
     setUndo(null);
     setExpenses([]);
+    setBaseline([]);
+    setNextCursor(null);
+    setServerBalances(null);
+    setServerSummaries(null);
+    pageCount.current = 1;
     setLoaded(false);
     setError("");
   }, [householdId, demo]);
@@ -89,9 +130,11 @@ export function useExpenses(
     };
     const timer = window.setInterval(poll, 15000);
     document.addEventListener("visibilitychange", poll);
+    window.addEventListener("household-offline-synced", poll);
     return () => {
       clearInterval(timer);
       document.removeEventListener("visibilitychange", poll);
+      window.removeEventListener("household-offline-synced", poll);
     };
   }, [refresh]);
   function persist(
@@ -125,11 +168,25 @@ export function useExpenses(
             );
           }
         }
-        const result = await homeRequest("/api/expenses", "POST", {
-          operation,
-          payload: resolved,
-          sender: TAB_ID,
-        });
+        const result = await homeRequest(
+          "/api/expenses",
+          "POST",
+          {
+            operation,
+            payload: resolved,
+            sender: TAB_ID,
+          },
+          operation === "create"
+            ? {
+                expense: {
+                  ...resolved,
+                  household_id: householdId,
+                  created_by: memberId,
+                  created_at: new Date().toISOString(),
+                },
+              }
+            : {},
+        );
         if (generation.current === current) {
           if (operation === "delete" && typeof resolved.id === "string")
             sync?.afterDelete?.(resolved.id);
@@ -144,7 +201,7 @@ export function useExpenses(
               ),
             );
           }
-          after?.();
+          if (!result.queued) after?.();
         }
       } catch (err) {
         if (generation.current === current) {
@@ -249,7 +306,59 @@ export function useExpenses(
       );
     else persist("undo_edit", { undo_token: token });
   }
+  async function loadMore() {
+    if (!nextCursor || loadingMore || pending.current) return;
+    setLoadingMore(true);
+    pageCount.current++;
+    try {
+      await refresh();
+    } finally {
+      setLoadingMore(false);
+    }
+  }
+  const balances = serverBalances
+    ? { ...serverBalances }
+    : expenseBalances(expenses);
+  if (serverBalances) {
+    const before = expenseBalances(baseline),
+      after = expenseBalances(expenses);
+    for (const id of new Set([...Object.keys(before), ...Object.keys(after)]))
+      balances[id] = (balances[id] || 0) + (after[id] || 0) - (before[id] || 0);
+  }
+  function summary(month: string) {
+    if (!serverSummaries) return monthlySummary(expenses, month);
+    const result = {
+      total: 0,
+      categories: {} as Record<string, number>,
+      members: {} as Record<string, number>,
+    };
+    for (const row of serverSummaries.filter((s) => s.month === month)) {
+      result.total += row.amount_cents;
+      result.categories[row.category] =
+        (result.categories[row.category] || 0) + row.amount_cents;
+      result.members[row.paid_by] =
+        (result.members[row.paid_by] || 0) + row.amount_cents;
+    }
+    const before = monthlySummary(baseline, month),
+      after = monthlySummary(expenses, month);
+    result.total += after.total - before.total;
+    for (const field of ["categories", "members"] as const)
+      for (const key of new Set([
+        ...Object.keys(before[field]),
+        ...Object.keys(after[field]),
+      ]))
+        result[field][key] =
+          (result[field][key] || 0) +
+          (after[field][key] || 0) -
+          (before[field][key] || 0);
+    return result;
+  }
   return {
+    balances,
+    summary,
+    nextCursor,
+    loadingMore,
+    loadMore,
     undo,
     undoEdit,
     expenses,

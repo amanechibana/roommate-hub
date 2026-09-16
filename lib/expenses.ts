@@ -8,6 +8,9 @@ export type Expense = {
   paid_by: string;
   shares: Record<string, number>;
   recipient: string | null;
+  category?: string;
+  percentages?: Record<string, string> | null;
+  receipts?: { id: string; file_name: string }[];
   created_by: string;
   created_at: string;
 };
@@ -20,6 +23,8 @@ export type ExpenseValues = Pick<
   | "paid_by"
   | "shares"
   | "recipient"
+  | "category"
+  | "percentages"
 >;
 export function toCents(value: string): number | null {
   if (!/^\d+(\.\d{1,2})?$/.test(value.trim())) return null;

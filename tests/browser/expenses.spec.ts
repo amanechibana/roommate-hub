@@ -64,7 +64,12 @@ test("expenses calculate, survive tab changes, edit and record repayments", asyn
   await expect(
     page.getByText("You’re settled up", { exact: true }),
   ).toBeVisible();
-  await expect(page.getByText("$80.00", { exact: true })).toHaveCount(2);
+  await expect(
+    page
+      .locator(".content > div")
+      .locator("section:not(.monthly-summary)")
+      .getByText("$80.00", { exact: true }),
+  ).toHaveCount(2);
   await page.getByRole("button", { name: /Alex paid You/ }).click();
   await page
     .getByRole("button", { name: "Delete repayment", exact: true })
@@ -111,7 +116,11 @@ test("a bought shopping item turns its estimate into a real expense", async ({
     .getByRole("button", { name: "Expenses", exact: true })
     .click();
   await expect(page.getByRole("button", { name: /Olive oil/ })).toBeVisible();
-  await expect(page.getByText("$12.00", { exact: true })).toHaveCount(2);
+  await expect(
+    page
+      .locator("section:not(.monthly-summary)")
+      .getByText("$12.00", { exact: true }),
+  ).toHaveCount(2);
   await expect(
     page.getByText("$48.00 estimated", { exact: true }),
   ).toBeVisible();

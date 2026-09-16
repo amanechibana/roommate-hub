@@ -9,15 +9,24 @@ import {
   selectedMember,
 } from "@/lib/shared-server";
 import { pushConfigured, pushToMember } from "@/lib/push-server";
-import { expenseMessage, quietHours } from "@/lib/reminders";
+import { expenseMessage } from "@/lib/reminders";
 import type { Expense } from "@/lib/expenses";
 import type { Member } from "@/lib/model";
 export const runtime = "nodejs";
-export async function GET() {
+export async function GET(request: Request) {
   if (!(await signedIn()))
     return json({ error: "Please enter your household code." }, 401);
   try {
-    return json(await sharedDatabase("get", {}, "shared_expenses"));
+    return json(
+      await sharedDatabase(
+        "get",
+        {
+          cursor: new URL(request.url).searchParams.get("cursor"),
+          id: new URL(request.url).searchParams.get("id"),
+        },
+        "shared_expenses",
+      ),
+    );
   } catch (err) {
     logApiFailure("/api/expenses", "get", err);
     return json({ error: "Could not load expenses. Please try again." }, 503);
@@ -48,6 +57,9 @@ export async function POST(request: Request) {
         : operation === "delete"
           ? ["id"]
           : [
+              "mutation_id",
+              "category",
+              "percentages",
               "undo_token",
               "id",
               "kind",
@@ -77,8 +89,7 @@ export async function POST(request: Request) {
       operation === "create" &&
       typeof created === "string" &&
       Date.now() - Date.parse(created) < 15000 &&
-      pushConfigured() &&
-      !quietHours(new Date())
+      pushConfigured()
     )
       after(async () => {
         try {

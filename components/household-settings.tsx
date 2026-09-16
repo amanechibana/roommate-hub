@@ -2,6 +2,8 @@
 
 import { Button } from "@/components/ui/button";
 
+import ReminderPreferencesForm from "./reminder-preferences";
+import type { ImprovementsController } from "@/lib/use-improvements";
 import PushSettings from "@/components/push-settings";
 import CalendarFeed from "@/components/calendar-feed";
 import AgreementsSection from "@/components/agreements-section";
@@ -26,9 +28,13 @@ type Props = Pick<
   | "uid"
   | "setChoosingPerson"
   | "refresh"
-> & { avatar: (member: Member, index: number) => import("react").ReactNode };
+> & {
+  improvements: ImprovementsController;
+  avatar: (member: Member, index: number) => import("react").ReactNode;
+};
 export default function HouseholdSettings({
   demo,
+  improvements,
   household,
   members,
   entries,
@@ -133,7 +139,16 @@ export default function HouseholdSettings({
             URL and publishable key.
           </p>
         )}
-        {!demo && <PushSettings />}
+        <h3>Personal visibility</h3>
+        <p className="subtle">
+          Personal items are visible to housemates by default and stay off
+          shared boards and reminders. A private personal item is returned only
+          to its creator’s selected device identity. Everyone with the household
+          code can change the selected person; private items do not have
+          separate account authentication. Offline copies stay on this device
+          until sign-out or a person change.
+        </p>
+        {!demo && !sharedScreen && <PushSettings />}
         <h3>Display motion</h3>
         <p className="subtle">
           Gentle details for this device. Your system’s reduced-motion
@@ -157,6 +172,10 @@ export default function HouseholdSettings({
           isn’t connected.
         </p>
       </section>
+      <ReminderPreferencesForm
+        controller={improvements}
+        readOnly={sharedScreen}
+      />
       <AgreementsSection
         members={members}
         uid={uid}

@@ -76,3 +76,74 @@
     gap: 4px 10px;
   }
 }
+.chore-checklist,
+.receipt-attachments {
+  margin: 1rem 0;
+  padding: 1rem;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  min-width: 0;
+}
+.checklist-step {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin: 0.5rem 0;
+}
+.checklist-step input[type="checkbox"] {
+  width: 18px;
+  flex: 0 0 18px;
+}
+.checklist-step input:not([type="checkbox"]) {
+  min-width: 0;
+  flex: 1;
+}
+.coverage-panel {
+  margin: 1rem 0;
+}
+.coverage-row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 0.75rem;
+  align-items: center;
+  padding: 0.6rem 0;
+}
+.conflict-warning,
+.offline-banner {
+  background: var(--peach);
+  padding: 0.8rem 1rem;
+  border-radius: 10px;
+  margin: 0.6rem 0;
+}
+.offline-banner {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+.search-result {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  text-align: left;
+  gap: 0.25rem;
+  padding: 0.8rem;
+  border-bottom: 1px solid var(--line);
+  width: 100%;
+}
+.search-result small {
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+.monthly-summary {
+  margin: 1rem 0;
+}
+
+.store-heading {
+  display: block;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+  margin-bottom: 0.35rem;
+}
