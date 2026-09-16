@@ -9,6 +9,9 @@ import { useState } from "react";
 import {
   ArrowDownLeft,
   ArrowUpRight,
+  Check,
+  Copy,
+  ExternalLink,
   Plus,
   ReceiptText,
   Wallet,
@@ -29,6 +32,7 @@ import {
   type Expense,
   type ExpenseValues,
 } from "@/lib/expenses";
+import { paymentNote, venmoPaymentUrl } from "@/lib/settle-up";
 import type { ExpensesController } from "@/lib/use-expenses";
 import styles from "./expenses-tab.module.css";
 
@@ -47,17 +51,23 @@ export default function ExpensesTab({
   members,
   memberId,
   pending,
+  householdName,
 }: {
   controller: ExpensesController;
   members: Member[];
   memberId: string | null;
   pending: Entry[];
+  householdName: string;
 }) {
   // A shared screen reads the ledger but is nobody in particular: no "you"
   // balance, and nothing here can be authored.
   const readOnly = !memberId;
   const { reduced, celebrate } = useHouseMotion();
   const [draft, setDraft] = useState<Draft | null>(null);
+  const [copyResult, setCopyResult] = useState<{
+    payment: string;
+    ok: boolean;
+  } | null>(null);
   const { expenses, loaded, error } = controller;
   const name = (id: string) =>
     members.find((member) => member.user_id === id)?.name || "Housemate";
@@ -73,6 +83,24 @@ export default function ExpensesTab({
       day: "numeric",
       year: "numeric",
     }).format(new Date(`${value}T12:00:00`));
+  async function copyPaymentNote(
+    payment: ReturnType<typeof suggestedRepayments>[number],
+  ) {
+    const key = `${payment.from}-${payment.to}`;
+    try {
+      await navigator.clipboard.writeText(
+        paymentNote({
+          payer: name(payment.from),
+          recipient: name(payment.to),
+          amountCents: payment.amount,
+          household: householdName,
+        }),
+      );
+      setCopyResult({ payment: key, ok: true });
+    } catch {
+      setCopyResult({ payment: key, ok: false });
+    }
+  }
   return (
     <div className={styles.expenses}>
       <div className="page-heading">
@@ -167,27 +195,69 @@ export default function ExpensesTab({
                 Record repayment <Plus size={14} />
               </Button>
             </div>
+            <p className={styles.settlementHelp}>
+              Pay outside Common Ground with Venmo, or copy the note for Zelle
+              or another payment app. Record paid only after money moves—it
+              updates the ledger and does not transfer money.
+            </p>
             <AnimatePresence initial={false}>
-              {suggestedRepayments(balances).map((payment) => (
-                <PresenceRow
-                  className={styles.payment}
-                  key={`${payment.from}-${payment.to}`}
-                >
-                  <span>
-                    <b>{name(payment.from)}</b>
-                    <ArrowRight size={14} />
-                    <b>{name(payment.to)}</b>
-                  </span>
-                  <strong>{expenseMoney(payment.amount)}</strong>
-                  <Button
-                    className="button secondary small"
-                    hidden={readOnly}
-                    onClick={() => setDraft({ kind: "settlement", ...payment })}
-                  >
-                    Record paid
-                  </Button>
-                </PresenceRow>
-              ))}
+              {suggestedRepayments(balances).map((payment) => {
+                const payer = name(payment.from);
+                const recipient = name(payment.to);
+                const key = `${payment.from}-${payment.to}`;
+                const handoff = {
+                  payer,
+                  recipient,
+                  amountCents: payment.amount,
+                  household: householdName,
+                };
+                return (
+                  <PresenceRow className={styles.payment} key={key}>
+                    <span className={styles.paymentRoute}>
+                      <b>{payer}</b>
+                      <ArrowRight size={14} />
+                      <b>{recipient}</b>
+                    </span>
+                    <strong>{expenseMoney(payment.amount)}</strong>
+                    <div className={styles.paymentActions}>
+                      <a
+                        className="button secondary small"
+                        href={venmoPaymentUrl(handoff)}
+                        target="_blank"
+                        rel="noreferrer"
+                        aria-label={`Open Venmo for ${payer} to pay ${recipient} ${expenseMoney(payment.amount)}`}
+                      >
+                        Venmo <ExternalLink size={13} aria-hidden="true" />
+                      </a>
+                      <Button
+                        className="button secondary small"
+                        aria-label={`Copy payment note for ${payer} to pay ${recipient}`}
+                        onClick={() => void copyPaymentNote(payment)}
+                      >
+                        {copyResult?.payment === key && copyResult.ok ? (
+                          <Check size={13} aria-hidden="true" />
+                        ) : (
+                          <Copy size={13} aria-hidden="true" />
+                        )}
+                        {copyResult?.payment === key
+                          ? copyResult.ok
+                            ? "Copied"
+                            : "Copy failed"
+                          : "Copy note"}
+                      </Button>
+                      <Button
+                        className="button secondary small"
+                        hidden={readOnly}
+                        onClick={() =>
+                          setDraft({ kind: "settlement", ...payment })
+                        }
+                      >
+                        Record paid
+                      </Button>
+                    </div>
+                  </PresenceRow>
+                );
+              })}
             </AnimatePresence>
             {!suggestedRepayments(balances).length && (
               <p className={styles.settled}>No outstanding balances.</p>

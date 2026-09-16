@@ -7,6 +7,9 @@ test("expenses calculate, survive tab changes, edit and record repayments", asyn
 }) => {
   test.skip(!!process.env.PW_SHARED_API);
   await page.goto("/");
+  await page.context().grantPermissions(["clipboard-read", "clipboard-write"], {
+    origin: new URL(page.url()).origin,
+  });
   await page
     .getByRole("navigation")
     .getByRole("button", { name: "Expenses", exact: true })
@@ -29,6 +32,27 @@ test("expenses calculate, survive tab changes, edit and record repayments", asyn
   await page.getByLabel("Amount ($)", { exact: true }).fill("80.00");
   await page.getByRole("button", { name: "Save expense", exact: true }).click();
   await expect(page.getByText("$40.00", { exact: true })).toHaveCount(2);
+  const venmo = page.getByRole("link", {
+    name: "Open Venmo for Alex to pay You $40.00",
+  });
+  const venmoUrl = new URL((await venmo.getAttribute("href"))!);
+  expect(venmoUrl.origin).toBe("https://account.venmo.com");
+  expect(venmoUrl.pathname).toBe("/pay");
+  expect(venmoUrl.searchParams.get("amount")).toBe("40.00");
+  expect(venmoUrl.searchParams.get("note")).toBe(
+    "The Maple House household settle-up: Alex pays You $40.00.",
+  );
+  const copyNote = page.getByRole("button", {
+    name: "Copy payment note for Alex to pay You",
+  });
+  await copyNote.click();
+  await expect(copyNote).toContainText("Copied");
+  expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(
+    "The Maple House household settle-up: Alex pays You $40.00.",
+  );
+  await expect(
+    page.getByText(/updates the ledger and does not transfer money/),
+  ).toBeVisible();
   await page.getByRole("button", { name: "Record paid", exact: true }).click();
   await expect(page.getByLabel("Amount ($)", { exact: true })).toHaveValue(
     "40.00",
