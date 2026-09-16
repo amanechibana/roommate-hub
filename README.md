@@ -282,7 +282,7 @@ For a fresh database, apply migrations in order: `001_household.sql`,
 `012_house_activity.sql`, `013_pinned_notes.sql`, `014_personal_todos.sql`,
 `015_agreements.sql`, `016_house_handbook.sql`, `017_timed_house_status.sql`,
 `019_daily_life_gaps.sql`, `020_edit_undo.sql`, and
-`021_household_reliability.sql`.
+`021_household_reliability.sql`, and `022_house_coordination.sql`.
 For an existing installation, apply only the migrations newer than the last installed migration.
 
 Use `npm run migrate` with `pg_connection_url` in `.env` or a server-only
@@ -489,7 +489,7 @@ Suggested order:
 4. **Guests / quiet hours:** shipped as calendar categories with date ranges and optional times; they also appear on the overview and wall display.
 5. **Calendar subscription:** shipped and read-only. Its derived secret URL is revoked by changing the household code; two-way sync/conflict resolution is out of scope.
 6. **Shopping enrichment:** optional product metadata from approved retailer APIs. Current store links are manual; no Amazon login, price scraping, checkout, or purchase automation.
-7. **Membership management:** owner-controlled removal, leaving a house, ownership transfer, and recovery flows.
+7. **Membership management:** shipped for the current two-person household: owner-controlled invitations and removal, leaving, and ownership transfer. Larger rosters and independent account recovery remain future work.
 
 Chore reminders and push notifications shipped as the daily morning digest;
 shared expenses shipped as the Expenses tab. Data amounts are USD; events can
@@ -530,3 +530,46 @@ Verify with `tests/daily-life-gaps.test.ts`, `supabase/tests/daily-life-gaps.sql
 and `tests/browser/daily-life-gaps.spec.ts`. The older `isolation.sql` targets
 legacy authenticated-user functions revoked by migration 011; gateway isolation
 is exercised by the current SQL tests.
+
+## House planning and membership
+
+Apply migration `022_house_coordination.sql` before rolling out this update.
+**House planning** brings together weekly reviews, shared reservations, and moving
+checklists. A review lists unpaid bills and unfinished shared chores through the
+end of next week, including overdue and undated work, plus proposed agreements,
+open amendments, relief requests, and household decisions. Save review notes for
+the current Monday-based household week (New York time); the previous twelve
+reviews remain available. Personal tasks stay outside the review.
+
+Reserve Laundry, Parking spot, Shared workspace, or a custom resource, using
+this device's local time zone. Reservations may last up to 24 hours and start
+within 180 days. Database row locks prevent overlapping reservations even when
+two devices save together; adjacent slots are allowed. Each housemate cancels
+their own reservations. Move-in and move-out checklists keep keys, deposits,
+meter readings, cleaning, and final balances with item notes and completion
+checks. Amounts in checklist notes do not post to Expenses. Shared screens can
+read all three features but cannot change them.
+
+In **Our household**, the owner adds a housemate's name and privately shares
+the existing household code. The two-person limit remains while agreements
+require a pair; departing housemates free a slot for replacements. Migration
+022 assigns a legacy shared-screen owner to the first named housemate in
+alphabetical order; existing named owners remain owners. Ownership must be
+transferred before the owner leaves. Removing or leaving archives membership,
+stops reminders, cancels future bookings, and unassigns unfinished shared
+chores. Past expenses, outstanding balances, completed work, and moving
+checklists remain, and final repayments can still name a former housemate.
+
+A roster change archives signed/proposed agreements, cancels unfinished future
+generated obligations, closes pending agreement decisions, and returns live
+agreements to draft for review with the new housemate. The original terms and
+signatures remain readable in House planning. Member selection is attribution,
+not independent authentication: anyone holding the shared code can select a
+current person. To revoke a departed person's household access, rotate
+`HOUSEHOLD_ACCESS_CODE` in the hosting settings and redeploy; this invalidates
+existing sessions and the calendar subscription link.
+
+Validation includes `tests/coordination.test.ts`,
+`supabase/tests/house-coordination.sql`, and
+`tests/browser/coordination.spec.ts` (demo desktop/mobile flows and mocked
+shared-household permissions and membership).

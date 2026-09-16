@@ -37,6 +37,7 @@ export type Tab =
   | "To-dos"
   | "Shopping list"
   | "House notes"
+  | "House planning"
   | "House handbook"
   | "Expenses"
   | "Our household";
@@ -47,6 +48,7 @@ export const tabs = [
   { name: "Shopping list", icon: ShoppingBasket },
   { name: "House notes", icon: StickyNote },
   { name: "House handbook", icon: BookOpen },
+  { name: "House planning", icon: ClipboardList },
   { name: "Expenses", icon: Wallet },
 ] as const;
 // Day words start sentences capitalised but sit inside them lowercase:

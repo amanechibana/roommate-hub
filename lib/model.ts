@@ -21,7 +21,7 @@ export type Entry = {
   created_at: string;
 };
 export type Repeat = "daily" | "weekly" | "biweekly" | "monthly" | "weekdays";
-export type Member = { user_id: string; household_id: string; name: string };
+export type Member = { user_id: string; household_id: string; name: string; active?: boolean };
 export type Household = { id: string; name: string; owner_id: string };
 
 export function dateKey(date: Date): string {

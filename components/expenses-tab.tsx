@@ -541,7 +541,9 @@ function ExpenseDialog({
   const [people, setPeople] = useState(
     draft.entry
       ? Object.keys(draft.entry.shares)
-      : members.map((member) => member.user_id),
+      : members
+          .filter((member) => member.active !== false)
+          .map((member) => member.user_id),
   );
   // An expense saved with hand-set shares reopens that way, so editing the
   // title doesn't quietly even the split back out.
