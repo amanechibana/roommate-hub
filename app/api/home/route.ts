@@ -55,9 +55,15 @@ export async function POST(request: Request) {
       return json({ error: "This entry is too long." }, 400);
     const { operation, payload, sender } = JSON.parse(raw);
     if (
-      !["create", "update", "delete", "restore", "payment", "member"].includes(
-        operation,
-      ) ||
+      ![
+        "create",
+        "update",
+        "delete",
+        "restore",
+        "undo_edit",
+        "payment",
+        "member",
+      ].includes(operation) ||
       !payload ||
       typeof payload !== "object" ||
       Array.isArray(payload)
@@ -66,7 +72,7 @@ export async function POST(request: Request) {
     const keys =
       operation === "member"
         ? ["name"]
-        : operation === "restore"
+        : ["restore", "undo_edit"].includes(operation)
           ? ["undo_token"]
           : operation === "payment"
             ? ["id", "paid", "cover", "expense"]
@@ -87,6 +93,8 @@ export async function POST(request: Request) {
                 "done",
                 "repeat",
                 "repeat_until",
+                "repeat_days",
+                "repeat_interval",
                 "scope",
               ];
     const values = Object.fromEntries(

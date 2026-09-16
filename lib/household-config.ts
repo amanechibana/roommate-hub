@@ -16,6 +16,8 @@ import {
 export type SaveValues = Partial<Entry> & {
   repeat?: Repeat;
   repeat_until?: string;
+  repeat_days?: number[];
+  repeat_interval?: number;
   time_of_day?: string | null;
   end_time?: string | null;
   rotation_partner?: string;

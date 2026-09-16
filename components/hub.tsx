@@ -60,6 +60,7 @@ import EntryDialog from "./entry-dialog";
 import Auth from "./house-auth";
 import { DayDialog, Empty, ShortcutsDialog } from "./house-dialogs";
 import HouseholdSettings from "./household-settings";
+import SearchField from "./search-field";
 import HandbookTab from "./handbook-tab";
 export default function Hub() {
   const house = useHousehold();
@@ -127,6 +128,8 @@ export default function Hub() {
     choosePerson,
     tasks,
     shopping,
+    search,
+    setSearch,
     filteredTasks,
     filteredShopping,
     notes,
@@ -871,6 +874,9 @@ export default function Hub() {
             </m.div>
           )}
 
+          {["To-dos", "Shopping list", "House notes"].includes(tab) && (
+            <SearchField label={`Search ${tab.toLowerCase()}`} value={search} onChange={setSearch} />
+          )}
           {tab === "Overview" && <HomeBoard {...boardProps} />}
           {tab === "Expenses" && (
             <ExpensesTab

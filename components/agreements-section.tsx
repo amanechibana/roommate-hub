@@ -7,6 +7,8 @@ import { useAgreementsContext } from "./agreements-context";
 import AgreementView, { AGREEMENT_TITLES } from "./agreement-view";
 import type { Entry, Member } from "@/lib/model";
 import type { Agreement, AgreementSlug } from "@/lib/agreements";
+import SearchField from "./search-field";
+import { matchesSearch } from "@/lib/search";
 import styles from "./agreements.module.css";
 
 const CARDS: { slug: AgreementSlug; subtitle: string }[] = [
@@ -26,6 +28,7 @@ export default function AgreementsSection({
   refreshHousehold: (quiet?: boolean) => void;
 }) {
   const controller = useAgreementsContext();
+  const [query, setQuery] = useState("");
   const [open, setOpen] = useState<AgreementSlug | null>(null);
   if (!controller?.enabled || !uid) return null;
   const real = members.filter((m) => m.name !== "Housemates");
@@ -40,7 +43,9 @@ export default function AgreementsSection({
     if (!agreement || agreement.status === "draft")
       return <span className={styles.chip}>Draft</span>;
     if (agreement.status === "proposed") {
-      const waiting = real.find((m) => !agreement.signed_by.includes(m.user_id));
+      const waiting = real.find(
+        (m) => !agreement.signed_by.includes(m.user_id),
+      );
       return (
         <span className={`${styles.chip} ${styles.chipWaiting}`}>
           Awaiting {waiting?.name ?? "signature"}
@@ -62,8 +67,7 @@ export default function AgreementsSection({
   const pendingFor = (agreement?: Agreement) =>
     !agreement
       ? 0
-      : (agreement.status === "proposed" &&
-        !agreement.signed_by.includes(uid)
+      : (agreement.status === "proposed" && !agreement.signed_by.includes(uid)
           ? 1
           : 0) +
         controller.amendments.filter(
@@ -86,6 +90,13 @@ export default function AgreementsSection({
       <p className="subtle">
         The house rules you both sign, kept where the arguments can find them.
       </p>
+      {!open && (
+        <SearchField
+          label="Search agreements"
+          value={query}
+          onChange={setQuery}
+        />
+      )}
       {/* The open view surfaces the same error next to its actions. */}
       {controller.error && !open && (
         <p className="error" role="alert">
@@ -112,10 +123,39 @@ export default function AgreementsSection({
         </>
       ) : (
         <div className={styles.rows}>
+          {query &&
+            !CARDS.some((card) => {
+              const a = controller.agreements.find((a) => a.slug === card.slug);
+              return matchesSearch(
+                query,
+                AGREEMENT_TITLES[card.slug],
+                card.subtitle,
+                a?.terms,
+                controller.amendments.filter((m) => m.agreement_id === a?.id),
+                controller.events.filter((e) => e.agreement_id === a?.id),
+              );
+            }) && <p className="subtle">No matching agreements.</p>}
           {CARDS.map((card) => {
             const agreement = controller.agreements.find(
               (a) => a.slug === card.slug,
             );
+            const amendments = controller.amendments.filter(
+              (a) => a.agreement_id === agreement?.id,
+            );
+            const events = controller.events.filter(
+              (e) => e.agreement_id === agreement?.id,
+            );
+            if (
+              !matchesSearch(
+                query,
+                AGREEMENT_TITLES[card.slug],
+                card.subtitle,
+                agreement?.terms,
+                amendments,
+                events,
+              )
+            )
+              return null;
             const pending = pendingFor(agreement);
             return (
               <Button
@@ -126,6 +166,24 @@ export default function AgreementsSection({
                 <span className={styles.rowCopy}>
                   <strong>{AGREEMENT_TITLES[card.slug]}</strong>
                   <small className="subtle">{card.subtitle}</small>
+                  {query &&
+                    amendments
+                      .filter((a) =>
+                        matchesSearch(query, a.title, a.body, a.terms_patch),
+                      )
+                      .map((a) => (
+                        <small key={a.id}>
+                          {a.title}: {a.body}
+                        </small>
+                      ))}
+                  {query &&
+                    events
+                      .filter((e) => matchesSearch(query, e.kind, e.details))
+                      .map((e) => (
+                        <small key={e.id}>
+                          {e.kind.replaceAll("_", " ")} — {e.status}
+                        </small>
+                      ))}
                 </span>
                 {pending > 0 && (
                   <span

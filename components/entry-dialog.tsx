@@ -69,6 +69,10 @@ export default function EntryDialog({
   const [startDate, setStartDate] = useState(
     editing.entry?.date || editing.date || "",
   );
+  const [repeatDays, setRepeatDays] = useState<number[]>([
+    parseDate(startDate || dateKey(new Date())).getDay(),
+  ]);
+  const [repeatInterval, setRepeatInterval] = useState(1);
   const [repeatUntil, setRepeatUntil] = useState("");
   const [rangeEnd, setRangeEnd] = useState("");
   function chooseRepeat(value: Repeat | "") {
@@ -152,6 +156,10 @@ export default function EntryDialog({
       setValidation("The repeat end date should be after the start.");
       return;
     }
+    if (repeating === "weekdays" && !repeatDays.length) {
+      setValidation("Choose at least one weekday.");
+      return;
+    }
     if (repeating) {
       const cap = parseDate(date!);
       if (repeating === "daily") cap.setDate(cap.getDate() + 30);
@@ -164,6 +172,22 @@ export default function EntryDialog({
         );
         return;
       }
+    }
+    if (
+      repeating &&
+      date &&
+      !seriesDates(
+        date,
+        repeating,
+        until,
+        repeatDays,
+        rangedEvent ? 1 : repeatInterval,
+      ).length
+    ) {
+      setValidation(
+        "No occurrences fall within these dates. Adjust the days or end date.",
+      );
+      return;
     }
     if (data.get("end_time") && !data.get("time_of_day")) {
       setValidation("Choose a start time before adding an end time.");
@@ -187,7 +211,14 @@ export default function EntryDialog({
       url,
       time_of_day: String(data.get("time_of_day") || "") || null,
       end_time: String(data.get("end_time") || "") || null,
-      ...(repeating ? { repeat: repeating, repeat_until: until } : {}),
+      ...(repeating
+        ? {
+            repeat: repeating,
+            repeat_until: until,
+            repeat_days: repeatDays,
+            repeat_interval: rangedEvent ? 1 : repeatInterval,
+          }
+        : {}),
       ...(rotating ? { rotation_partner: partner } : {}),
       ...(entry?.series_id && wholeSeries ? { scope: "series" as const } : {}),
     });
@@ -375,11 +406,53 @@ export default function EntryDialog({
                 >
                   <option value="">Never</option>
                   <option value="weekly">Weekly</option>
+                  <option value="weekdays">Selected weekdays</option>
                   <option value="biweekly">Every 2 weeks</option>
                   <option value="monthly">Monthly</option>
                 </select>
               </label>
             )}
+          {repeat && !entry?.series_id && repeat !== "daily" && (
+            <label>
+              Repeat every
+              <input
+                type="number"
+                min={1}
+                max={52}
+                required
+                value={repeatInterval}
+                onChange={(event) =>
+                  setRepeatInterval(Number(event.target.value))
+                }
+              />
+              {repeat === "monthly"
+                ? "months"
+                : repeat === "biweekly"
+                  ? "two-week periods"
+                  : "weeks"}
+            </label>
+          )}
+          {repeat === "weekdays" && !entry?.series_id && (
+            <fieldset>
+              <legend>On these days</legend>
+              {[1, 2, 3, 4, 5, 6, 0].map((day) => (
+                <label className="checkbox-row" key={day}>
+                  <input
+                    type="checkbox"
+                    checked={repeatDays.includes(day)}
+                    onChange={(event) =>
+                      setRepeatDays((current) =>
+                        event.target.checked
+                          ? [...current, day]
+                          : current.filter((d) => d !== day),
+                      )
+                    }
+                  />
+                  {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][day]}
+                </label>
+              ))}
+            </fieldset>
+          )}
           {kind === "event" && (
             <>
               <label>
@@ -488,8 +561,16 @@ export default function EntryDialog({
           startDate &&
           repeatUntil >= startDate && (
             <p className="repeat-summary">
-              {seriesDates(startDate, repeat, repeatUntil).length} occurrences,
-              starting{" "}
+              {
+                seriesDates(
+                  startDate,
+                  repeat,
+                  repeatUntil,
+                  repeatDays,
+                  repeatInterval,
+                ).length
+              }{" "}
+              occurrences, starting{" "}
               {parseDate(startDate).toLocaleDateString("en-US", {
                 month: "short",
                 day: "numeric",

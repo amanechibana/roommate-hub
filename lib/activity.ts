@@ -3,7 +3,24 @@ import { dateKey } from "./model";
 export type HouseActivity = {
   id: string;
   actor: string;
-  action: "completed" | "bought" | "reopened" | "paid" | "noted";
+  action:
+    | "completed"
+    | "bought"
+    | "reopened"
+    | "paid"
+    | "noted"
+    | "proposed"
+    | "signed"
+    | "withdrew"
+    | "approved"
+    | "declined"
+    | "requested"
+    | "accepted"
+    | "recorded"
+    | "added"
+    | "edited"
+    | "removed"
+    | "attached";
   title: string;
   created_at: string;
 };

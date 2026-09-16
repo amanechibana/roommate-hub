@@ -1,4 +1,6 @@
 "use client";
+import * as Popover from "@radix-ui/react-popover";
+import { Button } from "./ui/button";
 import { useHouseMotion } from "./ui/motion-provider";
 import { PaperDialog } from "./ui/dialog";
 import { AnimatePresence } from "motion/react";
@@ -407,7 +409,52 @@ export default function CommuteStrip({
         <WeatherIcon aria-hidden="true" />
         {weather ? (
           <div className="commute-weather-copy">
-            <strong>{weather.temperature}°</strong>
+            {weather.forecast && weather.forecast.length > 1 && !display ? (
+              <Popover.Root>
+                <Popover.Trigger asChild>
+                  <Button
+                    className="weather-forecast-trigger"
+                    aria-label="Tomorrow & weekend weather"
+                  >
+                    <strong>{weather.temperature}°</strong>
+                    <ChevronDown size={12} />
+                  </Button>
+                </Popover.Trigger>
+                <Popover.Portal>
+                  <Popover.Content
+                    className="weather-outlook"
+                    sideOffset={10}
+                    align="start"
+                    collisionPadding={12}
+                  >
+                    <h3>Tomorrow & weekend</h3>
+                    {weather.forecast.slice(1).map((day, index) => (
+                      <p key={day.date}>
+                        {index === 0
+                          ? "Tomorrow"
+                          : new Date(`${day.date}T12:00:00`).toLocaleDateString(
+                              "en-US",
+                              { weekday: "short" },
+                            )}
+                        : {day.description}
+                        {day.high !== null && day.low !== null
+                          ? ` · H ${day.high}° L ${day.low}°`
+                          : ""}
+                        {day.precipitation !== null
+                          ? ` · ${day.precipitation}% precipitation`
+                          : ""}
+                      </p>
+                    ))}
+                    <Popover.Close asChild>
+                      <Button className="text-button">Close forecast</Button>
+                    </Popover.Close>
+                  </Popover.Content>
+                </Popover.Portal>
+              </Popover.Root>
+            ) : (
+              <strong>{weather.temperature}°</strong>
+            )}
+
             <small>
               {weather.description}
               {Math.abs(weather.feelsLike - weather.temperature) >= 3
