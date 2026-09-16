@@ -1,0 +1,84 @@
+.grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 24px;
+  padding-bottom: 24px;
+}
+.checkin,
+.error {
+  grid-column: 1/-1;
+}
+.review {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 24px;
+}
+.grid form {
+  display: grid;
+  gap: 12px;
+  margin: 16px 0;
+}
+.grid label {
+  display: grid;
+  gap: 6px;
+}
+.grid ul {
+  padding-left: 20px;
+}
+.grid li {
+  margin-bottom: 12px;
+  overflow-wrap: anywhere;
+}
+.grid small {
+  display: block;
+  color: var(--muted);
+  margin-top: 4px;
+}
+.times {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+.grid input,
+.grid select,
+.grid textarea {
+  max-width: 100%;
+  min-width: 0;
+  width: 100%;
+}
+.grid .moveItem label {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+}
+.moveItem input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+}
+.move {
+  border-top: 1px solid var(--line);
+  padding-top: 16px;
+  margin-top: 20px;
+}
+.move summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+.error {
+  padding: 16px;
+  background: var(--peach);
+  border-radius: 12px;
+}
+.bookings {
+  margin-top: 20px;
+}
+@media (max-width: 800px) {
+  .grid,
+  .review {
+    grid-template-columns: 1fr;
+  }
+  .times {
+    grid-template-columns: 1fr;
+  }
+}

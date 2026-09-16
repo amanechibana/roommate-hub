@@ -64,6 +64,7 @@ import SearchField from "./search-field";
 import HandbookTab from "./handbook-tab";
 import HouseholdLifeTab from "./household-life-tab";
 import { useHouseholdLife } from "@/lib/use-household-life";
+import HousePlanning from "./house-planning";
 export default function Hub() {
   const house = useHousehold();
   const {
@@ -860,6 +861,7 @@ export default function Hub() {
                     {
                       {
                         Calendar: "Plans and dated to-dos for your home.",
+                        "House planning": "Check in, reserve shared spaces, and plan a move.",
                         "To-dos": `${openTasks.length} open, ${openTasks.filter((entry) => entry.assignee === uid).length} assigned to you`,
                         "Shopping list": `${neededItems.length} ${neededItems.length === 1 ? "item" : "items"} to pick up`,
                         "House notes": `${notes.length} ${notes.length === 1 ? "note" : "notes"} shared with your home${takenDown.length ? `, ${takenDown.length} taken down` : ""}`,
@@ -878,6 +880,7 @@ export default function Hub() {
               {tab !== "Our household" &&
                 tab !== "House handbook" &&
                 tab !== "Household life" &&
+                tab !== "House planning" &&
                 addButton(
                   tab === "Calendar"
                     ? "event"
@@ -897,7 +900,7 @@ export default function Hub() {
           {tab === "Expenses" && (
             <ExpensesTab
               controller={expenseController}
-              members={members.filter((member) => member.name !== "Housemates")}
+              members={[...members, ...house.formerMembers].filter((member) => member.name !== "Housemates")}
               memberId={uid}
               householdName={household.name}
               pending={householdShopping.filter(
@@ -909,7 +912,7 @@ export default function Hub() {
           {tab === "Household life" && (
             <HouseholdLifeTab
               life={life}
-              members={members}
+              members={[...members, ...house.formerMembers]}
               uid={uid}
               readOnly={readOnly}
               entries={entries}
@@ -1249,6 +1252,10 @@ export default function Hub() {
               demo={demo}
               readOnly={readOnly}
             />
+          )}
+
+          {tab === "House planning" && (
+            <HousePlanning demo={demo} entries={entries} members={members} uid={uid} readOnly={readOnly} />
           )}
 
           {tab === "Our household" && (

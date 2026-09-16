@@ -40,6 +40,8 @@ const suites = {
   20: ["daily-life-gaps"],
   21: ["daily-life-gaps", "household-reliability"],
   22: ["household-life"],
+  23: ["house-coordination"],
+  24: ["household-life", "house-coordination", "household-life-membership"],
 };
 let runnerDatabase;
 try {

@@ -84,9 +84,11 @@ export default function HouseholdLifeTab({
   useEffect(() => setEditor(null), [uid]);
   const { data, busy, error, notice } = life;
   const writable = !readOnly && !!uid;
-  const people = members.filter((m) => m.name !== "Housemates");
+  const people = members.filter(
+    (m) => m.name !== "Housemates" && m.active !== false,
+  );
   const person = (id: string | null) =>
-    people.find((m) => m.user_id === id)?.name || "Unassigned";
+    members.find((m) => m.user_id === id)?.name || "Unassigned";
   const shopping = entries.filter(
     (e) => e.kind === "request" && !e.done && e.category !== "Personal",
   );
@@ -233,7 +235,9 @@ export default function HouseholdLifeTab({
                     ))}
                   </div>
                   <p className={styles.meta}>
-                    {votes.length} of {people.length} housemates voted
+                    {poll.decision
+                      ? `${votes.length} votes saved`
+                      : `${votes.length} of ${people.length} housemates voted`}
                     {mine && open
                       ? " · Tap another option to change your vote."
                       : ""}

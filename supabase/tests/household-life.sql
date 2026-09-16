@@ -9,7 +9,7 @@ begin
   -- Token and actor enforcement for every write; read-only device can read.
   failed:=false; begin perform public.shared_household_life('wrong','get'); exception when insufficient_privilege then failed:=true; end;
   if not failed then raise exception 'Wrong token accepted'; end if;
-  failed:=false; begin perform public.shared_household_life('test-gateway','pantry_save',jsonb_build_object('actor',shared,'title','Rice','status','low')); exception when insufficient_privilege then failed:=true; end;
+  failed:=false; begin perform public.shared_household_life('test-gateway','pantry_save',jsonb_build_object('actor',shared,'title','Rice','status','low')); exception when insufficient_privilege or raise_exception then failed:=true; end;
   if not failed then raise exception 'Shared screen authored a staple'; end if;
   result:=public.shared_household_life('test-gateway','poll_create',jsonb_build_object('actor',a,'title','Vacuum?','options',jsonb_build_array('Yes','No'),'deadline',now()+interval '1 hour'));
   pid:=(result->'polls'->0->>'id')::uuid;

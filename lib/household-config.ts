@@ -38,6 +38,7 @@ export type Tab =
   | "To-dos"
   | "Shopping list"
   | "House notes"
+  | "House planning"
   | "House handbook"
   | "Expenses"
   | "Our household"
@@ -49,6 +50,7 @@ export const tabs = [
   { name: "Shopping list", icon: ShoppingBasket },
   { name: "House notes", icon: StickyNote },
   { name: "House handbook", icon: BookOpen },
+  { name: "House planning", icon: ClipboardList },
   { name: "Expenses", icon: Wallet },
   { name: "Household life", icon: HeartHandshake },
 ] as const;
