@@ -3,7 +3,7 @@ do $$
 declare hid uuid; a uuid; b uuid; bill uuid:=gen_random_uuid(); expense uuid;
   result jsonb; claim uuid; retry uuid; cooldown uuid; total integer:=0; cursor text;
   gym uuid; house uuid; series uuid:=gen_random_uuid(); chores uuid; original uuid;
-  today date:=(now() at time zone 'America/New_York')::date; fresh uuid:=gen_random_uuid(); fresh_seen boolean:=false;
+  today date:=(now() at time zone 'America/New_York')::date; fresh uuid:=gen_random_uuid(); fresh_seen boolean:=false; undo_token uuid:=gen_random_uuid();
 begin
   select household_id into hid from public.shared_home_config;
   select user_id into a from public.members where household_id=hid and name='Amane';
@@ -66,6 +66,10 @@ begin
   end loop;
   if total<>1201 then raise exception 'Lost open rows across pages: %',total; end if;
   if not fresh_seen then raise exception 'Archived an old request bought today'; end if;
+  perform public.shared_home('test-gateway','update',jsonb_build_object('actor',a,'id',fresh,'title','Temporary title','undo_token',undo_token));
+  result:=public.shared_home('test-gateway','undo_edit',jsonb_build_object('actor',a,'undo_token',undo_token));
+  if jsonb_array_length(result->'entries')>500 then raise exception 'Edit undo returned an unbounded snapshot'; end if;
+  if (select title from public.entries where id=fresh)<>'Bought today' then raise exception 'Upstream edit undo was lost'; end if;
   result:=public.shared_home('test-gateway','history');
   if jsonb_array_length(result->'entries')<>50 or result->>'next_cursor' is null then raise exception 'History not paged'; end if;
   -- SQL-owned cooldowns and nonce-safe release work across separate instances.

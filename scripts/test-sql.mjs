@@ -38,7 +38,7 @@ const suites = {
   16: ["house-handbook"],
   17: ["timed-house-status"],
   20: ["daily-life-gaps"],
-  21: ["household-reliability"],
+  21: ["daily-life-gaps", "household-reliability"],
 };
 let runnerDatabase;
 try {

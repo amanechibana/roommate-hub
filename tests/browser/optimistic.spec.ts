@@ -397,10 +397,14 @@ test("alternating series keeps turns through edits and whole-series undo", async
   await page.getByLabel("Apply to every occurrence of this plan").check();
   await page.getByRole("button", { name: "Delete entry" }).click();
   await expect(changed).toHaveCount(0);
-  await expect(page.locator(".toast-stack").getByRole("status")).toContainText(
-    "3 occurrences deleted",
-  );
-  await page.getByRole("button", { name: "Undo", exact: true }).click();
+  const deletedNotice = page
+    .locator(".toast-stack")
+    .getByRole("status")
+    .filter({ hasText: "3 occurrences deleted" });
+  await expect(deletedNotice).toBeVisible();
+  await deletedNotice
+    .getByRole("button", { name: "Undo", exact: true })
+    .click();
   await expect(changed.locator(".person-tag")).toHaveText([
     "Amane",
     "Amane",
