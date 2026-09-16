@@ -9,7 +9,11 @@ export function useExpenses(
   memberId: string | null,
   demo: boolean,
   active: boolean,
-  sync?: { drain: () => Promise<void>; resolveId: (id: string) => string },
+  sync?: {
+    drain: () => Promise<void>;
+    resolveId: (id: string) => string;
+    afterDelete?: (id: string) => void;
+  },
 ) {
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [undo, setUndo] = useState<{
@@ -127,6 +131,8 @@ export function useExpenses(
           sender: TAB_ID,
         });
         if (generation.current === current) {
+          if (operation === "delete" && typeof resolved.id === "string")
+            sync?.afterDelete?.(resolved.id);
           if (operation === "undo_edit") {
             recovery.current = true;
             setExpenses((items) =>
@@ -197,11 +203,15 @@ export function useExpenses(
   // reads from clobbering it.
   function inject(expense: Expense) {
     revision.current++;
-    setExpenses((current) => [expense, ...current]);
+    setExpenses((current) => [
+      expense,
+      ...current.filter((e) => e.id !== expense.id),
+    ]);
   }
   function remove(id: string) {
     setExpenses((current) => current.filter((item) => item.id !== id));
     persist("delete", { id });
+    if (demo) sync?.afterDelete?.(id);
   }
   // An expense persisted through another queue (a cover payment on the home
   // queue) holds that promise here so polls and pings defer exactly like they

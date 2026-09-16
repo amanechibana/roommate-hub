@@ -32,7 +32,7 @@ The cat window follows local device time and the commute strip's weather reading
 
 The Expenses tab records shared purchases, who paid, and even splits among selected housemates. Amounts are calculated in whole cents; any remainder is assigned consistently so shares always add up to the total. **Adjust shares** in the split box turns the even amounts into inputs, for the night one person had the wine: type each share (0 is allowed), the hint says what is left to assign, and the save is refused until they add up. An expense saved that way reopens with its shares as typed (unless they happen to be the even split, which reopens as one). Balances show who owes whom, with a Venmo handoff and a copyable Zelle/general payment note that names the payer, recipient, amount, and household. These links help housemates pay outside Common Ground; **Record paid** remains a separate bookkeeping action and does not transfer money. Repayments reduce the balance without increasing monthly spending. A new entry is read out to the people in it ("Alex logged a purchase — “Groceries” $82.50, your share $27.50"; "Sam paid you back — $40.00, recorded on the ledger"), with the same quiet hours as a nudge; edits and deletions stay quiet. Purchases and repayments can be edited or deleted from Activity. Entries save optimistically and refresh across devices.
 
-Expenses use migration `006_expenses.sql` and a separate household-scoped gateway. Calendar rent/bill checks remain reminders when each person pays their own share; those payments are not posted as expenses. When nobody has paid yet, a bill with an amount offers **I covered the whole bill** — one tap checks off every payer and logs the full amount to Expenses as an even split paid by you, so housemates owe you their shares. The home board greeting shows who owes whom from the ledger, with a shortcut to settle up. Recording a repayment does not send money.
+Expenses use migration `006_expenses.sql` and a separate household-scoped gateway. **I paid** is a reminder check only. **Log my share to Expenses** records your original share paid by you, without creating debt. **I covered the whole bill** (or **I covered the remaining shares**) logs only unpaid original shares and checks those people off. Migration 021 links these postings: retries cannot duplicate them, deleting the expense reverses only checks it created, and monetary edits require deleting and re-logging the linked expense. The home board shows who owes whom from the ledger. None of these actions transfers money.
 
 House notes can be turned into a to-do, plan, or shopping item: open the note and pick a new type in the edit dialog. The entry keeps its title, details, and author; turning one into a rent or bill event adds payment checks for everyone.
 
@@ -119,6 +119,19 @@ the morning digest never keeps arriving for the housemate who used the phone
 last; choosing the shared screen clears it, since a kitchen display gets no
 personal reminders. Dead endpoints are pruned automatically when a push
 bounces.
+
+Migration 021 persists each scheduled edition's New York date, last attempt,
+delivery counts, safe error category, and per-device successful-delivery hashes.
+**Our household → Household reliability** shows interrupted/failed/partial
+deliveries and lets a housemate retry outside quiet hours. A retry skips devices
+whose success was recorded. A push accepted just before the database fails may
+still be resent; this is not an exactly-once guarantee across the push provider
+and database. There is no automatic second cron on Hobby. Fan-out isolates
+individual failures and has a bounded concurrency/time budget.
+The same existing daily crons append gym sessions and chore rotations when their
+horizon is within two weeks, even if push is not configured. They preserve
+existing entries, swaps, skips, and workout logs. Nudge/thanks cooldowns are
+stored in SQL, so a cold instance does not reset them.
 
 ## Weather and train times
 
@@ -267,9 +280,32 @@ For a fresh database, apply migrations in order: `001_household.sql`,
 `008_push_subscriptions.sql`, `009_cover_expense_and_attempt_clear.sql`,
 `010_push_subscribe_hardening.sql`, `011_revoke_legacy_multi_user.sql`,
 `012_house_activity.sql`, `013_pinned_notes.sql`, `014_personal_todos.sql`,
-`015_agreements.sql`, `016_house_handbook.sql`, and
-`017_timed_house_status.sql`.
+`015_agreements.sql`, `016_house_handbook.sql`, `017_timed_house_status.sql`,
+`019_daily_life_gaps.sql`, `020_edit_undo.sql`, and
+`021_household_reliability.sql`.
 For an existing installation, apply only the migrations newer than the last installed migration.
+
+Use `npm run migrate` with `pg_connection_url` in `.env` or a server-only
+`MIGRATION_DATABASE_URL`. It applies pending files in order, one transaction per
+file, with an advisory lock and SHA-256 checksums recorded in the private
+`household_schema_migrations` table. `npm run migrate -- --check` reports pending
+or changed migrations. Never edit an applied migration.
+Legacy installations have no ledger: verify the actual installed schema first,
+then explicitly baseline it, for example `npm run migrate -- --baseline 016`
+**only if 001–016 are already installed**. This records that asserted baseline
+and applies newer migrations; it does not replay historical DDL. The runner
+refuses to replay migration 001 onto an existing household. If direct Supabase
+IPv6 is unreachable, set `MIGRATION_POOLER_HOST` to the project's verified
+session-pooler hostname from Supabase; the runner uses port 5432 and the project
+qualified user. Connection passwords/tokens are not printed.
+Migration 021 bounds home RPC pages to 500 entries (open items plus a date window)
+and exposes 50-row historical pages. Calendar navigation loads its selected
+month; older bought shopping remains saved in **Household history**, not deleted.
+It also temporarily disables adding a third real member in both the UI and SQL.
+Personal records are excluded from calendar exports/subscriptions; the shared
+feed still includes bill amounts, and signing out does not revoke its URL.
+Attachment availability is shown in settings. Signing still uses the server-only
+storage key, which must never be exposed to browser code.
 Migration 017 adds event end times and the Away, Guest, and Quiet hours
 categories. It also persists event times through the household gateway and
 expands an away or guest date range into a bounded daily series. Verify it with
@@ -409,10 +445,18 @@ This repository does not create cloud accounts, remote Git repositories, or paid
 ```sh
 npm run typecheck
 npm test
+SQL_TEST_DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:5432/postgres npm run test:sql
 npm run build
 ```
 
-With the development server running and Google Chrome installed, run `npm run test:browser` for desktop/mobile interaction tests. You can change the Chrome channel in `playwright.config.ts` to use another installed Playwright browser.
+With the development server running and Google Chrome installed, run `npm run test:browser` for desktop/mobile interaction tests. Set `PW_BROWSER_CHANNEL=chromium` to use bundled Playwright Chromium. CI runs type generation, typecheck, unit tests, all staged SQL suites, production build, and the mocked reliability browser tests (including Agreements signing and handbook file opening).
+
+The SQL harness creates its own uniquely named database on a **local** admin
+database `postgres`, bootstraps the minimal Supabase-compatible auth/storage
+definitions, and runs each suite at its required migration version. It refuses
+remote URLs and never drops the supplied database. On success its own database
+is dropped; on failure it is retained for diagnosis. PostgreSQL and `psql` must
+be installed locally. Never point SQL tests at production.
 
 Calendar tests cover all-day date boundaries, escaping of user text, UTF-8 line folding, filtering of exported records, and safe external links. `supabase/tests/isolation.sql` verifies RLS and write restrictions inside a transaction that rolls back its fixtures; run it against a disposable database with the schema installed. The local test harness requires a local PostgreSQL server and Supabase-compatible `auth.users`, `auth.uid()`, `anon`, and `authenticated` definitions.
 
@@ -428,7 +472,7 @@ For the mocked shared-code browser checks, start the app with its public
 Supabase variables set, then run:
 
 ```sh
-PW_SHARED_API=1 npx playwright test tests/browser/optimistic.spec.ts
+PW_SHARED_API=1 npx playwright test tests/browser/optimistic.spec.ts tests/browser/reliability.spec.ts
 ```
 
 These tests intercept session and household requests; they never modify the
@@ -443,7 +487,7 @@ Suggested order:
 2. **Meal planner + pantry:** dinner plans, staples running low, and one-click shopping requests.
 3. **Quick polls:** vote on purchases, movie nights, or house rules.
 4. **Guests / quiet hours:** shipped as calendar categories with date ranges and optional times; they also appear on the overview and wall display.
-5. **Calendar connections:** Google/Microsoft OAuth, server-side encrypted tokens, webhook handling, and conflict resolution for two-way sync. (The read-only subscription feed shipped; its URL is a derived secret revoked by changing the household code.)
+5. **Calendar subscription:** shipped and read-only. Its derived secret URL is revoked by changing the household code; two-way sync/conflict resolution is out of scope.
 6. **Shopping enrichment:** optional product metadata from approved retailer APIs. Current store links are manual; no Amazon login, price scraping, checkout, or purchase automation.
 7. **Membership management:** owner-controlled removal, leaving a house, ownership transfer, and recovery flows.
 
@@ -451,15 +495,16 @@ Chore reminders and push notifications shipped as the daily morning digest;
 shared expenses shipped as the Expenses tab. Data amounts are USD; events can
 be timed or all-day, and weekly, biweekly, and monthly recurring entries are supported.
 Reminders at arbitrary times are not implemented — the only scheduled jobs
-are the morning digest and evening heads-up crons. The Supabase Data API’s
-default row cap also means households should add pagination before growing
-beyond roughly 1,000 entries.
+are the morning digest and evening heads-up crons. Home/history now paginate
+the JSON aggregate inside the RPC itself: the risk was an oversized single JSON
+payload, not silent truncation at the Data API's roughly 1,000-row cap.
+Ledger and agreement-log history still need their own pagination as they grow.
 
 ## Daily household improvements
 
 Apply migrations `019_daily_life_gaps.sql` and `020_edit_undo.sql` before deploying
-this update. Migration 018 belongs to the separate household reliability work;
-019 and 020 also work directly after 017. The history wrappers preserve gateway
+this update. Migration 021 adds the household reliability work after those
+changes; 019 and 020 also work directly after 017. The history wrappers preserve gateway
 validation, and edit undo stores private, expiring snapshots rather than accepting
 restoration data from clients.
 

@@ -1,3 +1,4 @@
+import { logApiFailure } from "@/lib/api-log";
 import { after } from "next/server";
 import {
   pushConfigured,
@@ -22,14 +23,28 @@ import {
   sharedDatabase,
   signedIn,
   selectedMember,
+  homeSnapshotServer,
 } from "@/lib/shared-server";
 
 export const runtime = "nodejs";
-export async function GET() {
+export async function GET(request: Request) {
   if (!(await signedIn()))
     return json({ error: "Please enter your household code." }, 401);
   try {
-    const data = await sharedDatabase("get");
+    const query = new URL(request.url).searchParams;
+    const month = query.get("month");
+    const payload: Record<string, unknown> = {};
+    if (month) {
+      if (!/^(20\d{2})-(0[1-9]|1[0-2])$/.test(month))
+        return json({ error: "Invalid calendar month." }, 400);
+      payload.from_date = month + "-01";
+      const end = new Date(month + "-01T12:00:00Z");
+      end.setUTCMonth(end.getUTCMonth() + 1);
+      end.setUTCDate(0);
+      payload.until_date = end.toISOString().slice(0, 10);
+    }
+    if (query.get("cursor")) payload.cursor = query.get("cursor");
+    const data = await sharedDatabase("get", payload);
     const memberId = await selectedMember();
     return json({
       ...data,
@@ -41,7 +56,7 @@ export async function GET() {
         : null,
     });
   } catch (err) {
-    console.error("GET /api/home", err);
+    logApiFailure("/api/home", "get", err);
     return json({ error: "Could not load your home. Please try again." }, 503);
   }
 }
@@ -75,7 +90,7 @@ export async function POST(request: Request) {
         : ["restore", "undo_edit"].includes(operation)
           ? ["undo_token"]
           : operation === "payment"
-            ? ["id", "paid", "cover", "expense"]
+            ? ["id", "paid", "cover", "log_share"]
             : [
                 "undo_token",
                 "rotation_partner",
@@ -114,6 +129,7 @@ export async function POST(request: Request) {
       return json({ error: "Choose who’s using this device first." }, 400);
     const result = await sharedDatabase(operation, { ...values, actor });
     broadcastChange("home", sender);
+    if (result?.expense) broadcastChange("expenses", sender);
     // A check-off closes a loop for whoever added the thing: they hear it
     // got done, once, unless they did it themselves. The stored row is the
     // authority on kind, title, and who added it, and the activity row the
@@ -132,7 +148,7 @@ export async function POST(request: Request) {
     )
       after(async () => {
         try {
-          const home = await sharedDatabase("get");
+          const home = await homeSnapshotServer();
           const entry = (home.entries as Entry[]).find(
             (e) => e.id === values.id && e.title === flipped.title,
           );
@@ -176,7 +192,7 @@ export async function POST(request: Request) {
     if (paid && pushConfigured() && !quietHours(new Date()))
       after(async () => {
         try {
-          const home = await sharedDatabase("get");
+          const home = await homeSnapshotServer();
           const members = home.members as Member[];
           const entry = (home.entries as Entry[]).find(
             (e) => e.id === values.id && e.title === paid.title,
@@ -192,7 +208,14 @@ export async function POST(request: Request) {
             );
             const message =
               to &&
-              paidMessage(entry, by, to, !!values.cover && !!values.expense);
+              paidMessage(
+                entry,
+                by,
+                to,
+                !!values.cover &&
+                  !!result.expense &&
+                  Object.hasOwn(result.expense.shares, to.user_id),
+              );
             if (!message) continue;
             // One payer's dead endpoint must not cost the next their line.
             await pushToMember(to.user_id, {
@@ -218,7 +241,7 @@ export async function POST(request: Request) {
     )
       after(async () => {
         try {
-          const home = await sharedDatabase("get");
+          const home = await homeSnapshotServer();
           const from = (home.members as Member[]).find(
             (m) => m.user_id === actor && m.name !== "Housemates",
           );
@@ -256,7 +279,7 @@ export async function POST(request: Request) {
     )
       after(async () => {
         try {
-          const home = await sharedDatabase("get");
+          const home = await homeSnapshotServer();
           const people = (home.members as Member[]).filter(
             (m) => m.name !== "Housemates",
           );
@@ -288,15 +311,11 @@ export async function POST(request: Request) {
           console.error("event push failed", (err as Error).name);
         }
       });
-    // A covered bill writes to the ledger too, so other screens' expense
-    // views need the ping as well.
-    if (operation === "payment" && values.expense)
-      broadcastChange("expenses", sender);
     return json(result);
   } catch (err) {
     if ((err as { rejected?: boolean }).rejected)
       return json({ error: (err as Error).message, rejected: true }, 400);
-    console.error("POST /api/home", err);
+    logApiFailure("/api/home", "post", err);
     return json(
       { error: "Could not save this change. Check the fields and try again." },
       400,

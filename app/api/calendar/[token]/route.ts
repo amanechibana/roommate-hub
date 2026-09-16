@@ -1,4 +1,4 @@
-import { configured, sharedDatabase } from "@/lib/shared-server";
+import { configured, homeSnapshotServer } from "@/lib/shared-server";
 import { calendarFeedToken, equalSecret } from "@/lib/session-token";
 import { calendarFile, type Entry, type Member } from "@/lib/model";
 
@@ -24,7 +24,7 @@ export async function GET(
   )
     return new Response("Not found", { status: 404 });
   try {
-    const data = await sharedDatabase("get");
+    const data = await homeSnapshotServer();
     return new Response(
       calendarFile(
         data.entries as Entry[],

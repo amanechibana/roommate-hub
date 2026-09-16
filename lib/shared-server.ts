@@ -4,6 +4,7 @@ import { cookies } from "next/headers";
 import { after } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { validSession } from "./session-token";
+import { collectEntryPages } from "./home-pages";
 
 export const COOKIE_NAME = "common_ground_home";
 export const MEMBER_COOKIE = "common_ground_person";
@@ -40,7 +41,8 @@ export async function sharedDatabase(
     | "shared_expenses"
     | "shared_push"
     | "shared_agreements"
-    | "shared_handbook" = "shared_home",
+    | "shared_handbook"
+    | "shared_household_ops" = "shared_home",
 ) {
   const db = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -63,11 +65,23 @@ export async function sharedDatabase(
     // those messages are written for the person, so pass them through.
     if (error.code === "P0001")
       throw Object.assign(new Error(error.message), { rejected: true });
-    throw new Error(
-      "The household could not be loaded or updated. Please try again.",
+    throw Object.assign(
+      new Error(
+        ["42883", "42P01", "42703"].includes(error.code)
+          ? "The household database needs an update. Ask the owner to run pending migrations."
+          : "The household could not be loaded or updated. Please try again.",
+      ),
+      { code: error.code },
     );
   }
   return data;
+}
+export async function homeSnapshotServer(
+  payload: Record<string, unknown> = {},
+) {
+  return collectEntryPages((cursor) =>
+    sharedDatabase("get", { ...payload, ...(cursor ? { cursor } : {}) }),
+  );
 }
 // The broadcast channel name is a secret shared only with signed-in clients;
 // pings carry no household data, so knowing the name reveals activity timing

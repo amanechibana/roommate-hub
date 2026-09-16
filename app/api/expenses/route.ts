@@ -1,3 +1,4 @@
+import { logApiFailure } from "@/lib/api-log";
 import { after } from "next/server";
 import {
   broadcastChange,
@@ -18,7 +19,7 @@ export async function GET() {
   try {
     return json(await sharedDatabase("get", {}, "shared_expenses"));
   } catch (err) {
-    console.error("GET /api/expenses", err);
+    logApiFailure("/api/expenses", "get", err);
     return json({ error: "Could not load expenses. Please try again." }, 503);
   }
 }
@@ -66,6 +67,7 @@ export async function POST(request: Request) {
       "shared_expenses",
     );
     broadcastChange("expenses", sender);
+    if (operation === "delete") broadcastChange("home", sender);
     // A new ledger entry is news to the people in it, after the response
     // and never during quiet hours. Edits and deletions stay quiet: the
     // ledger's balance says what it says. The gateway's create is
@@ -122,7 +124,7 @@ export async function POST(request: Request) {
   } catch (err) {
     if ((err as { rejected?: boolean }).rejected)
       return json({ error: (err as Error).message, rejected: true }, 400);
-    console.error("POST /api/expenses", err);
+    logApiFailure("/api/expenses", "post", err);
     return json(
       {
         error:

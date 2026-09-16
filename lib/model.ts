@@ -192,7 +192,7 @@ export function calendarFile(
     "X-PUBLISHED-TTL:PT1H",
   ];
   for (const entry of entries.filter(
-    (e) => e.date && (e.kind === "event" || e.kind === "task"),
+    (e) => e.date && e.category !== 'Personal' && (e.kind === "event" || e.kind === "task"),
   )) {
     const end = parseDate(entry.date!);
     end.setDate(end.getDate() + 1);

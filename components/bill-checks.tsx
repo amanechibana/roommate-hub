@@ -20,6 +20,7 @@ export default function BillChecks({
   uid,
   onPayment,
   onCover,
+  onLogShare,
   onNudge,
 }: {
   entry: Entry;
@@ -27,13 +28,14 @@ export default function BillChecks({
   uid: string | null;
   onPayment: (entry: Entry) => void;
   onCover: (entry: Entry) => void;
+  onLogShare?: (entry: Entry) => void;
   onNudge?: (entry: Entry, member: Member) => void;
 }) {
   const { active } = useHouseMotion();
   if (!isBill(entry) || !entry.payment_members?.length) return null;
   const canCover =
     !!entry.amount &&
-    !entry.paid_by?.length &&
+    !billPaid(entry) &&
     !!uid &&
     entry.payment_members.includes(uid);
   return (
@@ -122,13 +124,27 @@ export default function BillChecks({
           className="button secondary small"
           onClick={() => onCover(entry)}
         >
-          I covered the whole bill — split it
+          {entry.paid_by?.length
+            ? "I covered the remaining shares — split them"
+            : "I covered the whole bill — split it"}
         </Button>
       )}
+      {uid &&
+        entry.amount &&
+        entry.payment_members.includes(uid) &&
+        onLogShare && (
+          <Button
+            type="button"
+            className="button secondary small"
+            onClick={() => onLogShare(entry)}
+          >
+            Log my share to Expenses
+          </Button>
+        )}
       <p className="subtle">
         {canCover
-          ? "Each person checks off their own payment, or one of you covers it and the split lands in Expenses."
-          : "Each person checks off their own payment."}
+          ? "I paid is a reminder check only. Log my share records spending without creating a debt. Cover posts only unpaid shares to Expenses."
+          : "I paid is a reminder check only. Log my share records your spending without creating a debt."}
       </p>
     </section>
   );

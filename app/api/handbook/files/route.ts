@@ -1,3 +1,4 @@
+import { logApiFailure } from "@/lib/api-log";
 import { randomUUID } from "node:crypto";
 import { Buffer } from "node:buffer";
 import { handbookFileTypes, type HandbookFile } from "@/lib/handbook";
@@ -51,7 +52,7 @@ export async function GET(request: Request) {
     if (error || !data?.signedUrl) throw error || new Error("No signed URL");
     return Response.redirect(data.signedUrl, 302);
   } catch (err) {
-    console.error("GET /api/handbook/files", err);
+    logApiFailure("/api/handbook/files", "get", err);
     return json({ error: "Could not open that handbook file." }, 404);
   }
 }
@@ -149,7 +150,7 @@ export async function DELETE(request: Request) {
     broadcastChange("home", null);
     return json({ ok: true });
   } catch (err) {
-    console.error("DELETE /api/handbook/files", err);
+    logApiFailure("/api/handbook/files", "delete", err);
     return json({ error: "Could not remove that file." }, 400);
   }
 }

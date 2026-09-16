@@ -1,3 +1,4 @@
+import { logApiFailure } from "@/lib/api-log";
 import {
   json,
   sameOrigin,
@@ -5,7 +6,11 @@ import {
   selectedMember,
 } from "@/lib/shared-server";
 import { pushConfigured } from "@/lib/push-server";
-import { cronAuthorized, sendDigests } from "@/lib/digest-server";
+import {
+  cronAuthorized,
+  sendDigests,
+  runScheduledDigest,
+} from "@/lib/digest-server";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -13,11 +18,10 @@ export const maxDuration = 60;
 // Vercel Cron calls this every morning.
 export async function GET(request: Request) {
   if (!cronAuthorized(request)) return json({ error: "Not allowed." }, 401);
-  if (!pushConfigured()) return json({ sent: 0, pruned: 0 });
   try {
-    return json(await sendDigests("morning", null));
+    return json(await runScheduledDigest("morning"));
   } catch (err) {
-    console.error("GET /api/reminders", err);
+    logApiFailure("/api/reminders", "get", err);
     return json({ error: "Could not send reminders." }, 503);
   }
 }
@@ -35,7 +39,7 @@ export async function POST(request: Request) {
   try {
     return json(await sendDigests("morning", member));
   } catch (err) {
-    console.error("POST /api/reminders", err);
+    logApiFailure("/api/reminders", "post", err);
     return json({ error: "Could not send your digest." }, 503);
   }
 }

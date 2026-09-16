@@ -1,5 +1,6 @@
 import { test, expect, type Page } from "@playwright/test";
 import { demoData, seriesDates, type Entry } from "../../lib/model";
+import { mockBackground } from "./mock-background";
 
 test.skip(
   !process.env.PW_SHARED_API,
@@ -7,6 +8,7 @@ test.skip(
 );
 
 async function home(page: Page, picked: string | null = "you") {
+  await mockBackground(page);
   const data = demoData();
   data.members = data.members.slice(0, 2);
   data.members[0].name = "Amane";
@@ -34,7 +36,7 @@ async function home(page: Page, picked: string | null = "you") {
   await page.route("**/api/expenses", (route) =>
     route.fulfill({ json: { expenses: [] } }),
   );
-  await page.route("**/api/home", async (route) => {
+  await page.route("**/api/home{,?*}", async (route) => {
     if (route.request().method() === "GET") {
       gets++;
       await route.fulfill({ json: { ...data, member_id: memberId } });
@@ -255,14 +257,14 @@ test("person picker persists the choice, enables Mine, and allows switching", as
     }),
   ).toHaveCount(0);
   await page.reload();
-  await expect(page.getByRole("button", { name: "Switch person" })).toHaveText(
-    "Barnatt",
-  );
+  await expect(
+    page.getByRole("button", { name: "Switch person" }),
+  ).toHaveAttribute("aria-label", "Switch person (now Barnatt)");
   await page.getByRole("button", { name: "Switch person" }).click();
   await page.getByRole("button", { name: "Amane" }).click();
-  await expect(page.getByRole("button", { name: "Switch person" })).toHaveText(
-    "Amane",
-  );
+  await expect(
+    page.getByRole("button", { name: "Switch person" }),
+  ).toHaveAttribute("aria-label", "Switch person (now Amane)");
 });
 
 test("delete disappears before save, unpriced shopping hides total", async ({
@@ -271,9 +273,9 @@ test("delete disappears before save, unpriced shopping hides total", async ({
   const mock = await home(page);
   await tasks(page);
   await page
-    .getByRole("button", {
-      name: /Take out recycling Tomorrow|Take out recycling Sep/,
-    })
+    .locator(".task-row")
+    .filter({ hasText: "Take out recycling" })
+    .locator(".entry-label")
     .click();
   const release = mock.pause();
 
@@ -375,8 +377,8 @@ test("alternating series keeps turns through edits and whole-series undo", async
   await expect(rows).toHaveCount(3);
   await expect(rows.locator(".person-tag")).toHaveText([
     "Amane",
-    "Barnatt",
     "Amane",
+    "Barnatt",
   ]);
   await expect.poll(() => mock.posts.length).toBe(1);
   expect(mock.posts[0].payload.rotation_partner).toBe("alex");
@@ -388,21 +390,25 @@ test("alternating series keeps turns through edits and whole-series undo", async
   const changed = page.locator(".task-row").filter({ hasText: "Clean dishes" });
   await expect(changed.locator(".person-tag")).toHaveText([
     "Amane",
-    "Barnatt",
     "Amane",
+    "Barnatt",
   ]);
   await changed.first().locator(".entry-label").click();
   await page.getByLabel("Apply to every occurrence of this plan").check();
   await page.getByRole("button", { name: "Delete entry" }).click();
   await expect(changed).toHaveCount(0);
-  await expect(page.locator(".toast-stack").getByRole("status")).toContainText(
-    "3 occurrences deleted",
-  );
-  await page.getByRole("button", { name: "Undo", exact: true }).click();
+  const deletedNotice = page
+    .locator(".toast-stack")
+    .getByRole("status")
+    .filter({ hasText: "3 occurrences deleted" });
+  await expect(deletedNotice).toBeVisible();
+  await deletedNotice
+    .getByRole("button", { name: "Undo", exact: true })
+    .click();
   await expect(changed.locator(".person-tag")).toHaveText([
     "Amane",
-    "Barnatt",
     "Amane",
+    "Barnatt",
   ]);
   await expect.poll(() => mock.posts.length).toBe(4);
   await page.reload();
@@ -412,12 +418,13 @@ test("alternating series keeps turns through edits and whole-series undo", async
       .locator(".task-row")
       .filter({ hasText: "Clean dishes" })
       .locator(".person-tag"),
-  ).toHaveText(["Amane", "Barnatt", "Amane"]);
+  ).toHaveText(["Amane", "Amane", "Barnatt"]);
 });
 
 test("bill check-offs are instant and each person changes only their own check", async ({
   page,
 }) => {
+  await page.setViewportSize({ width: 1280, height: 1400 });
   const mock = await home(page);
   await page.getByRole("button", { name: "Rent is due", exact: true }).click();
   const release = mock.pause();
