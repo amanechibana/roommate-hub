@@ -16,6 +16,8 @@ import {
 export type SaveValues = Partial<Entry> & {
   repeat?: Repeat;
   repeat_until?: string;
+  time_of_day?: string | null;
+  end_time?: string | null;
   rotation_partner?: string;
   paid?: boolean;
   cover?: boolean;
@@ -64,7 +66,16 @@ export const labels: Record<Kind, string> = {
 };
 export const categories: Record<Kind, string[]> = {
   task: ["Chore", "To-do", "Personal"],
-  event: ["Together", "Rent", "Bill", "Gym", "Other"],
+  event: [
+    "Together",
+    "Away",
+    "Guest",
+    "Quiet hours",
+    "Rent",
+    "Bill",
+    "Gym",
+    "Other",
+  ],
   request: ["Need", "Want", "Personal"],
   note: ["Note", "Pinned"],
 };

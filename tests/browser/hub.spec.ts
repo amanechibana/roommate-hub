@@ -136,6 +136,40 @@ test("the house handbook keeps reference details in structured sections", async 
   await expect(page.getByRole("heading", { name: "Super" })).not.toBeVisible();
 });
 
+test("away ranges and timed quiet hours appear on the household calendar", async ({
+  page,
+}) => {
+  const now = new Date();
+  const date = (day: number) =>
+    `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+  await page.goto("/");
+  await page.getByRole("button", { name: "Plan", exact: true }).click();
+  await page.getByLabel("What’s on your mind?").fill("Barnatt away");
+  await page.getByLabel("Category").selectOption("Away");
+  await page.getByLabel("Who’s away?").selectOption("alex");
+  await page.getByLabel("Starts").fill(date(5));
+  await page.getByLabel("Ends").fill(date(7));
+  await page.getByRole("button", { name: "Save to our home" }).click();
+  await page
+    .getByRole("navigation")
+    .getByRole("button", { name: "Calendar", exact: true })
+    .click();
+  await expect(
+    page.locator(".calendar-event").filter({ hasText: "Barnatt away" }),
+  ).toHaveCount(3);
+
+  await page.getByRole("button", { name: "Add event", exact: true }).click();
+  await page.getByLabel("What’s on your mind?").fill("WFH quiet hours");
+  await page.getByLabel("Category").selectOption("Quiet hours");
+  await page.getByLabel("Date").fill(date(8));
+  await page.getByLabel("Start time (optional)").fill("09:30");
+  await page.getByLabel("End time (optional)").fill("12:00");
+  await page.getByRole("button", { name: "Save to our home" }).click();
+  await expect(
+    page.locator(".calendar-event").filter({ hasText: "WFH quiet hours" }),
+  ).toContainText("9:30 am");
+});
+
 test("a pasted product link fills in the item’s name and price", async ({
   page,
 }) => {

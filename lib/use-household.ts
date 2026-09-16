@@ -673,6 +673,7 @@ export function useHousehold() {
           setNotice(
             `Now repeats ${
               {
+                daily: "daily",
                 weekly: "weekly",
                 biweekly: "every 2 weeks",
                 monthly: "monthly",

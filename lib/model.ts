@@ -8,6 +8,7 @@ export type Entry = {
   category: string;
   date: string | null;
   time_of_day?: string | null; // "HH:MM"
+  end_time?: string | null; // "HH:MM"
   assignee: string | null;
   amount: number | null;
   url: string;
@@ -19,7 +20,7 @@ export type Entry = {
   created_by: string;
   created_at: string;
 };
-export type Repeat = "weekly" | "biweekly" | "monthly";
+export type Repeat = "daily" | "weekly" | "biweekly" | "monthly";
 export type Member = { user_id: string; household_id: string; name: string };
 export type Household = { id: string; name: string; owner_id: string };
 
@@ -33,6 +34,11 @@ export function shiftDay(date: string, days: number): string {
   const next = parseDate(date);
   next.setDate(next.getDate() + days);
   return dateKey(next);
+}
+export function clockLabel(value: string): string {
+  const [hour, minute] = value.split(":").map(Number);
+  if (!Number.isInteger(hour) || !Number.isInteger(minute)) return value;
+  return `${hour % 12 || 12}:${String(minute).padStart(2, "0")} ${hour < 12 ? "am" : "pm"}`;
 }
 // The first Saturday strictly after a day: "the weekend" as a chore hears
 // it, so a Saturday chore pushed to the weekend goes a week, not nowhere.
@@ -55,7 +61,11 @@ export function seriesDates(
     if (repeat === "monthly") {
       next.setMonth(first.getMonth() + n);
       if (next.getDate() !== first.getDate()) next.setDate(0);
-    } else next.setDate(first.getDate() + n * (repeat === "weekly" ? 7 : 14));
+    } else
+      next.setDate(
+        first.getDate() +
+          n * (repeat === "daily" ? 1 : repeat === "weekly" ? 7 : 14),
+      );
     if (next > end) break;
     dates.push(dateKey(next));
   }
@@ -170,6 +180,7 @@ export function calendarFile(
   )) {
     const end = parseDate(entry.date!);
     end.setDate(end.getDate() + 1);
+    const timed = calendarTimes(entry);
     lines.push(
       "BEGIN:VEVENT",
       `UID:${entry.id}@common-ground`,
@@ -177,8 +188,12 @@ export function calendarFile(
         .toISOString()
         .replace(/[-:]/g, "")
         .replace(/\.\d{3}/, "")}`,
-      `DTSTART;VALUE=DATE:${entry.date!.replaceAll("-", "")}`,
-      `DTEND;VALUE=DATE:${dateKey(end).replaceAll("-", "")}`,
+      ...(timed
+        ? [`DTSTART:${timed.start}`, `DTEND:${timed.end}`]
+        : [
+            `DTSTART;VALUE=DATE:${entry.date!.replaceAll("-", "")}`,
+            `DTEND;VALUE=DATE:${dateKey(end).replaceAll("-", "")}`,
+          ]),
       `SUMMARY:${escapeICS(calendarSummary(entry, people))}`,
       `DESCRIPTION:${escapeICS(calendarNotes(entry, people))}`,
       "END:VEVENT",
@@ -190,13 +205,29 @@ export function googleCalendarUrl(entry: Entry): string {
   if (!entry.date) return "";
   const end = parseDate(entry.date);
   end.setDate(end.getDate() + 1);
+  const timed = calendarTimes(entry);
   const params = new URLSearchParams({
     action: "TEMPLATE",
     text: entry.title,
     details: entry.description,
-    dates: `${entry.date.replaceAll("-", "")}/${dateKey(end).replaceAll("-", "")}`,
+    dates: timed
+      ? `${timed.start}/${timed.end}`
+      : `${entry.date.replaceAll("-", "")}/${dateKey(end).replaceAll("-", "")}`,
   });
   return `https://calendar.google.com/calendar/render?${params}`;
+}
+
+function calendarTimes(entry: Entry) {
+  if (!entry.date || !entry.time_of_day) return null;
+  const start = new Date(`${entry.date}T${entry.time_of_day}:00`);
+  if (Number.isNaN(start.getTime())) return null;
+  const end = entry.end_time
+    ? new Date(`${entry.date}T${entry.end_time}:00`)
+    : new Date(start.getTime() + 60 * 60 * 1000);
+  if (end <= start) end.setDate(end.getDate() + 1);
+  const compact = (value: Date) =>
+    `${dateKey(value).replaceAll("-", "")}T${String(value.getHours()).padStart(2, "0")}${String(value.getMinutes()).padStart(2, "0")}00`;
+  return { start: compact(start), end: compact(end) };
 }
 export function demoData(): {
   household: Household;

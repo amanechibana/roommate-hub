@@ -70,6 +70,7 @@ export default function EntryDialog({
     editing.entry?.date || editing.date || "",
   );
   const [repeatUntil, setRepeatUntil] = useState("");
+  const [rangeEnd, setRangeEnd] = useState("");
   function chooseRepeat(value: Repeat | "") {
     setRepeat(value);
     if (!value) return;
@@ -130,11 +131,19 @@ export default function EntryDialog({
       return;
     }
     const date = String(data.get("date") || "") || null;
-    const until = String(data.get("repeat_until") || "");
+    const rangedEvent =
+      kind === "event" && ["Away", "Guest"].includes(category) && !entry;
+    const until = String(
+      data.get(rangedEvent ? "range_end" : "repeat_until") || "",
+    );
     const repeating =
-      (!entry || !entry.series_id) && repeat && ["task", "event"].includes(kind)
-        ? repeat
-        : null;
+      rangedEvent && until !== date
+        ? "daily"
+        : (!entry || !entry.series_id) &&
+            repeat &&
+            ["task", "event"].includes(kind)
+          ? repeat
+          : null;
     if (repeating && !date) {
       setValidation("Pick a start date for a repeating plan.");
       return;
@@ -145,11 +154,20 @@ export default function EntryDialog({
     }
     if (repeating) {
       const cap = parseDate(date!);
-      cap.setFullYear(cap.getFullYear() + 2);
+      if (repeating === "daily") cap.setDate(cap.getDate() + 30);
+      else cap.setFullYear(cap.getFullYear() + 2);
       if (until > dateKey(cap)) {
-        setValidation("Pick a repeat end date within two years.");
+        setValidation(
+          repeating === "daily"
+            ? "Keep an away or guest stay within 31 days."
+            : "Pick a repeat end date within two years.",
+        );
         return;
       }
+    }
+    if (data.get("end_time") && !data.get("time_of_day")) {
+      setValidation("Choose a start time before adding an end time.");
+      return;
     }
     const partner = String(data.get("rotation_partner") || "");
     const rotating = kind === "task" && repeating && alternating;
@@ -167,6 +185,8 @@ export default function EntryDialog({
       assignee: category === "Personal" ? assignee || uid : assignee || null,
       amount: data.get("amount") ? Number(data.get("amount")) : null,
       url,
+      time_of_day: String(data.get("time_of_day") || "") || null,
+      end_time: String(data.get("end_time") || "") || null,
       ...(repeating ? { repeat: repeating, repeat_until: until } : {}),
       ...(rotating ? { rotation_partner: partner } : {}),
       ...(entry?.series_id && wholeSeries ? { scope: "series" as const } : {}),
@@ -289,7 +309,13 @@ export default function EntryDialog({
                 ? category === "Personal"
                   ? "Who’s it for?"
                   : "Who’s getting it?"
-                : "Who’s on it?"}
+                : category === "Away"
+                  ? "Who’s away?"
+                  : category === "Guest"
+                    ? "Guest of"
+                    : category === "Quiet hours"
+                      ? "Who needs quiet?"
+                      : "Who’s on it?"}
             <select
               name="assignee"
               value={assignee}
@@ -306,7 +332,11 @@ export default function EntryDialog({
           </label>
           {kind !== "note" && (
             <label>
-              {kind === "event" ? "Date" : "Due date (optional)"}
+              {kind === "event" && ["Away", "Guest"].includes(category)
+                ? "Starts"
+                : kind === "event"
+                  ? "Date"
+                  : "Due date (optional)"}
               <input
                 name="date"
                 type="date"
@@ -316,22 +346,59 @@ export default function EntryDialog({
               />
             </label>
           )}
-          {(!entry || !entry.series_id) && ["task", "event"].includes(kind) && (
-            <label>
-              Repeats
-              <select
-                name="repeat"
-                value={repeat}
-                onChange={(event) =>
-                  chooseRepeat(event.target.value as Repeat | "")
-                }
-              >
-                <option value="">Never</option>
-                <option value="weekly">Weekly</option>
-                <option value="biweekly">Every 2 weeks</option>
-                <option value="monthly">Monthly</option>
-              </select>
-            </label>
+          {!entry &&
+            kind === "event" &&
+            ["Away", "Guest"].includes(category) && (
+              <label>
+                Ends
+                <input
+                  name="range_end"
+                  type="date"
+                  required
+                  min={startDate}
+                  value={rangeEnd}
+                  onChange={(event) => setRangeEnd(event.target.value)}
+                />
+              </label>
+            )}
+          {(!entry || !entry.series_id) &&
+            ["task", "event"].includes(kind) &&
+            !(kind === "event" && ["Away", "Guest"].includes(category)) && (
+              <label>
+                Repeats
+                <select
+                  name="repeat"
+                  value={repeat}
+                  onChange={(event) =>
+                    chooseRepeat(event.target.value as Repeat | "")
+                  }
+                >
+                  <option value="">Never</option>
+                  <option value="weekly">Weekly</option>
+                  <option value="biweekly">Every 2 weeks</option>
+                  <option value="monthly">Monthly</option>
+                </select>
+              </label>
+            )}
+          {kind === "event" && (
+            <>
+              <label>
+                Start time (optional)
+                <input
+                  name="time_of_day"
+                  type="time"
+                  defaultValue={entry?.time_of_day || ""}
+                />
+              </label>
+              <label>
+                End time (optional)
+                <input
+                  name="end_time"
+                  type="time"
+                  defaultValue={entry?.end_time || ""}
+                />
+              </label>
+            </>
           )}
           {!entry && kind === "task" && repeat && (
             <>

@@ -31,6 +31,7 @@ import {
 } from "lucide-react";
 import {
   dateKey,
+  clockLabel,
   parseDate,
   shiftDay,
   type Entry,
@@ -627,6 +628,9 @@ export default function HomeBoard({
                     <small>
                       {relative(entry.date!)}
                       {isBill(entry) ? "" : `, ${entry.category.toLowerCase()}`}
+                      {entry.time_of_day
+                        ? ` at ${clockLabel(entry.time_of_day)}${entry.end_time ? `–${clockLabel(entry.end_time)}` : ""}`
+                        : ""}
                       {entry.series_id ? ", repeats" : ""}
                       {entry.amount != null ? `. ${dollars(entry.amount)}` : ""}
                       {(entry.payment_members?.length || 0) > 1 &&
