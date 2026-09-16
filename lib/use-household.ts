@@ -65,6 +65,7 @@ export function useHousehold() {
   const [demo, setDemo] = useState(false);
   const [household, setHousehold] = useState<Household | null>(null);
   const [members, setMembers] = useState<Member[]>([]);
+  const [formerMembers, setFormerMembers] = useState<Member[]>([]);
   const [entries, setEntries] = useState<Entry[]>([]);
   const demoBillPayments = useRef(
     new Map<string, { billId: string; members: string[]; logged: string[] }>(),
@@ -124,7 +125,10 @@ export function useHousehold() {
     household?.id,
     uid,
     demo,
-    tab === "Expenses" || tab === "Overview" || display,
+    tab === "Expenses" ||
+      tab === "Overview" ||
+      tab === "Household life" ||
+      display,
     // Purchase expenses reuse entry ids; draining the home queue and mirroring
     // its optimistic-id remaps keeps them matched to the saved entry. Home
     // writes must never await the expenses queue, or drain() deadlocks.
@@ -243,6 +247,7 @@ export function useHousehold() {
     setEntries([]);
     setActivity([]);
     setMembers([]);
+    setFormerMembers([]);
     setLoaded(false);
     setEditing(null);
     setShowShortcuts(false);
@@ -261,6 +266,7 @@ export function useHousehold() {
         if (sequence !== loadSequence.current) return;
         setHousehold(data.household);
         setMembers(data.members);
+        setFormerMembers(data.former_members || []);
         setEntries(data.entries);
         setActivity(data.activity || []);
         setIdentity(data.member_id ?? null);
@@ -281,6 +287,7 @@ export function useHousehold() {
   const live = useRealtime(session && !demo ? channel : null, (scope) => {
     if (document.visibilityState !== "visible") return;
     if (scope !== "expenses") {
+      window.dispatchEvent(new Event("household-life-changed"));
       if (pending.current) needsRecovery.current = true;
       else void refresh(true);
     }
@@ -291,6 +298,7 @@ export function useHousehold() {
       const data = demoData();
       setHousehold(data.household);
       setMembers(data.members);
+      setFormerMembers([]);
       setEntries(data.entries);
       setDemo(true);
       setReady(true);
@@ -1297,6 +1305,51 @@ export function useHousehold() {
       setBusy(false);
     }
   }
+  async function manageMembership(
+    operation: "remove_member" | "leave" | "transfer_owner",
+    member?: string,
+  ) {
+    setBusy(true);
+    setError("");
+    try {
+      if (demo) {
+        if (operation === "transfer_owner")
+          setHousehold((current) =>
+            current ? { ...current, owner_id: member! } : current,
+          );
+        else {
+          const target = operation === "leave" ? uid : member;
+          setFormerMembers((current) => [
+            ...current,
+            ...members
+              .filter((m) => m.user_id === target)
+              .map((m) => ({ ...m, active: false })),
+          ]);
+          setMembers((current) => current.filter((m) => m.user_id !== target));
+          if (operation === "leave") setIdentity(null);
+        }
+      } else {
+        await homeRequest("/api/coordination", "POST", {
+          operation,
+          payload: member ? { member } : {},
+        });
+        if (operation === "leave") {
+          await signOut();
+        } else await refresh();
+      }
+      setNotice(
+        operation === "transfer_owner"
+          ? "Household ownership transferred."
+          : "Membership updated. Past records are preserved.",
+      );
+      return true;
+    } catch (err) {
+      setError((err as Error).message);
+      return false;
+    } finally {
+      setBusy(false);
+    }
+  }
   // A list this device has arranged by hand is left exactly as arranged;
   // until then it opens with whatever is waiting on you.
   const tasks = taskOrder.sort(
@@ -1370,8 +1423,51 @@ export function useHousehold() {
   useEffect(() => {
     setAgendaPage(agendaStart < 0 ? 0 : Math.floor(agendaStart / agendaLimit));
   }, [month, agendaStart, agendaLimit]);
+  // The demo mirrors the linked meal/calendar writes performed by the SQL gateway.
+  async function syncDemoMeal(
+    values: {
+      title: string;
+      date: string;
+      notes: string;
+      cook: string | null;
+    } | null,
+    existingId: string | null,
+  ) {
+    if (!demo || !household || !uid) return null;
+    const id = existingId || crypto.randomUUID();
+    if (!values) {
+      setEntries((current) => current.filter((entry) => entry.id !== id));
+      return null;
+    }
+    const entry = {
+      id,
+      household_id: household.id,
+      kind: "event",
+      title: values.title,
+      category: "Together",
+      description: values.notes,
+      date: values.date,
+      assignee: values.cook,
+      amount: null,
+      url: "",
+      done: false,
+      created_by: uid,
+      created_at: new Date().toISOString(),
+      series_id: null,
+      rotation_members: [],
+      payment_members: [],
+      paid_by: [],
+    } as Entry;
+    setEntries((current) =>
+      current.some((e) => e.id === id)
+        ? current.map((e) => (e.id === id ? { ...e, ...entry } : e))
+        : [entry, ...current],
+    );
+    return id;
+  }
   const person = (id: string | null) =>
-    members.find((m) => m.user_id === id)?.name || "Everyone";
+    [...members, ...formerMembers].find((m) => m.user_id === id)?.name ||
+    "Everyone";
   const friendlyDate = (date: string | null) =>
     !date
       ? "Anytime"
@@ -1392,6 +1488,7 @@ export function useHousehold() {
               });
   return {
     activity,
+    syncDemoMeal,
     reduced,
     ready,
     loaded,
@@ -1401,6 +1498,7 @@ export function useHousehold() {
     demo,
     household,
     members,
+    formerMembers,
     entries,
     tab,
     setTab,
@@ -1464,6 +1562,7 @@ export function useHousehold() {
     choosePerson,
     exportCalendar,
     addMember,
+    manageMembership,
     tasks,
     shopping,
     search,

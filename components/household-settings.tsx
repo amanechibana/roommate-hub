@@ -1,5 +1,8 @@
 "use client";
 
+import { useState } from "react";
+import { AnimatePresence } from "motion/react";
+import { PaperDialog } from "./ui/dialog";
 import { Button } from "@/components/ui/button";
 
 import ReminderPreferencesForm from "./reminder-preferences";
@@ -24,6 +27,7 @@ type Props = Pick<
   | "live"
   | "exportCalendar"
   | "addMember"
+  | "manageMembership"
   | "sharedScreen"
   | "uid"
   | "setChoosingPerson"
@@ -42,13 +46,21 @@ export default function HouseholdSettings({
   live,
   exportCalendar,
   addMember,
+  manageMembership,
   sharedScreen,
   avatar,
   uid,
   setChoosingPerson,
   refresh,
 }: Props) {
+  const [confirm, setConfirm] = useState<{
+    operation: "remove_member" | "leave" | "transfer_owner";
+    member?: string;
+    name: string;
+  } | null>(null);
   if (!household) return null;
+  const owner = uid === household.owner_id;
+
   return (
     <div className="settings-grid">
       <section className="panel settings-panel">
@@ -71,17 +83,44 @@ export default function HouseholdSettings({
           Change person on this device
         </Button>
         {members.map((member, i) =>
-          // The legacy shared identity owns the household row but is nobody in
-          // particular; the index stays put so avatar tones keep matching.
+          // Keep avatar indices aligned while hiding the shared-screen identity.
           member.name === "Housemates" ? null : (
             <div className="member-row" key={member.user_id}>
               {avatar(member, i)}
               <strong>{member.name}</strong>
               <span className="subtle">
-                {member.user_id === household.owner_id
-                  ? "Shared home"
-                  : "Housemate"}
+                {member.user_id === household.owner_id ? "Owner" : "Housemate"}
               </span>
+              {!sharedScreen && owner && member.user_id !== uid && (
+                <>
+                  <Button
+                    className="text-button"
+                    disabled={busy}
+                    onClick={() =>
+                      setConfirm({
+                        operation: "transfer_owner",
+                        member: member.user_id,
+                        name: member.name,
+                      })
+                    }
+                  >
+                    Transfer ownership
+                  </Button>
+                  <Button
+                    className="text-button"
+                    disabled={busy}
+                    onClick={() =>
+                      setConfirm({
+                        operation: "remove_member",
+                        member: member.user_id,
+                        name: member.name,
+                      })
+                    }
+                  >
+                    Remove housemate
+                  </Button>
+                </>
+              )}
             </div>
           ),
         )}
@@ -90,12 +129,13 @@ export default function HouseholdSettings({
             This device is signed in as the household, so it reads the house but
             doesn’t check things off. Pick a person above to join in.
           </p>
-        ) : members.filter((m) => m.name !== "Housemates").length < 2 ? (
+        ) : owner &&
+          members.filter((m) => m.name !== "Housemates").length < 2 ? (
           <>
-            <h3>Add your housemates</h3>
+            <h3>Invite a housemate</h3>
             <p className="subtle">
-              Everyone uses the same household code. Add names here to assign
-              chores and leave notes for each other.
+              Add their name, then share the household code with them privately.
+              They can open this site and choose their name after signing in.
             </p>
             <form onSubmit={addMember}>
               <label>
@@ -109,15 +149,40 @@ export default function HouseholdSettings({
               </label>
               <Button className="button secondary" disabled={busy}>
                 <Plus size={16} />
-                Add housemate
+                Invite housemate
               </Button>
             </form>
           </>
         ) : (
           <p className="subtle">
-            Adding more housemates is disabled while the house agreements
-            support two people.
+            {owner
+              ? "Households currently support two people. You can invite a replacement after a housemate leaves."
+              : "The household owner manages invitations and removals."}
           </p>
+        )}
+        {!sharedScreen && (
+          <>
+            <h3>Leave this household</h3>
+            <p className="subtle">
+              Past expenses and moving checklists stay with the house. Future
+              reservations are canceled.{" "}
+              {owner && "Transfer ownership to your housemate first."}
+            </p>
+            <Button
+              className="button secondary"
+              disabled={busy || owner}
+              onClick={() => setConfirm({ operation: "leave", name: "you" })}
+            >
+              Leave household
+            </Button>
+            {!demo && (
+              <p className="subtle">
+                Access uses a shared household code. To revoke a departing
+                person’s access to the home and its calendar feed, the owner
+                must change that code in the hosting settings.
+              </p>
+            )}
+          </>
         )}
       </section>
       <section className="panel settings-panel">
@@ -184,6 +249,52 @@ export default function HouseholdSettings({
       />
       {!demo && <HouseholdReliability readOnly={sharedScreen} />}
       {!demo && <HouseholdHistory />}
+      <AnimatePresence>
+        {confirm && (
+          <PaperDialog
+            aria-labelledby="membership-title"
+            onClose={() => {
+              if (!busy) setConfirm(null);
+            }}
+          >
+            <h2 id="membership-title">
+              {confirm.operation === "transfer_owner"
+                ? `Transfer ownership to ${confirm.name}?`
+                : confirm.operation === "leave"
+                  ? "Leave this household?"
+                  : `Remove ${confirm.name}?`}
+            </h2>
+            <p>
+              {confirm.operation === "transfer_owner"
+                ? "They will manage invitations, removals, and ownership. You will remain a housemate."
+                : "Past records remain. Future reservations are canceled, shared chores become unassigned, and existing agreements return to draft for the new household to review."}
+            </p>
+            <div className="dialog-actions">
+              <Button
+                className="button secondary"
+                disabled={busy}
+                onClick={() => setConfirm(null)}
+              >
+                Cancel
+              </Button>
+              <Button
+                className="button"
+                disabled={busy}
+                onClick={async () => {
+                  if (await manageMembership(confirm.operation, confirm.member))
+                    setConfirm(null);
+                }}
+              >
+                {confirm.operation === "transfer_owner"
+                  ? "Transfer ownership"
+                  : confirm.operation === "leave"
+                    ? "Leave household"
+                    : "Remove housemate"}
+              </Button>
+            </div>
+          </PaperDialog>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

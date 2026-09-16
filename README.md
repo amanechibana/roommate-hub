@@ -36,6 +36,18 @@ Expenses use migration `006_expenses.sql` and a separate household-scoped gatewa
 
 House notes can be turned into a to-do, plan, or shopping item: open the note and pick a new type in the edit dialog. The entry keeps its title, details, and author; turning one into a rent or bill event adds payment checks for everyone.
 
+## Household life
+
+**Household life** groups five shared tools:
+
+- **Quick polls:** ask a question with 2–6 options and a future deadline. Each housemate has one changeable vote. The server closes voting at the deadline; a housemate then saves the final decision and next steps alongside the votes. Saved decisions cannot be overwritten.
+- **Pantry & supplies:** track staples as stocked, running low, or out. Add low/out staples to Shopping with their notes. Matching open household items are reused; bought or personal items do not block a new household request. Mark staples stocked after replenishing them.
+- **Maintenance:** describe a problem, assign a housemate to follow up, and move it from open to in progress to resolved. Resolution requires a note and records its date; requests can reopen. Attach up to 20 JPEG, PNG, or WebP photos (10 MB each) after saving. Photos use the private `house-maintenance` bucket and authenticated, short-lived links.
+- **Meal planning:** choose a shared dinner date and cook, list ingredients, and mark what is already at home. Stocked pantry matches start checked. Send missing ingredients to Shopping without duplicating open household items. Saving/editing/deleting a dinner also creates/updates/deletes its linked Together calendar plan in the same database transaction.
+- **Budget:** set separate grocery and utility targets per month, then categorize existing purchases from Expenses. Totals use current full purchase amounts in whole cents; repayments are excluded, and uncategorized spending is shown separately. Expense edits immediately affect totals, and deletions remove their classification.
+
+Apply migrations through `024_household_life_membership.sql` before deploying this update. Photo attachments additionally need the existing server-only `SUPABASE_SERVICE_ROLE_KEY`; records work without photo storage. All writes use the household token gateway and selected member identity. Shared screens can read these tools. Updates refresh through existing change broadcasts and a 15-second fallback poll. Sample-household changes last until reload.
+
 ## The shared screen
 
 A device can sign in as the **household** instead of as a person: pick _This is
@@ -283,8 +295,9 @@ For a fresh database, apply migrations in order: `001_household.sql`,
 `010_push_subscribe_hardening.sql`, `011_revoke_legacy_multi_user.sql`,
 `012_house_activity.sql`, `013_pinned_notes.sql`, `014_personal_todos.sql`,
 `015_agreements.sql`, `016_house_handbook.sql`, `017_timed_house_status.sql`,
-`019_daily_life_gaps.sql`, `020_edit_undo.sql`, and
-`021_household_reliability.sql`.
+`019_daily_life_gaps.sql`, `020_edit_undo.sql`,
+`021_household_reliability.sql`, `022_household_life.sql`,
+`023_house_coordination.sql`, and `024_household_life_membership.sql`.
 For an existing installation, apply only the migrations newer than the last installed migration.
 
 Use `npm run migrate` with `pg_connection_url` in `.env` or a server-only
@@ -491,7 +504,7 @@ Suggested order:
 4. **Guests / quiet hours:** shipped as calendar categories with date ranges and optional times; they also appear on the overview and wall display.
 5. **Calendar subscription:** shipped and read-only. Its derived secret URL is revoked by changing the household code; two-way sync/conflict resolution is out of scope.
 6. **Shopping enrichment:** optional product metadata from approved retailer APIs. Current store links are manual; no Amazon login, price scraping, checkout, or purchase automation.
-7. **Membership management:** owner-controlled removal, leaving a house, ownership transfer, and recovery flows.
+7. **Membership management:** shipped for the current two-person household: owner-controlled invitations and removal, leaving, and ownership transfer. Larger rosters and independent account recovery remain future work.
 
 Chore reminders and push notifications shipped as the daily morning digest;
 shared expenses shipped as the Expenses tab. Data amounts are USD; events can
@@ -583,3 +596,46 @@ Validation: `tests/feature-improvements.test.ts`,
 `supabase/tests/feature-improvements.sql`, and
 `tests/browser/feature-improvements.spec.ts`, alongside existing unit, SQL,
 production-build and household reliability browser checks.
+
+## House planning and membership
+
+Apply migrations through `024_household_life_membership.sql` before rolling out this update. Migration 022 for household life was already applied when coordination reached main, so its contents are preserved and the previously unapplied coordination migration follows as 023. Migration 024 connects membership removal to polls, repair assignments, and future meal plans.
+**House planning** brings together weekly reviews, shared reservations, and moving
+checklists. A review lists unpaid bills and unfinished shared chores through the
+end of next week, including overdue and undated work, plus proposed agreements,
+open amendments, relief requests, and household decisions. Save review notes for
+the current Monday-based household week (New York time); the previous twelve
+reviews remain available. Personal tasks stay outside the review.
+
+Reserve Laundry, Parking spot, Shared workspace, or a custom resource, using
+this device's local time zone. Reservations may last up to 24 hours and start
+within 180 days. Database row locks prevent overlapping reservations even when
+two devices save together; adjacent slots are allowed. Each housemate cancels
+their own reservations. Move-in and move-out checklists keep keys, deposits,
+meter readings, cleaning, and final balances with item notes and completion
+checks. Amounts in checklist notes do not post to Expenses. Shared screens can
+read all three features but cannot change them.
+
+In **Our household**, the owner adds a housemate's name and privately shares
+the existing household code. The two-person limit remains while agreements
+require a pair; departing housemates free a slot for replacements. Migration
+022 assigns a legacy shared-screen owner to the first named housemate in
+alphabetical order; existing named owners remain owners. Ownership must be
+transferred before the owner leaves. Removing or leaving archives membership,
+stops reminders, cancels future bookings, and unassigns unfinished shared
+chores. Past expenses, outstanding balances, completed work, and moving
+checklists remain, and final repayments can still name a former housemate.
+
+A roster change archives signed/proposed agreements, cancels unfinished future
+generated obligations, closes pending agreement decisions, and returns live
+agreements to draft for review with the new housemate. The original terms and
+signatures remain readable in House planning. Member selection is attribution,
+not independent authentication: anyone holding the shared code can select a
+current person. To revoke a departed person's household access, rotate
+`HOUSEHOLD_ACCESS_CODE` in the hosting settings and redeploy; this invalidates
+existing sessions and the calendar subscription link.
+
+Validation includes `tests/coordination.test.ts`,
+`supabase/tests/house-coordination.sql`, and
+`tests/browser/coordination.spec.ts` (demo desktop/mobile flows and mocked
+shared-household permissions and membership).

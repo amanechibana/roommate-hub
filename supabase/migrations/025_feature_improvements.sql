@@ -42,8 +42,7 @@ language plpgsql security definer set search_path='' as $$
 declare hid uuid; actor uuid:=nullif(payload->>'actor','')::uuid; today date; first_day date; last_day date; cursor_row public.entries;
  result jsonb; rows jsonb; more boolean; n integer; b public.entries; item jsonb; old_rows jsonb; ids uuid[]; mutation uuid:=nullif(payload->>'mutation_id','')::uuid; saved public.mutation_receipts; private_action boolean:=false; titles text[]; title text; copy_id uuid;
 begin
- select household_id into hid from public.shared_home_config where gateway_hash=encode(extensions.digest(access_token,'sha256'),'hex');
- if hid is null then raise exception 'Access denied' using errcode='42501'; end if;
+ hid:=public.coordination_identity(access_token,payload->>'actor');
  today:=(now() at time zone coalesce((select settings->>'timezone' from public.household_preferences where household_id=hid),'America/New_York'))::date;
  if operation in ('get','history') then
     first_day:=coalesce(nullif(payload->>'from_date','')::date,today-35);
@@ -72,7 +71,8 @@ begin
       result:=result||jsonb_build_object(
         'household',(select to_jsonb(h) from public.households h where h.id=hid),
         'preferences',coalesce((select settings from public.household_preferences where household_id=hid),'{}'::jsonb),
-        'members',(select coalesce(jsonb_agg(person order by person.name),'[]') from public.members person where person.household_id=hid),
+        'members',(select coalesce(jsonb_agg(person order by person.name),'[]') from public.members person where person.household_id=hid and person.active),
+        'former_members',(select coalesce(jsonb_agg(person order by person.name),'[]') from public.members person where person.household_id=hid and not person.active),
         'activity',(select coalesce(jsonb_agg(to_jsonb(a)-'household_id' order by a.created_at desc,a.id),'[]')
           from (select * from public.house_activity where household_id=hid order by created_at desc,id desc limit 20) a)
       );
@@ -80,7 +80,7 @@ begin
     return result;
  end if;
  if operation in ('attempt','attempt_clear') then return public.shared_home_before_improvements(access_token,operation,payload); end if;
- if not exists(select 1 from public.members where household_id=hid and user_id=actor and name<>'Housemates') then raise exception 'Choose a household member'; end if;
+ if not exists(select 1 from public.members where household_id=hid and user_id=actor and active and name<>'Housemates') then raise exception 'Choose a household member'; end if;
  if mutation is not null then
    perform pg_advisory_xact_lock(hashtextextended(hid::text||actor::text||mutation::text||'home',0));
    select * into saved from public.mutation_receipts where household_id=hid and mutation_receipts.actor=ctx.actor and id=mutation and surface='home';
@@ -178,8 +178,7 @@ language plpgsql security definer set search_path='' as $$
 declare hid uuid; actor uuid:=nullif(payload->>'actor','')::uuid; result jsonb; cursor_row public.household_expenses; rows jsonb; more boolean;
  mutation uuid:=nullif(payload->>'mutation_id','')::uuid; saved public.mutation_receipts; old_rows jsonb; percentages jsonb; part record; total numeric:=0; cents integer; expected jsonb;
 begin
- select household_id into hid from public.shared_home_config where gateway_hash=encode(extensions.digest(access_token,'sha256'),'hex');
- if hid is null then raise exception 'Access denied' using errcode='42501'; end if;
+ hid:=public.coordination_identity(access_token,payload->>'actor');
  if operation='get' then
    if payload->>'id' is not null then return jsonb_build_object('expense',(select to_jsonb(e)||jsonb_build_object('receipts',(select coalesce(jsonb_agg(jsonb_build_object('id',r.id,'file_name',r.file_name)),'[]') from public.expense_receipts r where r.expense_id=e.id)) from public.household_expenses e where household_id=hid and id=(payload->>'id')::uuid)); end if;
    if payload->>'cursor' is not null then
@@ -199,7 +198,7 @@ begin
     'summaries',(select coalesce(jsonb_agg(jsonb_build_object('month',totals.period,'category',category,'paid_by',paid_by,'amount_cents',amount)),'[]') from
       (select to_char(date,'YYYY-MM') as period,category,paid_by,sum(amount_cents) amount from public.household_expenses where household_id=hid and kind='expense' group by 1,2,3) totals));
  end if;
- if not exists(select 1 from public.members where household_id=hid and user_id=actor and name<>'Housemates') then raise exception 'Choose a household member'; end if;
+ if not exists(select 1 from public.members where household_id=hid and user_id=actor and active and name<>'Housemates') then raise exception 'Choose a household member'; end if;
  if mutation is not null then
    perform pg_advisory_xact_lock(hashtextextended(hid::text||actor::text||mutation::text||'expenses',0));
    select * into saved from public.mutation_receipts where household_id=hid and mutation_receipts.actor=ctx.actor and id=mutation and surface='expenses';
@@ -244,8 +243,7 @@ language plpgsql security definer set search_path='' as $$
 <<ctx>>
 declare hid uuid; result jsonb; rows jsonb; more boolean; cursor_row public.agreement_events;
 begin
- select household_id into hid from public.shared_home_config where gateway_hash=encode(extensions.digest(access_token,'sha256'),'hex');
- if hid is null then raise exception 'Access denied' using errcode='42501'; end if;
+ hid:=public.coordination_identity(access_token,payload->>'actor');
  if operation not in ('get','history') then
    if exists(select 1 from public.entries e where e.household_id=hid and e.visibility='private' and (e.id::text=payload->>'entry_id' or e.id::text in(select jsonb_array_elements_text(coalesce(payload->'details'->'entry_ids','[]'))))) then raise exception 'Private items cannot be included in shared agreements'; end if;
    return public.shared_agreements_before_pagination(access_token,operation,payload);
@@ -270,8 +268,7 @@ language plpgsql security definer set search_path='' as $$
 declare hid uuid; actor uuid:=nullif(payload->>'actor','')::uuid; settings jsonb; item jsonb; row_data public.chore_coverage; e public.entries; candidate uuid;
  file_data public.expense_receipts; timezone text; edition text; day date; endpoint_hash text; query text; results jsonb;
 begin
- select household_id into hid from public.shared_home_config where gateway_hash=encode(extensions.digest(access_token,'sha256'),'hex');
- if hid is null then raise exception 'Access denied' using errcode='42501'; end if;
+ hid:=public.coordination_identity(access_token,payload->>'actor');
  if operation='get' then return jsonb_build_object('household',coalesce((select p.settings from public.household_preferences p where household_id=hid),'{}'),
  'reminders',coalesce((select r.settings from public.member_reminders r where household_id=hid and member=actor),'{}'),
  'coverage',(select coalesce(jsonb_agg(c order by c.created_at desc),'[]') from public.chore_coverage c where household_id=hid and (status='open' or created_at>now()-interval '30 days'))); end if;
@@ -300,7 +297,7 @@ begin
  end if;
  if operation='entry' then select * into e from public.entries where household_id=hid and id=(payload->>'id')::uuid and (visibility='household' or created_by=actor); if not found then raise exception 'Entry not found'; end if; return jsonb_build_object('entry',to_jsonb(e)); end if;
  if operation='receipt_file' then select * into file_data from public.expense_receipts where household_id=hid and id=(payload->>'id')::uuid; if not found then raise exception 'Receipt not found'; end if; return jsonb_build_object('file',to_jsonb(file_data)); end if;
- if not exists(select 1 from public.members where household_id=hid and user_id=actor and name<>'Housemates') then raise exception 'Choose a household member'; end if;
+ if not exists(select 1 from public.members where household_id=hid and user_id=actor and active and name<>'Housemates') then raise exception 'Choose a household member'; end if;
  if operation in ('save_household','save_reminders') then
    settings:=payload->'settings';
    if jsonb_typeof(settings) is distinct from 'object' or pg_column_size(settings)>24000 then raise exception 'Invalid settings'; end if;
@@ -325,7 +322,7 @@ begin
  elsif operation='request_coverage' then
    select * into e from public.entries where household_id=hid and id=(payload->>'entry_id')::uuid for update;
    candidate:=(payload->>'candidate')::uuid;
-   if e.kind<>'task' or e.done or e.category='Personal' or e.assignee is null or e.date is null or actor not in (e.assignee,candidate) or candidate=e.assignee or not exists(select 1 from public.members where household_id=hid and user_id=candidate and name<>'Housemates') then raise exception 'Choose an assigned household chore and a different housemate'; end if;
+   if e.kind<>'task' or e.done or e.category='Personal' or e.assignee is null or e.date is null or actor not in (e.assignee,candidate) or candidate=e.assignee or not exists(select 1 from public.members where household_id=hid and user_id=candidate and active and name<>'Housemates') then raise exception 'Choose an assigned household chore and a different housemate'; end if;
    if not exists(select 1 from public.entries where household_id=hid and kind='event' and category='Away' and date=e.date and assignee=e.assignee) then raise exception 'That housemate is no longer away on this date'; end if;
    if exists(select 1 from public.entries where household_id=hid and kind='event' and category='Away' and date=e.date and assignee=candidate) then raise exception 'The covering housemate is also away'; end if;
    insert into public.chore_coverage(household_id,entry_id,original,candidate,requester,date) values(hid,e.id,e.assignee,candidate,actor,e.date) returning * into row_data;
@@ -335,7 +332,7 @@ begin
    if not found or row_data.status<>'open' or actor=row_data.requester or actor not in(row_data.original,row_data.candidate) or jsonb_typeof(payload->'approve') is distinct from 'boolean' then raise exception 'The other involved housemate must approve this request'; end if;
    if (payload->>'approve')::boolean then
      select * into e from public.entries where household_id=hid and id=row_data.entry_id for update;
-     if e.assignee is distinct from row_data.original or e.date is distinct from row_data.date or e.done or not exists(select 1 from public.entries where household_id=hid and kind='event' and category='Away' and date=e.date and assignee=e.assignee) or exists(select 1 from public.entries where household_id=hid and kind='event' and category='Away' and date=e.date and assignee=row_data.candidate) then raise exception 'The chore or availability changed. Review a new coverage request'; end if;
+     if e.assignee is distinct from row_data.original or e.date is distinct from row_data.date or e.done or not exists(select 1 from public.members where household_id=hid and user_id=row_data.candidate and active and name<>'Housemates') or not exists(select 1 from public.entries where household_id=hid and kind='event' and category='Away' and date=e.date and assignee=e.assignee) or exists(select 1 from public.entries where household_id=hid and kind='event' and category='Away' and date=e.date and assignee=row_data.candidate) then raise exception 'The chore or availability changed. Review a new coverage request'; end if;
      update public.entries set assignee=row_data.candidate where id=e.id;
    end if;
    update public.chore_coverage set status=case when (payload->>'approve')::boolean then 'approved' else 'declined' end where id=row_data.id returning * into row_data;

@@ -443,11 +443,17 @@
   }
   .shell :global(.sidebar nav button) {
     min-height: 0;
+    min-width: 0;
+    flex: 1 1 0;
     font-size: 9px;
     border-radius: 9px;
   }
   .shell :global(.sidebar nav button.active) {
     background: #e5ecd7;
+  }
+  .shell :global(.sidebar nav button > span:not(.nav-count)) {
+    white-space: normal;
+    text-align: center;
   }
   .shell :global(.content:not(.home-content):not(.calendar-content)) {
     padding: 16px 12px 24px;

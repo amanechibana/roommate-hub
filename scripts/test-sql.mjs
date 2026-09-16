@@ -40,6 +40,9 @@ const suites = {
   20: ["daily-life-gaps"],
   25: ["feature-improvements"],
   21: ["daily-life-gaps", "household-reliability"],
+  22: ["household-life"],
+  23: ["house-coordination"],
+  24: ["household-life", "house-coordination", "household-life-membership"],
 };
 let runnerDatabase;
 try {
@@ -98,7 +101,14 @@ try {
         sql(
           { ...env, PGDATABASE: runnerDatabase },
           "select max(version) from public.household_schema_migrations;",
-        ) !== String(Math.max(...readdirSync("supabase/migrations").filter((n) => /^\d+_.+\.sql$/.test(n)).map((n) => Number(n.split("_")[0]))))
+        ) !==
+        String(
+          Math.max(
+            ...readdirSync("supabase/migrations")
+              .filter((n) => /^\d+_.+\.sql$/.test(n))
+              .map((n) => Number(n.split("_")[0])),
+          ),
+        )
       )
         throw Error("Upgrade missed a migration");
       sql(env, `drop database ${runnerDatabase};`);
