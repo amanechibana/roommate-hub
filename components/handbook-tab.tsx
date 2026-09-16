@@ -19,7 +19,7 @@ import {
   Trash2,
   X,
 } from "lucide-react";
-import { useRef, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import SearchField from "./search-field";
 import { matchesSearch } from "@/lib/search";
 import styles from "./handbook-tab.module.css";
@@ -34,6 +34,26 @@ export default function HandbookTab({
   readOnly: boolean;
 }) {
   const [query, setQuery] = useState("");
+  useEffect(() => {
+    const openTarget = () => {
+      let target: any;
+      try {
+        target = JSON.parse(
+          sessionStorage.getItem("household-search-target") || "null",
+        );
+      } catch {
+        return;
+      }
+      if (target?.tab === "House handbook") {
+        setQuery(target.title);
+        sessionStorage.removeItem("household-search-target");
+      }
+    };
+    openTarget();
+    window.addEventListener("household-search-result", openTarget);
+    return () =>
+      window.removeEventListener("household-search-result", openTarget);
+  }, []);
   const handbook = useHandbook({ enabled: active, demo });
   const [editing, setEditing] = useState<{
     section: HandbookSection;

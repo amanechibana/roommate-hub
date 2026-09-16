@@ -1,4 +1,6 @@
 import "server-only";
+import { notificationAllowed } from "./notification-preferences-server";
+import type { NotificationTopic } from "./improvements";
 import webpush from "web-push";
 import { sharedDatabase } from "./shared-server";
 
@@ -26,9 +28,36 @@ export function preparePush() {
 // out; transient failures are left for the next attempt.
 export async function sendPush(
   sub: Subscription,
-  payload: { title: string; body: string; tag: string; url: string },
-): Promise<"sent" | "pruned" | "failed"> {
+  payload: {
+    title: string;
+    body: string;
+    tag: string;
+    url: string;
+    topic?: NotificationTopic;
+  },
+): Promise<"sent" | "pruned" | "failed" | "skipped"> {
   try {
+    const topic =
+      payload.topic ??
+      (payload.tag.startsWith("ledger")
+        ? "expenses"
+        : payload.tag.startsWith("note")
+          ? "notes"
+          : payload.tag.startsWith("event")
+            ? "plans"
+            : payload.tag.startsWith("paid")
+              ? "bills"
+              : payload.tag.startsWith("done")
+                ? "chores"
+                : payload.tag.includes("agreement")
+                  ? "agreements"
+                  : "nudges");
+    if (
+      !payload.tag.startsWith("digest-") &&
+      !payload.tag.startsWith("evening-") &&
+      !(await notificationAllowed(sub.member, topic))
+    )
+      return "skipped";
     await webpush.sendNotification(
       { endpoint: sub.endpoint, keys: sub.keys },
       JSON.stringify(payload),
@@ -57,7 +86,13 @@ export async function sendPush(
 // Loads the roster itself so a route can fire it after responding.
 export async function pushToHousemates(
   except: string,
-  payload: { title: string; body: string; tag: string; url: string },
+  payload: {
+    title: string;
+    body: string;
+    tag: string;
+    url: string;
+    topic?: NotificationTopic;
+  },
 ) {
   const push = await sharedDatabase("get", {}, "shared_push");
   const devices = (push.subscriptions as Subscription[]).filter(
@@ -74,7 +109,13 @@ export async function pushToHousemates(
 // One push to one person's subscribed devices.
 export async function pushToMember(
   member: string,
-  payload: { title: string; body: string; tag: string; url: string },
+  payload: {
+    title: string;
+    body: string;
+    tag: string;
+    url: string;
+    topic?: NotificationTopic;
+  },
 ) {
   const push = await sharedDatabase("get", {}, "shared_push");
   const devices = (push.subscriptions as Subscription[]).filter(

@@ -11,7 +11,6 @@ import {
   localDateKey,
   noteMessage,
   paidMessage,
-  quietHours,
 } from "@/lib/reminders";
 import type { Entry, Member } from "@/lib/model";
 import type { HouseActivity } from "@/lib/activity";
@@ -32,6 +31,14 @@ export async function GET(request: Request) {
     return json({ error: "Please enter your household code." }, 401);
   try {
     const query = new URL(request.url).searchParams;
+    if (query.has("id"))
+      return json(
+        await sharedDatabase(
+          "entry",
+          { id: query.get("id"), actor: await selectedMember() },
+          "shared_improvements",
+        ),
+      );
     const month = query.get("month");
     const payload: Record<string, unknown> = {};
     if (month) {
@@ -44,7 +51,10 @@ export async function GET(request: Request) {
       payload.until_date = end.toISOString().slice(0, 10);
     }
     if (query.get("cursor")) payload.cursor = query.get("cursor");
-    const data = await sharedDatabase("get", payload);
+    const data = await sharedDatabase("get", {
+      ...payload,
+      actor: await selectedMember(),
+    });
     const memberId = await selectedMember();
     return json({
       ...data,
@@ -71,6 +81,7 @@ export async function POST(request: Request) {
     const { operation, payload, sender } = JSON.parse(raw);
     if (
       ![
+        "split_shopping",
         "create",
         "update",
         "delete",
@@ -92,6 +103,14 @@ export async function POST(request: Request) {
           : operation === "payment"
             ? ["id", "paid", "cover", "log_share"]
             : [
+                "mutation_id",
+                "client_ids",
+                "quantity",
+                "unit",
+                "store",
+                "checklist",
+                "effort_minutes",
+                "visibility",
                 "undo_token",
                 "rotation_partner",
                 "id",
@@ -144,8 +163,7 @@ export async function POST(request: Request) {
       flipped?.actor === actor &&
       ["completed", "bought"].includes(flipped.action) &&
       Date.now() - Date.parse(flipped.created_at) < 15000 &&
-      pushConfigured() &&
-      !quietHours(new Date())
+      pushConfigured()
     )
       after(async () => {
         try {
@@ -168,6 +186,7 @@ export async function POST(request: Request) {
             title: message.title,
             body: message.lines.join("\n"),
             tag: `done-${entry.id}`,
+            topic: entry.kind === "request" ? "shopping" : "chores",
             url: "/",
           });
         } catch (err) {
@@ -190,7 +209,7 @@ export async function POST(request: Request) {
           a.action === "paid" &&
           Date.now() - Date.parse(a.created_at) < 15000,
       );
-    if (paid && pushConfigured() && !quietHours(new Date()))
+    if (paid && pushConfigured())
       after(async () => {
         try {
           const home = await homeSnapshotServer();
@@ -234,12 +253,7 @@ export async function POST(request: Request) {
       });
     // A new note on the fridge is read out to the rest of the house, after
     // the response is sent and never during quiet hours; a note keeps.
-    if (
-      operation === "create" &&
-      values.kind === "note" &&
-      pushConfigured() &&
-      !quietHours(new Date())
-    )
+    if (operation === "create" && values.kind === "note" && pushConfigured())
       after(async () => {
         try {
           const home = await homeSnapshotServer();
@@ -275,8 +289,7 @@ export async function POST(request: Request) {
       values.kind === "event" &&
       typeof values.date === "string" &&
       payload.converting !== true &&
-      pushConfigured() &&
-      !quietHours(new Date())
+      pushConfigured()
     )
       after(async () => {
         try {
@@ -307,6 +320,9 @@ export async function POST(request: Request) {
             title: message.title,
             body: message.lines.join("\n"),
             tag: `event-${Date.now()}`,
+            topic: ["Rent", "Bill"].includes(String(values.category))
+              ? "bills"
+              : "plans",
             url: "/",
           });
         } catch (err) {

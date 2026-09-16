@@ -17,7 +17,11 @@ export async function GET() {
     return json({ error: "Please enter your household code." }, 401);
   try {
     return json({
-      ...(await sharedDatabase("get", {}, gateway)),
+      ...(await sharedDatabase(
+        "get",
+        { actor: await selectedMember() },
+        gateway,
+      )),
       photos_enabled: handbookStorageConfigured(),
     });
   } catch (err) {

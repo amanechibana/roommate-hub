@@ -26,6 +26,7 @@ import {
   pinnedFirst,
   isPersonal,
   houseShopping,
+  titleGroup,
 } from "@/lib/household-actions";
 import {
   calendarFile,
@@ -358,9 +359,11 @@ export function useHousehold() {
       if (document.visibilityState === "visible") void refresh();
     }, 15000);
     const focus = () => void refresh();
+    window.addEventListener("household-offline-synced", focus);
     window.addEventListener("focus", focus);
     return () => {
       clearInterval(timer);
+      window.removeEventListener("household-offline-synced", focus);
       window.removeEventListener("focus", focus);
       ++loadSequence.current;
     };
@@ -474,26 +477,34 @@ export function useHousehold() {
         if (generation !== sessionGeneration.current) return;
         if (skipIf?.()) return;
         try {
-          const result = await homeRequest("/api/home", "POST", {
-            operation,
-            payload: {
-              ...payload,
-              ...(payload.id
-                ? { id: savedIds.current.get(payload.id) || payload.id }
-                : {}),
-              ...(payload.expense
-                ? {
-                    expense: {
-                      ...payload.expense,
-                      id:
-                        savedIds.current.get(payload.expense.id) ||
-                        payload.expense.id,
-                    },
-                  }
-                : {}),
+          const result = await homeRequest(
+            "/api/home",
+            "POST",
+            {
+              operation,
+              payload: {
+                ...payload,
+                ...(copies.length
+                  ? { client_ids: copies.map((copy) => copy.id) }
+                  : {}),
+                ...(payload.id
+                  ? { id: savedIds.current.get(payload.id) || payload.id }
+                  : {}),
+                ...(payload.expense
+                  ? {
+                      expense: {
+                        ...payload.expense,
+                        id:
+                          savedIds.current.get(payload.expense.id) ||
+                          payload.expense.id,
+                      },
+                    }
+                  : {}),
+              },
+              sender: TAB_ID,
             },
-            sender: TAB_ID,
-          });
+            copies.length ? { entries: copies } : {},
+          );
           if (generation !== sessionGeneration.current) return;
           if (Array.isArray(result.activity)) setActivity(result.activity);
           if (
@@ -658,6 +669,10 @@ export function useHousehold() {
       const generation = sessionGeneration.current;
       void writes.current.then(() => {
         if (failed || generation !== sessionGeneration.current) return;
+        if (!demo && !navigator.onLine) {
+          setNotice("Edit queued on this device. It will save when connected.");
+          return;
+        }
         setNoticeAction({
           text: `Saved changes to “${entry.title}”`,
           label: "Undo",
@@ -999,7 +1014,8 @@ export function useHousehold() {
       isPersonal(entry) && entry.assignee
         ? [entry.assignee]
         : members.filter((m) => m.name !== "Housemates").map((m) => m.user_id);
-    if (!uid || !cents || !payers.length) return;
+    if (!uid || !cents || !payers.length || entry.visibility === "private")
+      return;
     const logged = expenseController.expenses.find((e) => e.id === entry.id);
     if (logged) {
       setNotice(
@@ -1108,6 +1124,32 @@ export function useHousehold() {
     for (const { values, copy } of [...copies].reverse())
       persist("create", values, [copy]);
     if (titles.length > 1) setNotice(`Added ${titles.length} items`);
+  }
+  function splitShopping(entry: Entry) {
+    const group = titleGroup(entry.title);
+    if (!group || !household || !uid) return;
+    // Each new row owns its checkbox. Keep shared context, but do not invent a per-item price.
+    const copies: Entry[] = group.items.map((title) => ({
+      ...entry,
+      id: crypto.randomUUID(),
+      title,
+      description: [group.heading, entry.description]
+        .filter(Boolean)
+        .join(" · "),
+      amount: null,
+      quantity: 1,
+      done: false,
+      created_by: uid,
+      created_at: new Date().toISOString(),
+    }));
+    setEntries((items) => [
+      ...copies,
+      ...items.filter((e) => e.id !== entry.id),
+    ]);
+    persist("split_shopping", { id: entry.id }, copies);
+    setNotice(
+      "Each item now has its own checkbox. Add individual price estimates in the item editors.",
+    );
   }
   function takeDown(entry: Entry, down: boolean) {
     setEntries((current) =>
@@ -1254,10 +1296,19 @@ export function useHousehold() {
         await movePushSubscription(member.name !== "Housemates");
       }
       ++loadSequence.current;
+      if (!demo)
+        setEntries((items) =>
+          items.filter(
+            (entry) =>
+              entry.visibility !== "private" ||
+              entry.created_by === member.user_id,
+          ),
+        );
       clearOfflineShopping();
       setIdentity(member.user_id);
       setUndoDeletes([]);
       setChoosingPerson(false);
+      if (!demo) void refresh(true);
     } catch (err) {
       setError((err as Error).message);
     } finally {
@@ -1572,6 +1623,7 @@ export function useHousehold() {
     notes,
     takenDown,
     takeDown,
+    splitShopping,
     pin,
     monthEntries,
     person,

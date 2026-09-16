@@ -5,7 +5,6 @@ import {
   pushToMember,
 } from "@/lib/push-server";
 import { agreementNotification } from "@/lib/agreement-notifications";
-import { quietHours } from "@/lib/reminders";
 import type { Member } from "@/lib/model";
 import {
   broadcastChange,
@@ -38,12 +37,18 @@ const allowlists: Record<string, string[]> = {
   set_sessions: ["agreement_id", "series_id", "from_date", "sessions"],
   set_chores: ["agreement_id", "first_date", "weeks", "chores"],
 };
-export async function GET() {
+export async function GET(request: Request) {
   if (!(await signedIn()))
     return json({ error: "Please enter your household code." }, 401);
   try {
     const actor = await selectedMember();
-    return json(await sharedDatabase("get", { actor }, gateway));
+    return json(
+      await sharedDatabase(
+        new URL(request.url).searchParams.has("cursor") ? "history" : "get",
+        { actor, cursor: new URL(request.url).searchParams.get("cursor") },
+        gateway,
+      ),
+    );
   } catch (err) {
     console.error("GET /api/agreements", err);
     return json(
@@ -83,7 +88,7 @@ export async function POST(request: Request) {
       gateway,
     );
     broadcastChange("home", sender);
-    if (pushConfigured() && !quietHours(new Date()))
+    if (pushConfigured())
       after(async () => {
         try {
           const home = await sharedDatabase("get");

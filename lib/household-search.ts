@@ -28,6 +28,10 @@ export function searchEntries(
         e.category,
         e.date,
         e.amount,
+        e.quantity,
+        e.unit,
+        e.store,
+        JSON.stringify(e.checklist || []),
         members.find((m) => m.user_id === (e.assignee || e.created_by))?.name,
       ),
     )

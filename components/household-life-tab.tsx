@@ -59,6 +59,7 @@ export default function HouseholdLifeTab({
   expenses,
   expensesLoaded,
   expensesError,
+  moreExpenses,
   today,
   openShopping,
 }: {
@@ -70,6 +71,11 @@ export default function HouseholdLifeTab({
   expenses: Expense[];
   expensesLoaded: boolean;
   expensesError: string;
+  moreExpenses?: {
+    available: boolean;
+    loading: boolean;
+    load: () => Promise<void>;
+  };
   today: string;
   openShopping: () => void;
 }) {
@@ -599,6 +605,7 @@ export default function HouseholdLifeTab({
                     expenses,
                     data.categories,
                     month,
+                    data.spending,
                   )[category];
                   const target = data.targets.find(
                     (t) => t.month === month + "-01" && t.category === category,
@@ -680,12 +687,28 @@ export default function HouseholdLifeTab({
               </div>
               <p className={styles.meta}>
                 {expenseMoney(
-                  budgetSpending(expenses, data.categories, month).unclassified,
+                  budgetSpending(
+                    expenses,
+                    data.categories,
+                    month,
+                    data.spending,
+                  ).unclassified,
                 )}{" "}
                 in uncategorized purchases. Categorize groceries and utilities
                 below. Repayments are excluded; purchases count at their full
                 amount.
               </p>
+              {moreExpenses?.available && (
+                <Button
+                  className="button secondary"
+                  disabled={moreExpenses.loading}
+                  onClick={() => void moreExpenses.load()}
+                >
+                  {moreExpenses.loading
+                    ? "Loading…"
+                    : "Load older budget purchases"}
+                </Button>
+              )}
               <div className={styles.ledger}>
                 {expenses
                   .filter(

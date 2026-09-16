@@ -1,11 +1,13 @@
 // Bounded parallel fan-out; one rejected send never prevents another device.
 export async function deliverAll<T>(
   items: T[],
-  send: (item: T) => Promise<"sent" | "pruned" | "failed">,
+  send: (item: T) => Promise<"sent" | "pruned" | "failed" | "skipped">,
   budgetMs = 45000,
   concurrency = 6,
 ) {
-  const results: ("sent" | "pruned" | "failed")[] = items.map(() => "failed");
+  const results: ("sent" | "pruned" | "failed" | "skipped")[] = items.map(
+    () => "failed",
+  );
   const deadline = Date.now() + budgetMs;
   let index = 0;
   await Promise.allSettled(

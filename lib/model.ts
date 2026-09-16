@@ -17,6 +17,12 @@ export type Entry = {
   rotation_members?: string[];
   payment_members?: string[];
   paid_by?: string[];
+  quantity?: number;
+  unit?: string;
+  store?: string;
+  checklist?: import("./improvements").ChecklistStep[];
+  effort_minutes?: number | null;
+  visibility?: "household" | "private";
   bill_shares?: Record<string, number> | null;
   completed_at?: string | null;
   last_done_at?: string | null;

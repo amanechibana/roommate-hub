@@ -39,6 +39,9 @@ export function useAgreements({
   const [agreements, setAgreements] = useState<Agreement[]>([]);
   const [amendments, setAmendments] = useState<Amendment[]>([]);
   const [events, setEvents] = useState<AgreementEvent[]>([]);
+  const [nextCursor, setNextCursor] = useState<string | null>(null);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const loadedHistory = useRef<AgreementEvent[]>([]);
   const [logs, setLogs] = useState<GymLog[]>([]);
   const [loaded, setLoaded] = useState(false);
   const [error, setError] = useState("");
@@ -75,7 +78,22 @@ export function useAgreements({
         return;
       setAgreements(data.agreements ?? []);
       setAmendments(data.amendments ?? []);
-      setEvents(data.events ?? []);
+      const recent: AgreementEvent[] = [
+        ...(data.events ?? []),
+        ...(data.open_events ?? []),
+      ];
+      setEvents(
+        [
+          ...new Map(
+            [...loadedHistory.current, ...recent].map((event) => [
+              event.id,
+              event,
+            ]),
+          ).values(),
+        ].sort((a, b) => b.created_at.localeCompare(a.created_at)),
+      );
+      if (!loadedHistory.current.length)
+        setNextCursor(data.next_cursor ?? null);
       setLogs(data.logs ?? []);
       setLoaded(true);
       setError((message) =>
@@ -93,6 +111,8 @@ export function useAgreements({
     setAgreements([]);
     setAmendments([]);
     setEvents([]);
+    setNextCursor(null);
+    loadedHistory.current = [];
     setLogs([]);
     setLoaded(false);
     setError("");
@@ -161,7 +181,10 @@ export function useAgreements({
   // or wrapped as { agreement }.
   function agreementRow(result: Record<string, unknown>): Agreement | null {
     const row = (result.agreement ?? result) as Partial<Agreement> | null;
-    return row && typeof row === "object" && typeof row.id === "string" && row.slug
+    return row &&
+      typeof row === "object" &&
+      typeof row.id === "string" &&
+      row.slug
       ? (row as Agreement)
       : null;
   }
@@ -196,7 +219,11 @@ export function useAgreements({
             },
           ],
     );
-    persist("save", { slug, title, terms }, existing ? undefined : refetchOnDrain);
+    persist(
+      "save",
+      { slug, title, terms },
+      existing ? undefined : refetchOnDrain,
+    );
   }
   function propose(slug: AgreementSlug) {
     if (!memberId) return;
@@ -330,7 +357,12 @@ export function useAgreements({
     ]);
     persist(
       "amend",
-      { agreement_id: agreementId, title, body, terms_patch: termsPatch ?? null },
+      {
+        agreement_id: agreementId,
+        title,
+        body,
+        terms_patch: termsPatch ?? null,
+      },
       refetchOnDrain,
     );
   }
@@ -408,9 +440,12 @@ export function useAgreements({
     if (!memberId) return;
     const uid = memberId;
     setError("");
-    const unilateral = ["pto", "sick", "skip_rollover", "cover_repaid"].includes(
-      kind,
-    );
+    const unilateral = [
+      "pto",
+      "sick",
+      "skip_rollover",
+      "cover_repaid",
+    ].includes(kind);
     setEvents((current) => [
       {
         id: crypto.randomUUID(),
@@ -501,13 +536,52 @@ export function useAgreements({
     if (pending.current) recovery.current = true;
     else void refresh();
   }
+  async function loadMoreHistory() {
+    if (!nextCursor || loadingMore || pending.current) return;
+    setLoadingMore(true);
+    const current = generation.current;
+    try {
+      const data = await homeRequest(
+        `/api/agreements?cursor=${encodeURIComponent(nextCursor)}`,
+      );
+      if (generation.current !== current) return;
+      loadedHistory.current = [
+        ...new Map(
+          [...loadedHistory.current, ...data.events].map((event) => [
+            event.id,
+            event,
+          ]),
+        ).values(),
+      ];
+      setEvents((events) =>
+        [
+          ...new Map(
+            [...events, ...data.events].map((event: AgreementEvent) => [
+              event.id,
+              event,
+            ]),
+          ).values(),
+        ].sort((a, b) => b.created_at.localeCompare(a.created_at)),
+      );
+      setNextCursor(data.next_cursor ?? null);
+    } catch (e) {
+      if (generation.current === current) setError((e as Error).message);
+    } finally {
+      setLoadingMore(false);
+    }
+  }
   return {
+    nextCursor,
+    loadingMore,
+    loadMoreHistory,
     enabled: on,
     agreements,
     amendments,
     events,
     logs,
-    pendingCount: on ? pendingForMember(agreements, amendments, events, memberId) : 0,
+    pendingCount: on
+      ? pendingForMember(agreements, amendments, events, memberId)
+      : 0,
     loading: on && !loaded,
     error,
     saveDraft,

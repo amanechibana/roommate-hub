@@ -1,11 +1,15 @@
 "use client";
+import { percentageShares } from "@/lib/improvements";
+import { collectExpensePages } from "@/lib/expense-pages";
+import { hasDatabase, homeRequest } from "@/lib/home-client";
+import ReceiptAttachments from "./receipt-attachments";
 import * as Collapsible from "@radix-ui/react-collapsible";
 import { PresenceRow } from "./ui/presence";
 import { AnimatedMoney } from "./ui/animated-money";
 import { useHouseMotion } from "./ui/motion-provider";
 import { PaperDialog } from "./ui/dialog";
 import { AnimatePresence } from "motion/react";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   ArrowDownLeft,
   ArrowUpRight,
@@ -75,12 +79,50 @@ export default function ExpensesTab({
   const { expenses, loaded, error } = controller;
   const name = (id: string) =>
     members.find((member) => member.user_id === id)?.name || "Housemate";
-  const balances = expenseBalances(expenses);
+  const expensesRef = useRef(expenses);
+  expensesRef.current = expenses;
+  useEffect(() => {
+    let cancelled = false;
+    const openTarget = () => {
+      let target: any;
+      try {
+        target = JSON.parse(
+          sessionStorage.getItem("household-search-target") || "null",
+        );
+      } catch {
+        return;
+      }
+      if (target?.tab !== "Expenses") return;
+      sessionStorage.removeItem("household-search-target");
+      setQuery(target.title);
+      if (readOnly) return;
+      const known = expensesRef.current.find((e) => e.id === target.id);
+      if (known) {
+        setDraft({ kind: known.kind, entry: known });
+        return;
+      }
+      if (hasDatabase)
+        void homeRequest(`/api/expenses?id=${encodeURIComponent(target.id)}`)
+          .then((data) => {
+            if (!cancelled && data.expense)
+              setDraft({ kind: data.expense.kind, entry: data.expense });
+          })
+          .catch(() => {});
+    };
+    openTarget();
+    window.addEventListener("household-search-result", openTarget);
+    return () => {
+      cancelled = true;
+      window.removeEventListener("household-search-result", openTarget);
+    };
+  }, [readOnly]);
+  const balances = controller.balances;
   const mine = (memberId && balances[memberId]) || 0;
   const month = dateKey(new Date()).slice(0, 7);
-  const monthTotal = expenses
-    .filter((item) => item.kind === "expense" && item.date.startsWith(month))
-    .reduce((sum, item) => sum + item.amount_cents, 0);
+  const monthTotal = controller.summary(month).total;
+  const [exportError, setExportError] = useState("");
+  const [summaryMonth, setSummaryMonth] = useState(month);
+  const summary = controller.summary(summaryMonth);
   const formatDate = (value: string) =>
     new Intl.DateTimeFormat("en-US", {
       month: "short",
@@ -105,12 +147,28 @@ export default function ExpensesTab({
       setCopyResult({ payment: key, ok: false });
     }
   }
-  function exportLedger(format: "csv" | "json") {
+  async function exportLedger(format: "csv" | "json") {
+    setExportError("");
+    let records = expenses;
+    try {
+      if (controller.nextCursor)
+        records = await collectExpensePages((cursor) =>
+          homeRequest(
+            "/api/expenses" +
+              (cursor ? `?cursor=${encodeURIComponent(cursor)}` : ""),
+          ),
+        );
+    } catch {
+      setExportError(
+        "Could not load the complete ledger for export. Try again when connected.",
+      );
+      return;
+    }
     const blob = new Blob(
       [
         format === "csv"
-          ? expenseCSV(expenses, members)
-          : expenseJSON(expenses, members, householdName),
+          ? expenseCSV(records, members)
+          : expenseJSON(records, members, householdName),
       ],
       {
         type: format === "csv" ? "text/csv;charset=utf-8" : "application/json",
@@ -144,6 +202,11 @@ export default function ExpensesTab({
           <Plus size={16} /> Add expense
         </Button>
       </div>
+      {exportError && (
+        <p className="error" role="alert">
+          {exportError}
+        </p>
+      )}
       <div className="filters">
         <Button
           className="button secondary small"
@@ -168,6 +231,42 @@ export default function ExpensesTab({
           </Button>
         </div>
       )}
+      <section className="panel monthly-summary">
+        <h2>Monthly spending summary</h2>
+        <label>
+          Summary month
+          <input
+            type="month"
+            required
+            value={summaryMonth}
+            onChange={(event) => setSummaryMonth(event.target.value)}
+          />
+        </label>
+        <strong>{expenseMoney(summary.total)} in purchases</strong>
+        <p className="subtle">
+          Repayments are excluded. Totals include the full ledger.
+        </p>
+        <div className="form-grid">
+          <div>
+            {Object.entries(summary.categories)
+              .filter(([, amount]) => amount > 0)
+              .map(([category, amount]) => (
+                <p key={category}>
+                  {category}: <strong>{expenseMoney(amount)}</strong>
+                </p>
+              ))}
+          </div>
+          <div>
+            {Object.entries(summary.members)
+              .filter(([, amount]) => amount > 0)
+              .map(([id, amount]) => (
+                <p key={id}>
+                  {name(id)} paid: <strong>{expenseMoney(amount)}</strong>
+                </p>
+              ))}
+          </div>
+        </div>
+      </section>
       <SearchField label="Search expenses" value={query} onChange={setQuery} />
       {error && (
         <div className={styles.error} role="alert">
@@ -352,6 +451,7 @@ export default function ExpensesTab({
                         query,
                         item.title,
                         item.kind,
+                        item.category,
                         item.date,
                         name(item.paid_by),
                         item.recipient ? name(item.recipient) : "",
@@ -386,6 +486,7 @@ export default function ExpensesTab({
                                   query,
                                   item.title,
                                   item.kind,
+                                  item.category,
                                   item.date,
                                   name(item.paid_by),
                                   item.recipient ? name(item.recipient) : "",
@@ -435,6 +536,7 @@ export default function ExpensesTab({
                                       : item.title}
                                   </strong>
                                   <small>
+                                    {item.category || "Other"} ·{" "}
                                     {formatDate(item.date)},{" "}
                                     {item.kind === "expense"
                                       ? `${name(item.paid_by)} paid, split ${Object.keys(item.shares).length} ${Object.keys(item.shares).length === 1 ? "way" : "ways"}`
@@ -453,6 +555,17 @@ export default function ExpensesTab({
                   </PresenceRow>
                 ))}
             </AnimatePresence>
+            {controller.nextCursor && (
+              <Button
+                className="button secondary"
+                disabled={controller.loadingMore}
+                onClick={() => void controller.loadMore()}
+              >
+                {controller.loadingMore
+                  ? "Loading older expenses…"
+                  : "Load older expenses"}
+              </Button>
+            )}
             {!expenses.length && (
               <div className={styles.empty}>
                 <ReceiptText size={28} />
@@ -480,6 +593,7 @@ export default function ExpensesTab({
             draft={draft}
             members={members}
             memberId={memberId}
+            onReceiptsChanged={() => void controller.refresh()}
             onClose={() => setDraft(null)}
             onSave={(values) => {
               controller.save(values, draft.entry?.id);
@@ -509,10 +623,12 @@ function ExpenseDialog({
   draft,
   members,
   memberId,
+  onReceiptsChanged,
   onClose,
   onSave,
   onDelete,
 }: {
+  onReceiptsChanged: () => void;
   draft: Draft;
   members: Member[];
   memberId: string;
@@ -561,6 +677,16 @@ function ExpenseDialog({
     ),
   );
   const [error, setError] = useState("");
+  const [percentageMode, setPercentageMode] = useState(
+    !!draft.entry?.percentages,
+  );
+  const [percentages, setPercentages] = useState<Record<string, string>>(
+    draft.entry?.percentages ?? {},
+  );
+  const percentageSplit = percentageShares(
+    toCents(amount) || 0,
+    Object.fromEntries(people.map((id) => [id, percentages[id] ?? ""])),
+  );
   const settlement = draft.kind === "settlement";
   const cents = toCents(amount);
   const split = splitEvenly(cents || 0, people);
@@ -576,7 +702,11 @@ function ExpenseDialog({
     (sum, share) => sum + (share ?? 0),
     0,
   );
-  const shares = uneven ? (customShares as Record<string, number>) : split;
+  const shares = percentageMode
+    ? (percentageSplit ?? {})
+    : uneven
+      ? (customShares as Record<string, number>)
+      : split;
   return (
     <PaperDialog
       onClose={onClose}
@@ -598,7 +728,13 @@ function ExpenseDialog({
             setError("Choose at least one person for the split.");
             return;
           }
-          if (!settlement && uneven) {
+          if (!settlement && percentageMode && !percentageSplit) {
+            setError(
+              "Percentages must add up to 100, with up to two decimal places.",
+            );
+            return;
+          }
+          if (!settlement && uneven && !percentageMode) {
             if (Object.values(customShares).some((share) => share === null)) {
               setError("Check the shares: amounts like 12.50, or blank for 0.");
               return;
@@ -622,6 +758,13 @@ function ExpenseDialog({
             paid_by: payer,
             shares: settlement ? {} : shares,
             recipient: settlement ? recipient : null,
+            category: settlement
+              ? "Other"
+              : String(data.get("category") || "Other"),
+            percentages:
+              !settlement && percentageMode
+                ? Object.fromEntries(people.map((id) => [id, percentages[id]]))
+                : null,
           });
         }}
       >
@@ -650,6 +793,27 @@ function ExpenseDialog({
               placeholder="Groceries, electricity, dinner…"
               autoFocus
             />
+          </label>
+        )}
+        {!settlement && (
+          <label>
+            Spending category
+            <select
+              name="category"
+              defaultValue={draft.entry?.category || "Other"}
+            >
+              {[
+                "Groceries",
+                "Utilities",
+                "Rent",
+                "Household",
+                "Dining",
+                "Transport",
+                "Other",
+              ].map((category) => (
+                <option key={category}>{category}</option>
+              ))}
+            </select>
           </label>
         )}
         <div className="form-grid">
@@ -725,6 +889,30 @@ function ExpenseDialog({
         ) : (
           <fieldset className={styles.split}>
             <legend>{uneven ? "Split between" : "Split evenly between"}</legend>
+            <label className="checkbox-row">
+              <input
+                type="checkbox"
+                checked={percentageMode}
+                onChange={(event) => {
+                  setPercentageMode(event.target.checked);
+                  if (
+                    event.target.checked &&
+                    !Object.keys(percentages).length
+                  ) {
+                    const basis = splitEvenly(10000, people);
+                    setPercentages(
+                      Object.fromEntries(
+                        people.map((id) => [
+                          id,
+                          ((basis[id] || 0) / 100).toFixed(2),
+                        ]),
+                      ),
+                    );
+                  }
+                }}
+              />
+              Split by percentage
+            </label>
             {members.map((member) => (
               <div key={member.user_id} className={styles.person}>
                 <label>
@@ -741,7 +929,23 @@ function ExpenseDialog({
                   />
                   <span>{member.name}</span>
                 </label>
-                {uneven && people.includes(member.user_id) ? (
+                {percentageMode && people.includes(member.user_id) ? (
+                  <div>
+                    <input
+                      className={styles.share}
+                      inputMode="decimal"
+                      aria-label={`${member.name}’s percentage (%)`}
+                      value={percentages[member.user_id] ?? ""}
+                      onChange={(event) =>
+                        setPercentages((current) => ({
+                          ...current,
+                          [member.user_id]: event.target.value,
+                        }))
+                      }
+                    />
+                    <small>{expenseMoney(shares[member.user_id] || 0)}</small>
+                  </div>
+                ) : uneven && people.includes(member.user_id) ? (
                   <input
                     className={styles.share}
                     inputMode="decimal"
@@ -762,15 +966,19 @@ function ExpenseDialog({
             ))}
             <div className={styles.splitFooter}>
               <p className={styles.hint}>
-                {uneven
-                  ? cents && assigned !== cents
-                    ? assigned < cents
-                      ? `${expenseMoney(cents - assigned)} left to assign.`
-                      : `${expenseMoney(assigned - cents)} over the total.`
-                    : cents
-                      ? "These add up."
-                      : "Shares must add up to the total."
-                  : "An extra cent is assigned automatically when needed."}
+                {percentageMode
+                  ? percentageSplit
+                    ? "Percentages add up to 100%."
+                    : "Percentages must add up to 100%."
+                  : uneven
+                    ? cents && assigned !== cents
+                      ? assigned < cents
+                        ? `${expenseMoney(cents - assigned)} left to assign.`
+                        : `${expenseMoney(assigned - cents)} over the total.`
+                      : cents
+                        ? "These add up."
+                        : "Shares must add up to the total."
+                    : "An extra cent is assigned automatically when needed."}
               </p>
               <Button
                 type="button"
@@ -786,6 +994,7 @@ function ExpenseDialog({
                         ]),
                       ),
                     );
+                  setPercentageMode(false);
                   setUneven((current) => !current);
                 }}
               >
@@ -793,6 +1002,12 @@ function ExpenseDialog({
               </Button>
             </div>
           </fieldset>
+        )}
+        {!settlement && (
+          <ReceiptAttachments
+            expense={draft.entry}
+            onChanged={onReceiptsChanged}
+          />
         )}
         {error && (
           <p className="error" role="alert">

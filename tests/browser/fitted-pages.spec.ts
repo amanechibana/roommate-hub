@@ -48,6 +48,8 @@ for (const [width, height] of [
           })),
       );
       expect(overflow).toEqual([]);
+      // Check the fitted page; the sidebar navigation can scroll independently.
+      await page.locator(".fitted-app .content").hover();
       await page.mouse.wheel(0, 700);
       await page.waitForTimeout(100);
       expect(

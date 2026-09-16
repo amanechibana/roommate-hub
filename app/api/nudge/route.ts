@@ -1,3 +1,4 @@
+import { householdQuietHours } from "@/lib/notification-preferences-server";
 import { logApiFailure } from "@/lib/api-log";
 import {
   json,
@@ -23,7 +24,6 @@ import {
   houseNudgeMessage,
   localDateKey,
   nudgeMessage,
-  quietHours,
   thanksMessage,
 } from "@/lib/reminders";
 import type { Entry, Member } from "@/lib/model";
@@ -98,7 +98,7 @@ export async function POST(request: Request) {
         localDateKey(new Date()),
       );
       if (!message) return json({ error: nothing }, 400);
-      if (quietHours(new Date()))
+      if (await householdQuietHours(new Date()))
         return json({ sent: 0, devices: 0, quiet: true });
       const slot = `house:${entry.id}`;
       const claim = await claimNotification(slot);
@@ -154,7 +154,7 @@ export async function POST(request: Request) {
           );
     if (!message) return json({ error: nothing }, 400);
     // Not an error: the nudge was understood, the house is just asleep.
-    if (quietHours(new Date()))
+    if (await householdQuietHours(new Date()))
       return json({ sent: 0, devices: 0, quiet: true });
     // A hand-off has its own short slot per new owner: a second real
     // hand-off a minute later still goes through, a replayed request doesn't.

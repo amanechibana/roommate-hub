@@ -1,4 +1,11 @@
 import "server-only";
+import { reminderRoster } from "./notification-preferences-server";
+import {
+  defaultReminderPreferences,
+  reminderDue,
+  localClock,
+} from "./improvements";
+import { collectExpensePages } from "./expense-pages";
 import { sharedDatabase, homeSnapshotServer } from "./shared-server";
 import { createHash } from "node:crypto";
 import { deliverAll } from "./delivery";
@@ -14,16 +21,19 @@ import {
   weekRecap,
 } from "./reminders";
 import type { Expense } from "./expenses";
-import { parseDate, type Entry, type Member } from "./model";
+import { parseDate, shiftDay, type Entry, type Member } from "./model";
 
 export type Edition = "morning" | "evening";
 
 // Vercel Cron signs its calls with the deployment's secret.
 export function cronAuthorized(request: Request) {
-  const secret = process.env.CRON_SECRET;
-  return (
-    !!secret &&
-    equalSecret(request.headers.get("authorization") ?? "", `Bearer ${secret}`)
+  return [process.env.CRON_SECRET, process.env.REMINDER_SCHEDULER_SECRET].some(
+    (secret) =>
+      !!secret &&
+      equalSecret(
+        request.headers.get("authorization") ?? "",
+        `Bearer ${secret}`,
+      ),
   );
 }
 
@@ -34,9 +44,22 @@ export async function sendDigests(
   edition: Edition,
   onlyMember: string | null,
   run?: { claim: string; delivered: string[]; deadline?: number },
+  custom = false,
+  retry = false,
+  retryDate?: string,
 ) {
   preparePush();
-  const today = localDateKey(new Date());
+  const roster = await reminderRoster();
+  if (
+    custom &&
+    !retry &&
+    ![defaultReminderPreferences, ...Object.values(roster.members)].some(
+      (preferences) =>
+        reminderDue(new Date(), preferences[edition], roster.household, 60),
+    )
+  )
+    return { sent: 0, failed: 0, pruned: 0 };
+  const today = localDateKey(new Date(), roster.household.timezone);
   // Sunday evening looks back over the week as well as at tomorrow.
   const sunday = edition === "evening" && parseDate(today).getDay() === 0;
   const [home, push, ledger] = await Promise.all([
@@ -44,20 +67,59 @@ export async function sendDigests(
     sharedDatabase("get", {}, "shared_push"),
     // The ledger is a nicety here: a digest still goes out if it can't load.
     edition === "morning" || sunday
-      ? sharedDatabase("get", {}, "shared_expenses").catch(() => null)
+      ? collectExpensePages((cursor) =>
+          sharedDatabase("get", { cursor }, "shared_expenses"),
+        ).catch(() => null)
       : null,
   ]);
   const entries: Entry[] = home.entries;
   const members: Member[] = home.members;
-  const expenses: Expense[] = ledger?.expenses ?? [];
-  const recap = sunday ? weekRecap(entries, expenses, members, today) : [];
+  const expenses: Expense[] = ledger ?? [];
+
   const deliveries: {
     sub: Subscription;
     digest: NonNullable<ReturnType<typeof memberDigest>>;
     hash: string;
+    deliveryDate: string;
   }[] = [];
   for (const sub of push.subscriptions as Subscription[]) {
     if (onlyMember && sub.member !== onlyMember) continue;
+    const preferences = {
+      ...defaultReminderPreferences,
+      ...roster.members[sub.member],
+    };
+    if (
+      custom &&
+      !retry &&
+      !reminderDue(new Date(), preferences[edition], roster.household, 60)
+    )
+      continue;
+    const filtered = entries.filter((e) =>
+      e.kind === "task"
+        ? preferences.topics.includes("chores")
+        : e.kind === "request"
+          ? preferences.topics.includes("shopping")
+          : e.kind === "event"
+            ? preferences.topics.includes(
+                ["Rent", "Bill"].includes(e.category) ? "bills" : "plans",
+              )
+            : false,
+    );
+    const recap = sunday
+      ? weekRecap(
+          filtered,
+          preferences.topics.includes("expenses") ? expenses : [],
+          members,
+          today,
+        )
+      : [];
+    const deliveryDate =
+      retryDate ??
+      (custom &&
+      preferences[edition] &&
+      localClock(new Date(), roster.household.timezone) < preferences[edition]!
+        ? shiftDay(today, -1)
+        : today);
     const hash = createHash("sha256").update(sub.endpoint).digest("hex");
     if (run?.delivered.includes(hash)) continue;
     const member = members.find(
@@ -67,25 +129,46 @@ export async function sendDigests(
     const digest =
       (edition === "morning"
         ? memberDigest(
-            entries,
+            filtered,
             member,
             today,
-            balanceLines(expenses, member, members),
+            preferences.topics.includes("expenses")
+              ? balanceLines(expenses, member, members)
+              : [],
           )
-        : eveningDigest(entries, member, today, recap)) ??
+        : eveningDigest(filtered, member, today, recap)) ??
       (onlyMember && edition === "morning" ? quietDigest(member.name) : null);
     if (!digest) continue;
-    deliveries.push({ sub, digest, hash });
+    deliveries.push({ sub, digest, hash, deliveryDate });
   }
   const results = await deliverAll(
     deliveries,
-    async ({ sub, digest, hash }) => {
+    async ({ sub, digest, hash, deliveryDate }) => {
+      if (custom) {
+        const claim = await sharedDatabase(
+          "claim_delivery",
+          { edition, date: deliveryDate, endpoint_hash: hash, retry },
+          "shared_improvements",
+        );
+        if (!claim.claimed) return "skipped";
+      }
       const result = await sendPush(sub, {
         title: digest.title,
         body: digest.lines.join("\n"),
         tag: `${edition === "morning" ? "digest" : "evening"}-${today}`,
         url: "/",
       });
+      if (custom)
+        await sharedDatabase(
+          "finish_delivery",
+          {
+            edition,
+            date: deliveryDate,
+            endpoint_hash: hash,
+            status: result === "failed" ? "failed" : "sent",
+          },
+          "shared_improvements",
+        );
       if (result === "sent" && run)
         await sharedDatabase(
           "digest_delivered",

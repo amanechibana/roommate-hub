@@ -210,7 +210,7 @@ export default function HomeBoard({
   // "All done" is only true of house to-dos; a personal one left open is not
   // the house's business either way.
   const anyHouseTask = entries.some((e) => e.kind === "task" && !isPersonal(e));
-  const repayments = suggestedRepayments(expenseBalances(expenses.expenses));
+  const repayments = suggestedRepayments(expenses.balances);
   const balanceSummary = repayments.length
     ? repayments
         .map(({ from, to, amount }) =>

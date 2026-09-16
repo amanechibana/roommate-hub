@@ -15,7 +15,7 @@ export type HandbookValues = {
   notes: string;
 };
 
-const sampleEntries: HandbookEntry[] = [
+export const sampleEntries: HandbookEntry[] = [
   {
     id: "demo-wifi",
     household_id: "demo",

@@ -38,6 +38,13 @@ const suites = {
   16: ["house-handbook"],
   17: ["timed-house-status"],
   20: ["daily-life-gaps"],
+  26: [
+    "feature-improvements",
+    "search-offline-chore-bill-splits",
+    "household-life",
+    "house-coordination",
+    "household-life-membership",
+  ],
   21: ["daily-life-gaps", "household-reliability"],
   22: ["household-life"],
   23: ["house-coordination"],

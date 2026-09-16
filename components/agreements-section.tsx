@@ -97,6 +97,17 @@ export default function AgreementsSection({
           onChange={setQuery}
         />
       )}
+      {controller.nextCursor && (
+        <Button
+          className="button secondary small"
+          disabled={controller.loadingMore}
+          onClick={() => void controller.loadMoreHistory()}
+        >
+          {controller.loadingMore
+            ? "Loading older agreement history…"
+            : "Load older agreement history"}
+        </Button>
+      )}
       {/* The open view surfaces the same error next to its actions. */}
       {controller.error && !open && (
         <p className="error" role="alert">

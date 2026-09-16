@@ -1,3 +1,4 @@
+import { householdQuietHours } from "@/lib/notification-preferences-server";
 import {
   json,
   signedIn,
@@ -6,8 +7,7 @@ import {
   sharedDatabase,
 } from "@/lib/shared-server";
 import { handbookStorageConfigured } from "@/lib/handbook-server";
-import { runScheduledDigest } from "@/lib/digest-server";
-import { quietHours } from "@/lib/reminders";
+import { sendDigests, runScheduledDigest } from "@/lib/digest-server";
 import { logApiFailure } from "@/lib/api-log";
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -42,10 +42,21 @@ export async function POST(request: Request) {
     const { edition } = JSON.parse(raw);
     if (edition !== "morning" && edition !== "evening")
       return json({ error: "Invalid edition." }, 400);
-    if (quietHours(new Date()))
+    if (await householdQuietHours(new Date()))
       return json(
-        { error: "Quiet hours are 10 pm–8 am. Retry after 8 am." },
+        {
+          error:
+            "The household is in quiet hours. Retry after the configured quiet-hours end.",
+        },
         409,
+      );
+    const status = await sharedDatabase("status", {}, "shared_household_ops");
+    const custom = status.custom_reminders?.find(
+      (run: { edition: string }) => run.edition === edition,
+    );
+    if (custom)
+      return json(
+        await sendDigests(edition, null, undefined, true, true, custom.date),
       );
     return json(await runScheduledDigest(edition, actor));
   } catch (error) {

@@ -4,6 +4,7 @@ import { Search, X } from "lucide-react";
 import { PaperDialog } from "./ui/dialog";
 import { Button } from "./ui/button";
 import SearchField from "./search-field";
+import { readOffline } from "@/lib/offline";
 import { homeRequest } from "@/lib/home-client";
 import { useHandbook } from "@/lib/use-handbook";
 import {
@@ -50,15 +51,29 @@ export default function HouseholdSearch({
     setBusy(true);
     const timer = setTimeout(async () => {
       try {
-        if (demo) {
+        if (demo || !navigator.onLine) {
+          const cached = readOffline().cache;
+          const ledger: Expense[] = demo
+            ? expenses
+            : [
+                ...new Map(
+                  Object.entries(cached)
+                    .filter(([key]) => key.startsWith("/api/expenses"))
+                    .flatMap(([, value]: [string, any]) => value.expenses ?? [])
+                    .map((e: Expense) => [e.id, e] as const),
+                ).values(),
+              ];
+          const notes = demo
+            ? handbook.entries
+            : ((cached["/api/handbook"] as any)?.entries ?? []);
           const extra: HouseholdSearchResult[] = [
-            ...expenses.map((e) => ({
+            ...ledger.map((e) => ({
               key: `expense:${e.id}`,
               tab: "Expenses" as Tab,
               title: e.title,
-              detail: `${e.date} · $${(e.amount_cents / 100).toFixed(2)}`,
+              detail: `${e.date} · $${(e.amount_cents / 100).toFixed(2)} · ${e.category || ""}`,
             })),
-            ...handbook.entries.map((h) => ({
+            ...notes.map((h: import("@/lib/handbook").HandbookEntry) => ({
               key: `handbook:${h.id}`,
               tab: "House handbook" as Tab,
               title: h.title,

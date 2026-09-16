@@ -10,12 +10,12 @@ export function handbookStorageConfigured() {
   );
 }
 
-export function handbookStorage() {
+export function handbookStorage(bucket = HANDBOOK_BUCKET) {
   if (!handbookStorageConfigured())
     throw new Error("Handbook file storage is not configured");
   return createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!,
     { auth: { persistSession: false, autoRefreshToken: false } },
-  ).storage.from(HANDBOOK_BUCKET);
+  ).storage.from(bucket);
 }
