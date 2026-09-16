@@ -10,6 +10,7 @@ import {
   Home,
   ShoppingBasket,
   StickyNote,
+  HeartHandshake,
   Wallet,
 } from "lucide-react";
 
@@ -40,7 +41,8 @@ export type Tab =
   | "House planning"
   | "House handbook"
   | "Expenses"
-  | "Our household";
+  | "Our household"
+  | "Household life";
 export const tabs = [
   { name: "Overview", icon: Home },
   { name: "Calendar", icon: CalendarDays },
@@ -50,6 +52,7 @@ export const tabs = [
   { name: "House handbook", icon: BookOpen },
   { name: "House planning", icon: ClipboardList },
   { name: "Expenses", icon: Wallet },
+  { name: "Household life", icon: HeartHandshake },
 ] as const;
 // Day words start sentences capitalised but sit inside them lowercase:
 // "Today" on its own, "You, today" in a phrase.
