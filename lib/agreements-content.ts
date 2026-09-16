@@ -63,11 +63,13 @@ const house: DocSection[] = [
     heading: "ARTICLE 4 — AS-YOU-GO RULES (UNTRACKED)",
     paragraphs: [
       "The following standards apply to both Parties at all times. They are not tracked per-instance in the App, and no scorekeeping shall be maintained; they are simply the law of the land.",
-      '4.1 Dishes. Dishes a Party uses are washed (or loaded) by the end of that night. "Soaking" is a technique, not a destination, and expires after one night.',
-      "4.2 Counters. The Party who cooks wipes the counters and stove after cooking.",
-      "4.3 Overflow. If a bin is full, the Party who topped it off takes it out, regardless of whose Bundle contains Trash that week.",
-      "4.4 Shared Surfaces. Personal items left in common areas migrate back to their owner's room within 24 hours of a request.",
-      "4.5 Guests. A guest's mess is the hosting Party's mess.",
+      "4.1 Clean Up After Yourself. Each Party cleans up after themselves in the kitchen and the bathroom as they go, leaving each room roughly as they would wish to find it. This Section is a standard of effort rather than of outcome: the obligation is to try, every time, and an honest best effort satisfies it. The weekly Bundles exist to reset the rooms, not to store up a week of avoidable mess for whoever is holding them.",
+      '4.2 Dishes. Dishes a Party uses are washed (or loaded) by the end of that night. "Soaking" is a technique, not a destination, and expires after one night.',
+      "4.3 Counters. The Party who cooks wipes the counters and stove after cooking.",
+      "4.4 Bathroom. A Party leaves the bathroom ready for the other: hair cleared from the sink and the drain, toothpaste and product wiped off the counter, and personal items returned to that Party's own shelf rather than left on the common surface.",
+      "4.5 Overflow. If a bin is full, the Party who topped it off takes it out, regardless of whose Bundle contains Trash that week.",
+      "4.6 Shared Surfaces. Personal items left in common areas migrate back to their owner's room within 24 hours of a request.",
+      "4.7 Guests. A guest's mess is the hosting Party's mess.",
     ],
   },
   {
