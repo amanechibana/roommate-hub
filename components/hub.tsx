@@ -877,6 +877,7 @@ export default function Hub() {
               controller={expenseController}
               members={members.filter((member) => member.name !== "Housemates")}
               memberId={uid}
+              householdName={household.name}
               pending={householdShopping.filter(
                 (e) => !e.done && e.amount != null,
               )}

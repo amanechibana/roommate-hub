@@ -75,7 +75,7 @@
   align-items: center;
   gap: 18px;
 }
-.payment > span {
+.paymentRoute {
   display: flex;
   align-items: center;
   gap: 12px;
@@ -86,6 +86,23 @@
 }
 .payment > strong {
   font-size: 16px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.settlementHelp {
+  margin: -7px 22px 16px;
+  max-width: 680px;
+  color: #75836a;
+  font-size: 12px;
+  line-height: 1.55;
+}
+.paymentActions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.paymentActions a {
+  text-decoration: none;
 }
 .settled {
   padding: 0 22px 20px;
@@ -319,14 +336,24 @@
     padding: 14px;
     gap: 10px;
   }
+  .settlementHelp {
+    margin: -5px 14px 14px;
+  }
   .pendingRow {
     padding: 14px;
   }
   .pendingNote {
     padding: 0 14px 16px;
   }
-  .payment > span {
+  .paymentRoute {
     min-width: 150px;
+  }
+  .paymentActions {
+    width: 100%;
+    flex-wrap: wrap;
+  }
+  .paymentActions > * {
+    flex: 1 1 auto;
   }
   .dialog input,
   .dialog select {
