@@ -1,3 +1,12 @@
+import { after } from "next/server";
+import {
+  pushConfigured,
+  pushToHousemates,
+  pushToMember,
+} from "@/lib/push-server";
+import { agreementNotification } from "@/lib/agreement-notifications";
+import { quietHours } from "@/lib/reminders";
+import type { Member } from "@/lib/model";
 import {
   broadcastChange,
   json,
@@ -68,8 +77,29 @@ export async function POST(request: Request) {
     const values = Object.fromEntries(
       Object.entries(payload).filter(([key]) => allowed.includes(key)),
     );
-    const result = await sharedDatabase(operation, { ...values, actor }, gateway);
+    const result = await sharedDatabase(
+      operation,
+      { ...values, actor },
+      gateway,
+    );
     broadcastChange("home", sender);
+    if (pushConfigured() && !quietHours(new Date()))
+      after(async () => {
+        try {
+          const home = await sharedDatabase("get");
+          const by = (home.members as Member[]).find(
+            (m) => m.user_id === actor && m.name !== "Housemates",
+          );
+          if (!by) return;
+          const message = agreementNotification(operation, result, by.name);
+          if (!message) return;
+          if (message.member && message.member !== actor)
+            await pushToMember(message.member, message);
+          else await pushToHousemates(actor, message);
+        } catch (error) {
+          console.error("agreement push failed", (error as Error).name);
+        }
+      });
     return json(result);
   } catch (err) {
     if ((err as { rejected?: boolean }).rejected)

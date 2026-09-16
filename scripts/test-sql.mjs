@@ -37,7 +37,8 @@ const suites = {
   15: ["agreements"],
   16: ["house-handbook"],
   17: ["timed-house-status"],
-  18: ["household-reliability"],
+  20: ["daily-life-gaps"],
+  21: ["household-reliability"],
 };
 let runnerDatabase;
 try {
@@ -95,8 +96,8 @@ try {
       if (
         sql(
           { ...env, PGDATABASE: runnerDatabase },
-          "select count(*) from public.household_schema_migrations;",
-        ) !== "18"
+          "select max(version) from public.household_schema_migrations;",
+        ) !== "21"
       )
         throw Error("Upgrade missed a migration");
       sql(env, `drop database ${runnerDatabase};`);

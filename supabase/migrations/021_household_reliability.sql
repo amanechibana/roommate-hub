@@ -1,5 +1,5 @@
 -- Narrow gateways, durable delivery state, and append-only agreement schedules.
--- Requires 017. No historical gateway body is copied here.
+-- Requires 020. No historical gateway body is copied here.
 begin;
 
 -- Archive by completion, not creation: an old request bought today is recent.
@@ -290,7 +290,7 @@ begin
     raise exception 'Choose a household member' using errcode='42501';
   end if;
   if operation='status' then
-    return jsonb_build_object('schema_version','018','reminders',(
+    return jsonb_build_object('schema_version','021','reminders',(
       select coalesce(jsonb_agg(to_jsonb(r)-'household_id'-'run_id'),'[]') from (
         select distinct on (edition) * from public.household_reminder_runs where household_id=hid order by edition,date desc
       ) r),'schedules',(select coalesce(jsonb_agg(jsonb_build_object('kind',sched.kind,'through_date',sched.through_date)),'[]')
@@ -387,4 +387,16 @@ begin
 end $$;
 revoke all on function public.shared_household_ops(text,text,jsonb) from public,authenticated;
 grant execute on function public.shared_household_ops(text,text,jsonb) to anon;
+
+-- Internal reads (including 020's edit-undo response) must also be bounded.
+-- Retain the original validation/write body behind this tiny read adapter.
+alter function public.shared_home_before_timing(text,text,jsonb) rename to shared_home_base_writes;
+revoke all on function public.shared_home_base_writes(text,text,jsonb) from public,anon,authenticated;
+create function public.shared_home_before_timing(access_token text,operation text,payload jsonb default '{}')
+returns jsonb language plpgsql security definer set search_path='' as $$
+begin
+  if operation='get' then return public.shared_home(access_token,'get',payload); end if;
+  return public.shared_home_base_writes(access_token,operation,payload);
+end $$;
+revoke all on function public.shared_home_before_timing(text,text,jsonb) from public,anon,authenticated;
 commit;

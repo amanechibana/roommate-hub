@@ -18,8 +18,8 @@ async function load(lat: number, lon: number): Promise<Weather> {
   const url =
     `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}` +
     "&current=temperature_2m,apparent_temperature,weather_code" +
-    "&daily=temperature_2m_max,temperature_2m_min,precipitation_probability_max" +
-    "&forecast_days=1&temperature_unit=fahrenheit&timezone=America%2FNew_York";
+    "&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max" +
+    "&forecast_days=7&temperature_unit=fahrenheit&timezone=America%2FNew_York";
   const response = await fetchWithTimeout(url);
   if (!response.ok)
     throw new Error(`Weather upstream returned ${response.status}`);

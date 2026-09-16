@@ -16,6 +16,20 @@ export function useExpenses(
   },
 ) {
   const [expenses, setExpenses] = useState<Expense[]>([]);
+  const [undo, setUndo] = useState<{
+    token: string;
+    before: Expense;
+    expires: number;
+  } | null>(null);
+  useEffect(() => {
+    if (!undo) return;
+    const timer = setTimeout(
+      () => setUndo(null),
+      Math.max(0, undo.expires - Date.now()),
+    );
+    return () => clearTimeout(timer);
+  }, [undo]);
+  useEffect(() => setUndo(null), [memberId]);
   const [loaded, setLoaded] = useState(false);
   const [error, setError] = useState("");
   const pending = useRef(0);
@@ -57,6 +71,7 @@ export function useExpenses(
     generation.current++;
     revision.current++;
     interested.current = false;
+    setUndo(null);
     setExpenses([]);
     setLoaded(false);
     setError("");
@@ -80,11 +95,15 @@ export function useExpenses(
     };
   }, [refresh]);
   function persist(
-    operation: "create" | "update" | "delete",
+    operation: "create" | "update" | "delete" | "undo_edit",
     payload: Record<string, unknown>,
+    after?: () => void,
   ) {
     revision.current++;
-    if (demo) return;
+    if (demo) {
+      after?.();
+      return;
+    }
     pending.current++;
     const current = generation.current;
     writes.current = writes.current.then(async () => {
@@ -106,13 +125,27 @@ export function useExpenses(
             );
           }
         }
-        await homeRequest("/api/expenses", "POST", {
+        const result = await homeRequest("/api/expenses", "POST", {
           operation,
           payload: resolved,
           sender: TAB_ID,
         });
-        if (operation === "delete" && typeof payload.id === "string")
-          sync?.afterDelete?.(payload.id);
+        if (generation.current === current) {
+          if (operation === "delete" && typeof resolved.id === "string")
+            sync?.afterDelete?.(resolved.id);
+          if (operation === "undo_edit") {
+            recovery.current = true;
+            setExpenses((items) =>
+              items.map(
+                (item) =>
+                  (result.restored as Expense[] | undefined)?.find(
+                    (old) => old.id === item.id,
+                  ) || item,
+              ),
+            );
+          }
+          after?.();
+        }
       } catch (err) {
         if (generation.current === current) {
           recovery.current = true;
@@ -159,7 +192,11 @@ export function useExpenses(
     setExpenses((current) =>
       current.map((item) => (item.id === id ? { ...item, ...values } : item)),
     );
-    persist("update", { ...values, id });
+    const before = expenses.find((item) => item.id === id);
+    const token = crypto.randomUUID();
+    persist("update", { ...values, id, undo_token: token }, () => {
+      if (before) setUndo({ token, before, expires: Date.now() + 10000 });
+    });
   }
   // Optimistic insert without an expense write; the caller persists the row
   // through another channel, so only bump the revision to keep in-flight
@@ -202,7 +239,19 @@ export function useExpenses(
     if (pending.current) recovery.current = true;
     else void refresh();
   }
+  function undoEdit() {
+    if (!undo || undo.expires <= Date.now()) return;
+    const { token, before } = undo;
+    setUndo(null);
+    if (demo)
+      setExpenses((items) =>
+        items.map((item) => (item.id === before.id ? before : item)),
+      );
+    else persist("undo_edit", { undo_token: token });
+  }
   return {
+    undo,
+    undoEdit,
     expenses,
     loaded,
     error,

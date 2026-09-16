@@ -32,7 +32,7 @@ The cat window follows local device time and the commute strip's weather reading
 
 The Expenses tab records shared purchases, who paid, and even splits among selected housemates. Amounts are calculated in whole cents; any remainder is assigned consistently so shares always add up to the total. **Adjust shares** in the split box turns the even amounts into inputs, for the night one person had the wine: type each share (0 is allowed), the hint says what is left to assign, and the save is refused until they add up. An expense saved that way reopens with its shares as typed (unless they happen to be the even split, which reopens as one). Balances show who owes whom, with a Venmo handoff and a copyable Zelle/general payment note that names the payer, recipient, amount, and household. These links help housemates pay outside Common Ground; **Record paid** remains a separate bookkeeping action and does not transfer money. Repayments reduce the balance without increasing monthly spending. A new entry is read out to the people in it ("Alex logged a purchase — “Groceries” $82.50, your share $27.50"; "Sam paid you back — $40.00, recorded on the ledger"), with the same quiet hours as a nudge; edits and deletions stay quiet. Purchases and repayments can be edited or deleted from Activity. Entries save optimistically and refresh across devices.
 
-Expenses use migration `006_expenses.sql` and a separate household-scoped gateway. **I paid** is a reminder check only. **Log my share to Expenses** records your original share paid by you, without creating debt. **I covered the whole bill** (or **I covered the remaining shares**) logs only unpaid original shares and checks those people off. Migration 018 links these postings: retries cannot duplicate them, deleting the expense reverses only checks it created, and monetary edits require deleting and re-logging the linked expense. The home board shows who owes whom from the ledger. None of these actions transfers money.
+Expenses use migration `006_expenses.sql` and a separate household-scoped gateway. **I paid** is a reminder check only. **Log my share to Expenses** records your original share paid by you, without creating debt. **I covered the whole bill** (or **I covered the remaining shares**) logs only unpaid original shares and checks those people off. Migration 021 links these postings: retries cannot duplicate them, deleting the expense reverses only checks it created, and monetary edits require deleting and re-logging the linked expense. The home board shows who owes whom from the ledger. None of these actions transfers money.
 
 House notes can be turned into a to-do, plan, or shopping item: open the note and pick a new type in the edit dialog. The entry keeps its title, details, and author; turning one into a rent or bill event adds payment checks for everyone.
 
@@ -120,7 +120,7 @@ last; choosing the shared screen clears it, since a kitchen display gets no
 personal reminders. Dead endpoints are pruned automatically when a push
 bounces.
 
-Migration 018 persists each scheduled edition's New York date, last attempt,
+Migration 021 persists each scheduled edition's New York date, last attempt,
 delivery counts, safe error category, and per-device successful-delivery hashes.
 **Our household → Household reliability** shows interrupted/failed/partial
 deliveries and lets a housemate retry outside quiet hours. A retry skips devices
@@ -280,8 +280,9 @@ For a fresh database, apply migrations in order: `001_household.sql`,
 `008_push_subscriptions.sql`, `009_cover_expense_and_attempt_clear.sql`,
 `010_push_subscribe_hardening.sql`, `011_revoke_legacy_multi_user.sql`,
 `012_house_activity.sql`, `013_pinned_notes.sql`, `014_personal_todos.sql`,
-`015_agreements.sql`, `016_house_handbook.sql`, `017_timed_house_status.sql`, and
-`018_household_reliability.sql`.
+`015_agreements.sql`, `016_house_handbook.sql`, `017_timed_house_status.sql`,
+`019_daily_life_gaps.sql`, `020_edit_undo.sql`, and
+`021_household_reliability.sql`.
 For an existing installation, apply only the migrations newer than the last installed migration.
 
 Use `npm run migrate` with `pg_connection_url` in `.env` or a server-only
@@ -297,7 +298,7 @@ refuses to replay migration 001 onto an existing household. If direct Supabase
 IPv6 is unreachable, set `MIGRATION_POOLER_HOST` to the project's verified
 session-pooler hostname from Supabase; the runner uses port 5432 and the project
 qualified user. Connection passwords/tokens are not printed.
-Migration 018 bounds home RPC pages to 500 entries (open items plus a date window)
+Migration 021 bounds home RPC pages to 500 entries (open items plus a date window)
 and exposes 50-row historical pages. Calendar navigation loads its selected
 month; older bought shopping remains saved in **Household history**, not deleted.
 It also temporarily disables adding a third real member in both the UI and SQL.
@@ -498,3 +499,34 @@ are the morning digest and evening heads-up crons. Home/history now paginate
 the JSON aggregate inside the RPC itself: the risk was an oversized single JSON
 payload, not silent truncation at the Data API's roughly 1,000-row cap.
 Ledger and agreement-log history still need their own pagination as they grow.
+
+## Daily household improvements
+
+Apply migrations `019_daily_life_gaps.sql` and `020_edit_undo.sql` before deploying
+this update. Migration 021 adds the household reliability work after those
+changes; 019 and 020 also work directly after 017. The history wrappers preserve gateway
+validation, and edit undo stores private, expiring snapshots rather than accepting
+restoration data from clients.
+
+- Gym sessions stay out of morning and evening plan digests.
+- Agreement proposals, signatures, amendments, relief requests and decisions,
+  and unilateral PTO/sick-day notices notify housemates using the existing push
+  configuration and quiet hours. Agreements and handbook changes appear in the
+  house activity feed. Passwords and handbook values never enter activity titles.
+- Repeating chores and events support selected weekdays and intervals of 1–52
+  weeks/months (or two-week periods), through an end date within two years.
+  Selected weekdays share one series and rotate assignees by occurrence.
+- The handbook searches values, notes, section names, and attachment filenames;
+  to-dos, shopping, notes, agreements, and expenses also have search fields.
+  Expense CSV/JSON exports include all purchases and repayments regardless of
+  the current search, retaining integer cents and member IDs.
+- The weather strip offers tomorrow and the next six days in an expandable
+  outlook, including the weekend.
+- Saved entry/series and expense edits offer Undo for ten seconds. Server
+  snapshots expire after thirty seconds; undo refuses records changed since
+  the edit, requires the original actor, and consumes each token once.
+
+Verify with `tests/daily-life-gaps.test.ts`, `supabase/tests/daily-life-gaps.sql`,
+and `tests/browser/daily-life-gaps.spec.ts`. The older `isolation.sql` targets
+legacy authenticated-user functions revoked by migration 011; gateway isolation
+is exercised by the current SQL tests.

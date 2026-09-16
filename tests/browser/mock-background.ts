@@ -12,7 +12,7 @@ export async function mockBackground(page: Page) {
     route.fulfill({
       json: {
         attachments_enabled: false,
-        schema_version: "018",
+        schema_version: "021",
         reminders: [],
         schedules: [],
       },

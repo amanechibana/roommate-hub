@@ -46,7 +46,16 @@ export type Departures = {
   fetchedAt?: number;
 };
 
+export type WeatherDay = {
+  date: string;
+  high: number | null;
+  low: number | null;
+  precipitation: number | null;
+  description: string;
+};
+
 export type Weather = {
+  forecast?: WeatherDay[];
   temperature: number;
   feelsLike: number;
   high: number | null;
@@ -567,6 +576,8 @@ type OpenMeteo = {
     weather_code?: number;
   };
   daily?: {
+    time?: string[];
+    weather_code?: number[];
     temperature_2m_max?: number[];
     temperature_2m_min?: number[];
     precipitation_probability_max?: number[];
@@ -589,6 +600,22 @@ export function parseWeather(data: unknown): Weather {
     throw new Error("Weather upstream sent no current temperature");
   const { text, icon } = describeWeather(current.weather_code ?? -1);
   return {
+    forecast: (daily.time ?? []).slice(0, 7).flatMap((date, i) => {
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return [];
+      const number = (value: unknown) =>
+        typeof value === "number" && Number.isFinite(value)
+          ? Math.round(value)
+          : null;
+      return [
+        {
+          date,
+          high: number(daily.temperature_2m_max?.[i]),
+          low: number(daily.temperature_2m_min?.[i]),
+          precipitation: number(daily.precipitation_probability_max?.[i]),
+          description: describeWeather(daily.weather_code?.[i] ?? -1).text,
+        },
+      ];
+    }),
     temperature: Math.round(current.temperature_2m),
     feelsLike: Math.round(
       typeof current.apparent_temperature === "number" &&

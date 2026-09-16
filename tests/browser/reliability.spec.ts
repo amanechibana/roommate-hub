@@ -41,7 +41,7 @@ async function mockHome(page: Page) {
     route.fulfill({
       json: {
         attachments_enabled: false,
-        schema_version: "018",
+        schema_version: "021",
         reminders: [],
         schedules: [],
       },
@@ -64,7 +64,7 @@ test("Settings surface attachment/digest status, retry, history, and the two-per
     return route.fulfill({
       json: {
         attachments_enabled: false,
-        schema_version: "018",
+        schema_version: "021",
         schedules: [],
         reminders: [
           {

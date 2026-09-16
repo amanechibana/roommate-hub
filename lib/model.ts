@@ -20,7 +20,7 @@ export type Entry = {
   created_by: string;
   created_at: string;
 };
-export type Repeat = "daily" | "weekly" | "biweekly" | "monthly";
+export type Repeat = "daily" | "weekly" | "biweekly" | "monthly" | "weekdays";
 export type Member = { user_id: string; household_id: string; name: string };
 export type Household = { id: string; name: string; owner_id: string };
 
@@ -52,23 +52,39 @@ export function seriesDates(
   start: string,
   repeat: Repeat,
   until: string,
+  days: number[] = [],
+  interval = 1,
 ): string[] {
   const first = parseDate(start);
   const end = parseDate(until);
   const dates: string[] = [];
-  for (let n = 0; dates.length < 106; n++) {
-    const next = new Date(first);
-    if (repeat === "monthly") {
-      next.setMonth(first.getMonth() + n);
-      if (next.getDate() !== first.getDate()) next.setDate(0);
-    } else
-      next.setDate(
-        first.getDate() +
-          n * (repeat === "daily" ? 1 : repeat === "weekly" ? 7 : 14),
-      );
-    if (next > end) break;
-    dates.push(dateKey(next));
-  }
+  if (!Number.isInteger(interval) || interval < 1 || interval > 52)
+    return dates;
+  if (repeat === "weekdays") {
+    for (let n = 0; n <= 732; n++) {
+      const next = parseDate(shiftDay(start, n));
+      if (next > end) break;
+      // Week intervals are anchored to Monday of the start week.
+      const week = Math.floor((n + ((first.getDay() + 6) % 7)) / 7);
+      if (week % interval === 0 && days.includes(next.getDay()))
+        dates.push(dateKey(next));
+    }
+  } else
+    for (let n = 0; n <= 732; n++) {
+      const next = new Date(first);
+      if (repeat === "monthly") {
+        next.setMonth(first.getMonth() + n * interval);
+        if (next.getDate() !== first.getDate()) next.setDate(0);
+      } else
+        next.setDate(
+          first.getDate() +
+            n *
+              interval *
+              (repeat === "daily" ? 1 : repeat === "weekly" ? 7 : 14),
+        );
+      if (next > end) break;
+      dates.push(dateKey(next));
+    }
   return dates;
 }
 export function safeUrl(value: string): string | null {

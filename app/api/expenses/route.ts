@@ -33,7 +33,7 @@ export async function POST(request: Request) {
       return json({ error: "This expense is too long." }, 400);
     const { operation, payload, sender } = JSON.parse(raw);
     if (
-      !["create", "update", "delete"].includes(operation) ||
+      !["create", "update", "delete", "undo_edit"].includes(operation) ||
       !payload ||
       typeof payload !== "object" ||
       Array.isArray(payload)
@@ -43,18 +43,21 @@ export async function POST(request: Request) {
     if (!actor)
       return json({ error: "Choose who’s using this device first." }, 400);
     const allowed =
-      operation === "delete"
-        ? ["id"]
-        : [
-            "id",
-            "kind",
-            "title",
-            "date",
-            "amount_cents",
-            "paid_by",
-            "shares",
-            "recipient",
-          ];
+      operation === "undo_edit"
+        ? ["undo_token"]
+        : operation === "delete"
+          ? ["id"]
+          : [
+              "undo_token",
+              "id",
+              "kind",
+              "title",
+              "date",
+              "amount_cents",
+              "paid_by",
+              "shares",
+              "recipient",
+            ];
     const values = Object.fromEntries(
       Object.entries(payload).filter(([key]) => allowed.includes(key)),
     );

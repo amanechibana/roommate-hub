@@ -70,9 +70,15 @@ export async function POST(request: Request) {
       return json({ error: "This entry is too long." }, 400);
     const { operation, payload, sender } = JSON.parse(raw);
     if (
-      !["create", "update", "delete", "restore", "payment", "member"].includes(
-        operation,
-      ) ||
+      ![
+        "create",
+        "update",
+        "delete",
+        "restore",
+        "undo_edit",
+        "payment",
+        "member",
+      ].includes(operation) ||
       !payload ||
       typeof payload !== "object" ||
       Array.isArray(payload)
@@ -81,7 +87,7 @@ export async function POST(request: Request) {
     const keys =
       operation === "member"
         ? ["name"]
-        : operation === "restore"
+        : ["restore", "undo_edit"].includes(operation)
           ? ["undo_token"]
           : operation === "payment"
             ? ["id", "paid", "cover", "log_share"]
@@ -102,6 +108,8 @@ export async function POST(request: Request) {
                 "done",
                 "repeat",
                 "repeat_until",
+                "repeat_days",
+                "repeat_interval",
                 "scope",
               ];
     const values = Object.fromEntries(
@@ -303,10 +311,6 @@ export async function POST(request: Request) {
           console.error("event push failed", (err as Error).name);
         }
       });
-    // A covered bill writes to the ledger too, so other screens' expense
-    // views need the ping as well.
-    if (operation === "payment" && values.expense)
-      broadcastChange("expenses", sender);
     return json(result);
   } catch (err) {
     if ((err as { rejected?: boolean }).rejected)
