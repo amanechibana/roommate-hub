@@ -1,5 +1,11 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": "nextjs",
-  "crons": [{ "path": "/api/reminders/custom", "schedule": "17 12 * * *" }]
+  "crons": [
+    {
+      "path": "/api/reminders/custom",
+      "schedule": "17 12 * * *"
+    }
+  ],
+  "ignoreCommand": "node scripts/deployment-ready.mjs"
 }

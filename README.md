@@ -552,7 +552,10 @@ is exercised by the current SQL tests.
 
 ## Feature improvements and rollout
 
-Apply **026_feature_improvements.sql before deploying this release**. It adds
+Apply **026_feature_improvements.sql before deploying this release**. The Vercel
+ignore command checks the production schema and holds deployments until schema
+026 is available; the current app stays live. After applying the migration,
+redeploy the merged commit. Preview and demo builds proceed normally. It adds
 shared household time settings and chore templates; person-specific reminder
 preferences; shopping quantities, units and stores; checklist progress and effort;
 expense categories, retained percentage splits, receipt metadata and history
