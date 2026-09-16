@@ -14,9 +14,9 @@ self.addEventListener("fetch", (event) => {
   if (event.request.mode === "navigate") {
     event.respondWith(fetch(event.request).then(async (response) => {
       // The root shell contains no household records; do not save other navigations.
-      if (response.ok && url.pathname === "/") { const cache = await caches.open(SHELL_CACHE); await cache.put("/", response.clone()); }
+      if (response.ok && (url.pathname === "/" || SHOPPING_ASSETS.includes(url.pathname))) { const cache = await caches.open(SHELL_CACHE); await cache.put(url.pathname, response.clone()); }
       return response;
-    }).catch(async () => (await caches.match("/")) || Response.error()));
+    }).catch(async () => (await caches.match(url.pathname)) || (await caches.match("/")) || Response.error()));
   } else if (url.pathname.startsWith("/_next/static/") || ["/icon-192.png", "/icon-512.png", ...SHOPPING_ASSETS].includes(url.pathname)) {
     event.respondWith(caches.open(SHELL_CACHE).then(async (cache) => (await cache.match(event.request)) || fetch(event.request).then((response) => { if (response.ok) void cache.put(event.request, response.clone()); return response; })));
   }

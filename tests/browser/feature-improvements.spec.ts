@@ -129,7 +129,7 @@ test("global search opens matching chores and remains usable on a phone", async 
     })
     .fill("recycling");
   await page.getByRole("button", { name: /Take out recycling/ }).click();
-  await page.getByRole("button", { name: /Go to To-dos/ }).click();
+  await page.getByRole("button", { name: /Open To-dos/ }).click();
   await expect(page.getByRole("dialog", { name: "Edit to-do" })).toBeVisible();
   expect(
     await page.evaluate(() => document.documentElement.scrollWidth),
