@@ -1,0 +1,65 @@
+begin;
+do $$
+declare hid uuid; a uuid; b uuid; outsider uuid:=gen_random_uuid(); other_house uuid:=gen_random_uuid(); foreign_resource uuid:=gen_random_uuid();
+ rid uuid; booking uuid; mid uuid; decision uuid; result jsonb; invite jsonb; replacement uuid; ledger_id uuid:=gen_random_uuid(); gateway text; start_time timestamptz:=now()+interval '2 days';
+begin
+ select household_id into hid from public.shared_home_config;
+ select owner_id into a from public.households where id=hid;
+ select user_id into b from public.members where household_id=hid and name<>'Housemates' and user_id<>a;
+ if a is null or b is null then raise exception 'Missing membership fixtures'; end if;
+ select id into rid from public.house_resources where household_id=hid order by name limit 1;
+ insert into auth.users(id) values(outsider);
+ insert into public.households(id,name,owner_id) values(other_house,'Other house',outsider);
+ insert into public.members(user_id,household_id,name) values(outsider,other_house,'Outsider');
+ insert into public.house_resources(id,household_id,name) values(foreign_resource,other_house,'Foreign laundry');
+ begin perform public.shared_coordination('wrong','get');raise exception 'Invalid token accepted' using errcode='P0002';exception when insufficient_privilege then null;end;
+ begin perform public.shared_coordination('test-gateway','book',jsonb_build_object('actor',outsider,'resource_id',rid));raise exception 'Foreign actor accepted' using errcode='P0002';exception when raise_exception then null;end;
+ begin perform public.shared_coordination('test-gateway','book',jsonb_build_object('actor',a,'resource_id',foreign_resource,'starts_at',start_time,'ends_at',start_time+interval '1 hour'));raise exception 'Foreign resource accepted' using errcode='P0002';exception when raise_exception then null;end;
+ perform public.shared_coordination('test-gateway','book',jsonb_build_object('actor',a,'resource_id',rid,'starts_at',start_time,'ends_at',start_time+interval '1 hour'));
+ select id into booking from public.house_bookings where household_id=hid and member=a;
+ begin perform public.shared_coordination('test-gateway','book',jsonb_build_object('actor',b,'resource_id',rid,'starts_at',start_time+interval '30 minutes','ends_at',start_time+interval '2 hours'));raise exception 'Overlapping booking accepted' using errcode='P0002';exception when raise_exception then null;end;
+ perform public.shared_coordination('test-gateway','book',jsonb_build_object('actor',b,'resource_id',rid,'starts_at',start_time+interval '1 hour','ends_at',start_time+interval '2 hours'));
+ begin perform public.shared_coordination('test-gateway','cancel_booking',jsonb_build_object('actor',b,'id',booking));raise exception 'Canceled other member booking' using errcode='P0002';exception when raise_exception then null;end;
+ perform public.shared_coordination('test-gateway','checkin',jsonb_build_object('actor',a,'notes','Review rent'));
+ perform public.shared_coordination('test-gateway','checkin',jsonb_build_object('actor',b,'notes','Decided cleaning'));
+ if (select count(*) from public.house_checkins where household_id=hid)<>1 then raise exception 'Duplicate weekly review';end if;
+ perform public.shared_coordination('test-gateway','decision',jsonb_build_object('actor',a,'title','New sofa?'));
+ select id into decision from public.house_decisions where household_id=hid;
+ perform public.shared_coordination('test-gateway','resolve_decision',jsonb_build_object('actor',b,'id',decision));
+ perform public.shared_coordination('test-gateway','move',jsonb_build_object('actor',a,'member',b,'direction','out','date',current_date));
+ select id into mid from public.house_moves where household_id=hid;
+ perform public.shared_coordination('test-gateway','move_item',jsonb_build_object('actor',b,'id',mid,'index',0,'done',true,'notes','Returned two keys'));
+ if not (select (items->0->>'done')::boolean from public.house_moves where id=mid) then raise exception 'Checklist update lost';end if;
+ begin perform public.shared_coordination('test-gateway','move_item',jsonb_build_object('actor',a,'id',mid,'index',99,'done',true));raise exception 'Invalid checklist index accepted' using errcode='P0002';exception when raise_exception then null;end;
+ begin perform public.shared_coordination('test-gateway','invite',jsonb_build_object('actor',b,'name','New roommate'));raise exception 'Non-owner invite accepted' using errcode='P0002';exception when raise_exception then null;end;
+ begin perform public.shared_home('test-gateway','member',jsonb_build_object('actor',a,'name','Third'));raise exception 'Two-person limit bypassed' using errcode='P0002';exception when raise_exception then null;end;
+ begin perform public.shared_coordination('test-gateway','leave',jsonb_build_object('actor',a));raise exception 'Owner left without transfer' using errcode='P0002';exception when raise_exception then null;end;
+ insert into public.household_expenses(id,household_id,kind,title,date,amount_cents,paid_by,shares,created_by) values(ledger_id,hid,'expense','Last groceries',current_date,1000,a,jsonb_build_object(a,500,b,500),a);
+ -- Simulate a signed agreement; membership changes retain the snapshot and reset live signatures.
+ insert into public.agreements(household_id,slug,title,status,signed_by,terms) values(hid,'house','Signed house agreement','active',array[a,b],'{"bundles":{}}');
+ perform public.shared_coordination('test-gateway','remove_member',jsonb_build_object('actor',a,'member',b));
+ if not exists(select 1 from public.household_expenses where id=ledger_id and shares->>b::text='500') then raise exception 'Departure lost outstanding balance';end if;
+ perform public.shared_expenses('test-gateway','create',jsonb_build_object('actor',a,'id',gen_random_uuid(),'kind','settlement','title','Final repayment','date',current_date,'amount_cents',500,'paid_by',b,'recipient',a,'shares','{}'::jsonb));
+ if not exists(select 1 from public.members where user_id=b and not active) then raise exception 'Member not archived';end if;
+ if exists(select 1 from public.house_bookings where member=b and not canceled and starts_at>now()) then raise exception 'Departed reservations survived';end if;
+ if not exists(select 1 from public.house_moves where id=mid and items->0->>'notes'='Returned two keys') then raise exception 'Departure lost move history';end if;
+ if exists(select 1 from public.agreements where household_id=hid and status<>'draft') then raise exception 'Old agreements still active';end if;
+ if not exists(select 1 from public.house_membership_agreement_archive where departed_member=b) then raise exception 'Signed agreement history lost';end if;
+ foreach gateway in array array['shared_home','shared_expenses','shared_agreements','shared_handbook','shared_push','shared_coordination'] loop
+ begin execute format('select public.%I($1,$2,$3)',gateway) using 'test-gateway','create',jsonb_build_object('actor',b);raise exception 'Archived actor accepted by %',gateway using errcode='P0002';exception when raise_exception then null;end;
+ end loop;
+ result:=public.shared_home('test-gateway','get');
+ if exists(select 1 from jsonb_array_elements(result->'members') m where m->>'user_id'=b::text) then raise exception 'Archived member remains selectable';end if;
+ invite:=public.shared_home('test-gateway','member',jsonb_build_object('actor',a,'name','Replacement'));
+ replacement:=(invite->>'member_id')::uuid;
+ if not exists(select 1 from public.members where user_id=replacement and active) then raise exception 'Replacement invitation failed';end if;
+ -- Newly created bill shares include only the current roster.
+ result:=public.shared_home('test-gateway','create',jsonb_build_object('actor',a,'kind','event','category','Bill','title','New bill','date',current_date,'amount',20));
+ if exists(select 1 from public.entries where household_id=hid and title='New bill' and b=any(payment_members)) then raise exception 'Former member charged new bill';end if;
+ perform public.shared_coordination('test-gateway','transfer_owner',jsonb_build_object('actor',a,'member',replacement));
+ perform public.shared_coordination('test-gateway','leave',jsonb_build_object('actor',a));
+ if (select owner_id from public.households where id=hid)<>replacement then raise exception 'Ownership transfer failed';end if;
+ if has_function_privilege('anon','public.shared_home_before_membership(text,text,jsonb)','execute') then raise exception 'Legacy gateway exposed';end if;
+ if has_table_privilege('anon','public.house_bookings','select') then raise exception 'Booking table exposed';end if;
+end $$;
+rollback;

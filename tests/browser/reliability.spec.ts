@@ -106,7 +106,7 @@ test("Settings surface attachment/digest status, retry, history, and the two-per
     page.getByRole("button", { name: "Add housemate", exact: true }),
   ).toHaveCount(0);
   await expect(
-    page.getByText(/Adding more housemates is disabled/),
+    page.getByText(/Households currently support two people/),
   ).toBeVisible();
   await page.getByRole("button", { name: "Retry morning delivery" }).click();
   await expect(page.getByText(/Morning: sent/)).toBeVisible();

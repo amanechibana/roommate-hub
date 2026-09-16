@@ -42,6 +42,7 @@ export async function sharedDatabase(
     | "shared_push"
     | "shared_agreements"
     | "shared_handbook"
+    | "shared_coordination"
     | "shared_household_ops" = "shared_home",
 ) {
   const db = createClient(
