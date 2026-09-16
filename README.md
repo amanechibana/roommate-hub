@@ -295,7 +295,8 @@ For a fresh database, apply migrations in order: `001_household.sql`,
 `015_agreements.sql`, `016_house_handbook.sql`, `017_timed_house_status.sql`,
 `019_daily_life_gaps.sql`, `020_edit_undo.sql`,
 `021_household_reliability.sql`, `022_household_life.sql`,
-`023_house_coordination.sql`, and `024_household_life_membership.sql`.
+`023_house_coordination.sql`, `024_household_life_membership.sql`, and
+`025_search_offline_chore_bill_splits.sql`.
 For an existing installation, apply only the migrations newer than the last installed migration.
 
 Use `npm run migrate` with `pg_connection_url` in `.env` or a server-only
@@ -586,3 +587,41 @@ Validation includes `tests/coordination.test.ts`,
 `supabase/tests/house-coordination.sql`, and
 `tests/browser/coordination.spec.ts` (demo desktop/mobile flows and mocked
 shared-household permissions and membership).
+
+## Search, offline shopping, chore history and recurring shares
+
+Apply `025_search_offline_chore_bill_splits.sql` before deploying. The top-bar
+**Search the household** button searches current and older entries, expenses,
+handbook values and attachment filenames, agreements, household life and house
+planning records. Every word must match, accents are ignored, and **More results**
+loads the next 50 matches. Open a result for details and its relevant tab;
+entries open their own editor for housemates. Personal and completed records
+remain searchable by everyone holding the household session.
+
+Shopping offers **Open saved list for offline shopping**. Opening the app online
+saves this household's shopping snapshot on the device. The separate checklist
+opens and reloads without a signal after its public shell is installed. Check-offs
+stay in a durable queue and sync on reconnect or **Sync now**, using the same
+selected person. Purchases with estimates log their expense atomically, once,
+with the normal household/personal split. Reopening keeps any existing expense.
+Changed or removed items show a conflict; **Use latest household version**
+discards that local check-off. Signing out or changing person clears the snapshot
+and queue. Shared screens can read their saved list but cannot author check-offs.
+Only the public checklist shell is cached by the service worker; household API
+responses and signed-in pages remain network-served. Demo check-offs stay local.
+
+To-do rows show **Last done** with the actual completion time and person,
+including previous occurrences of recurring chores outside the visible date
+window. Reopening preserves that history. Completion timestamps recorded since
+021 are retained; old completions without a known timestamp or actor stay unknown.
+
+Rent and bill editors offer **Adjust each person’s share** in dollars, including
+zero. Shares must sum exactly to the total in cents. Recurring creation and series
+edits carry the split to each occurrence while preserving payment checks. Checks,
+reminders, calendar exports, **Log my share** and partial/whole bill covers use
+those saved shares. Linked expenses must be deleted before changing their bill's
+split; edit undo and delete undo preserve shares.
+
+Validation: `tests/search-offline-chore-bill-splits.test.ts`,
+`supabase/tests/search-offline-chore-bill-splits.sql`, and
+`tests/browser/search-offline-chore-bill-splits.spec.ts`.

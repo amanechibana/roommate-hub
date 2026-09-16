@@ -1,4 +1,5 @@
 "use client";
+import { shareCents, toCents, splitEvenly } from "@/lib/expenses";
 import { PaperDialog } from "./ui/dialog";
 
 import { Button } from "@/components/ui/button";
@@ -95,6 +96,25 @@ export default function EntryDialog({
     editing.entry?.category || categories[editing.kind][0],
   );
   const entry = editing.entry;
+  const [billSplit, setBillSplit] = useState(!!entry?.bill_shares);
+  const [billAmount, setBillAmount] = useState(entry?.amount?.toString() || "");
+  const billPayers = entry?.payment_members?.length
+    ? entry.payment_members
+    : members.filter((m) => m.name !== "Housemates").map((m) => m.user_id);
+  const [billShares, setBillShares] = useState<Record<string, string>>(() =>
+    Object.fromEntries(
+      billPayers.map((id) => [
+        id,
+        (
+          (entry?.bill_shares ??
+            splitEvenly(Math.round((entry?.amount || 0) * 100), billPayers))[
+            id
+          ] / 100
+        ).toFixed(2),
+      ]),
+    ),
+  );
+  const billLike = kind === "event" && ["Rent", "Bill"].includes(category);
   const formRef = useRef<HTMLFormElement>(null);
   // Fill only fields the person hasn't typed in; their words always win.
   async function fillFromLink(input: HTMLInputElement) {
@@ -201,6 +221,24 @@ export default function EntryDialog({
       setValidation("Choose two different people to take turns.");
       return;
     }
+    let customShares: Record<string, number> | null = null;
+    if (billLike && billSplit) {
+      const cents = toCents(String(data.get("amount") || ""));
+      const parsed = billPayers.map(
+        (id) => [id, shareCents(billShares[id] || "")] as const,
+      );
+      if (
+        !cents ||
+        parsed.some(([, value]) => value === null) ||
+        parsed.reduce((sum, [, value]) => sum + (value || 0), 0) !== cents
+      ) {
+        setValidation(
+          "Each share must be a valid dollar amount, and all shares must add up to the bill total.",
+        );
+        return;
+      }
+      customShares = Object.fromEntries(parsed) as Record<string, number>;
+    }
     setValidation("");
     await onSave({
       ...(!entry || kind !== entry.kind ? { kind } : {}),
@@ -210,6 +248,7 @@ export default function EntryDialog({
       date,
       assignee: category === "Personal" ? assignee || uid : assignee || null,
       amount: data.get("amount") ? Number(data.get("amount")) : null,
+      ...(billLike ? { bill_shares: customShares } : {}),
       url,
       time_of_day: String(data.get("time_of_day") || "") || null,
       end_time: String(data.get("end_time") || "") || null,
@@ -528,11 +567,62 @@ export default function EntryDialog({
                 max="99999999.99"
                 step="0.01"
                 placeholder="0.00"
-                defaultValue={entry?.amount ?? ""}
+                value={billAmount}
+                onChange={(event) => setBillAmount(event.target.value)}
               />
             </label>
           )}
         </div>
+        {billLike && (
+          <fieldset>
+            <legend>Bill shares</legend>
+            <label className="checkbox-row">
+              <input
+                type="checkbox"
+                checked={billSplit}
+                onChange={(event) => {
+                  setBillSplit(event.target.checked);
+                  if (event.target.checked && !entry?.bill_shares)
+                    setBillShares(
+                      Object.fromEntries(
+                        Object.entries(
+                          splitEvenly(toCents(billAmount) || 0, billPayers),
+                        ).map(([id, cents]) => [id, (cents / 100).toFixed(2)]),
+                      ),
+                    );
+                }}
+              />
+              Adjust each person’s share
+            </label>
+            {billSplit &&
+              billPayers.map((id) => (
+                <label key={id}>
+                  {members.find((m) => m.user_id === id)?.name || "Housemate"}’s
+                  bill share ($)
+                  <input
+                    type="number"
+                    min="0"
+                    max="999999.99"
+                    step="0.01"
+                    required
+                    value={billShares[id] || ""}
+                    onChange={(event) =>
+                      setBillShares((current) => ({
+                        ...current,
+                        [id]: event.target.value,
+                      }))
+                    }
+                  />
+                </label>
+              ))}
+            <p className="subtle">
+              {billSplit
+                ? `Assigned $${(billPayers.reduce((sum, id) => sum + (shareCents(billShares[id] || "") || 0), 0) / 100).toFixed(2)} of $${((toCents(billAmount) || 0) / 100).toFixed(2)}. Zero is allowed.`
+                : "Split evenly among bill participants."}{" "}
+              Repeating bills keep these shares for each occurrence.
+            </p>
+          </fieldset>
+        )}
         {kind !== "note" &&
           uid &&
           assignee !== uid &&

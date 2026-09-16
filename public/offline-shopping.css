@@ -1,0 +1,88 @@
+:root {
+  color-scheme: light;
+  font-family: system-ui, sans-serif;
+  color: #42453b;
+  background: #f7f3eb;
+}
+* {
+  box-sizing: border-box;
+}
+body {
+  margin: 0;
+}
+main {
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 32px 20px;
+}
+a {
+  color: #54735a;
+}
+h1 {
+  font-family: Georgia, serif;
+  font-size: 34px;
+}
+.eyebrow {
+  font-size: 11px;
+  letter-spacing: 2px;
+  margin-top: 32px;
+}
+.hint,
+#saved {
+  color: #727466;
+  font-size: 14px;
+  line-height: 1.6;
+}
+#status {
+  padding: 14px;
+  background: #e8eee1;
+  border-radius: 8px;
+}
+button {
+  background: #54735a;
+  color: white;
+  border: 0;
+  border-radius: 8px;
+  padding: 12px 18px;
+  font: inherit;
+  cursor: pointer;
+}
+button:disabled {
+  opacity: 0.5;
+}
+ul {
+  padding: 0;
+  list-style: none;
+}
+li {
+  padding: 18px 4px;
+  border-bottom: 1px dashed #cecdbf;
+}
+label {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+  cursor: pointer;
+}
+input {
+  width: 22px;
+  height: 22px;
+  accent-color: #54735a;
+  flex-shrink: 0;
+}
+small {
+  display: block;
+  color: #727466;
+  margin-top: 6px;
+  white-space: pre-wrap;
+}
+li.bought strong {
+  text-decoration: line-through;
+}
+li.bought {
+  opacity: 0.65;
+}
+:focus-visible {
+  outline: 3px solid #b57f5e;
+  outline-offset: 4px;
+}

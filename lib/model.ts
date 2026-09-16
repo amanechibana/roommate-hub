@@ -17,11 +17,20 @@ export type Entry = {
   rotation_members?: string[];
   payment_members?: string[];
   paid_by?: string[];
+  bill_shares?: Record<string, number> | null;
+  completed_at?: string | null;
+  last_done_at?: string | null;
+  last_done_by?: string | null;
   created_by: string;
   created_at: string;
 };
 export type Repeat = "daily" | "weekly" | "biweekly" | "monthly" | "weekdays";
-export type Member = { user_id: string; household_id: string; name: string; active?: boolean };
+export type Member = {
+  user_id: string;
+  household_id: string;
+  name: string;
+  active?: boolean;
+};
 export type Household = { id: string; name: string; owner_id: string };
 
 export function dateKey(date: Date): string {
@@ -151,7 +160,16 @@ function calendarNotes(entry: Entry, people: Member[]): string {
     );
     // Cents first, then the split, the way billShare says "each" on the
     // board: $2.01 between two is $1.01, not the float's $1.
-    if (entry.amount && payers.length > 1)
+    if (entry.bill_shares)
+      notes.push(
+        payers
+          .map(
+            (id) =>
+              `${people.find((m) => m.user_id === id)!.name}: ${usd(entry.bill_shares![id] / 100, true)}`,
+          )
+          .join(", "),
+      );
+    else if (entry.amount && payers.length > 1)
       notes.push(
         `${usd(Math.round(Math.round(entry.amount * 100) / payers.length) / 100, true)} each`,
       );
@@ -192,7 +210,10 @@ export function calendarFile(
     "X-PUBLISHED-TTL:PT1H",
   ];
   for (const entry of entries.filter(
-    (e) => e.date && e.category !== 'Personal' && (e.kind === "event" || e.kind === "task"),
+    (e) =>
+      e.date &&
+      e.category !== "Personal" &&
+      (e.kind === "event" || e.kind === "task"),
   )) {
     const end = parseDate(entry.date!);
     end.setDate(end.getDate() + 1);

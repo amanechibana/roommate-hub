@@ -44,7 +44,9 @@ export async function sharedDatabase(
     | "shared_handbook"
     | "shared_household_ops"
     | "shared_coordination"
-    | "shared_household_life" = "shared_home",
+    | "shared_household_life"
+    | "shared_search"
+    | "shared_shopping" = "shared_home",
 ) {
   const db = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,

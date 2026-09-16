@@ -278,7 +278,10 @@ function dueWhen(date: string, today: string) {
 // person's cut is, since that is what a housemate wants to know first;
 // a repeating one is announced once, for its first date.
 export function eventMessage(
-  entry: Pick<Entry, "kind" | "title" | "category" | "amount" | "date">,
+  entry: Pick<
+    Entry,
+    "kind" | "title" | "category" | "amount" | "date" | "bill_shares"
+  >,
   from: Member,
   today: string,
   payers: number,
@@ -298,7 +301,7 @@ export function eventMessage(
       ],
     };
   const each =
-    entry.amount && payers > 1
+    entry.amount && payers > 1 && !entry.bill_shares
       ? `, ${shareMoney(Math.round(Math.round(entry.amount * 100) / payers) / 100)} each`
       : "";
   const amount = entry.amount ? ` (${money(entry.amount)}${each})` : "";

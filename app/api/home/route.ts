@@ -104,6 +104,7 @@ export async function POST(request: Request) {
                 "end_time",
                 "assignee",
                 "amount",
+                "bill_shares",
                 "url",
                 "done",
                 "repeat",
@@ -294,6 +295,7 @@ export async function POST(request: Request) {
                 amount:
                   typeof values.amount === "number" ? values.amount : null,
                 date: values.date as string,
+                bill_shares: values.bill_shares as Entry["bill_shares"],
               },
               from,
               localDateKey(new Date()),
