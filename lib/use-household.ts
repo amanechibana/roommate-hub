@@ -123,7 +123,10 @@ export function useHousehold() {
     household?.id,
     uid,
     demo,
-    tab === "Expenses" || tab === "Overview" || display,
+    tab === "Expenses" ||
+      tab === "Overview" ||
+      tab === "Household life" ||
+      display,
     // Purchase expenses reuse entry ids; draining the home queue and mirroring
     // its optimistic-id remaps keeps them matched to the saved entry. Home
     // writes must never await the expenses queue, or drain() deadlocks.
@@ -280,6 +283,7 @@ export function useHousehold() {
   const live = useRealtime(session && !demo ? channel : null, (scope) => {
     if (document.visibilityState !== "visible") return;
     if (scope !== "expenses") {
+      window.dispatchEvent(new Event("household-life-changed"));
       if (pending.current) needsRecovery.current = true;
       else void refresh(true);
     }
@@ -1328,6 +1332,48 @@ export function useHousehold() {
   useEffect(() => {
     setAgendaPage(agendaStart < 0 ? 0 : Math.floor(agendaStart / agendaLimit));
   }, [month, agendaStart, agendaLimit]);
+  // The demo mirrors the linked meal/calendar writes performed by the SQL gateway.
+  async function syncDemoMeal(
+    values: {
+      title: string;
+      date: string;
+      notes: string;
+      cook: string | null;
+    } | null,
+    existingId: string | null,
+  ) {
+    if (!demo || !household || !uid) return null;
+    const id = existingId || crypto.randomUUID();
+    if (!values) {
+      setEntries((current) => current.filter((entry) => entry.id !== id));
+      return null;
+    }
+    const entry = {
+      id,
+      household_id: household.id,
+      kind: "event",
+      title: values.title,
+      category: "Together",
+      description: values.notes,
+      date: values.date,
+      assignee: values.cook,
+      amount: null,
+      url: "",
+      done: false,
+      created_by: uid,
+      created_at: new Date().toISOString(),
+      series_id: null,
+      rotation_members: [],
+      payment_members: [],
+      paid_by: [],
+    } as Entry;
+    setEntries((current) =>
+      current.some((e) => e.id === id)
+        ? current.map((e) => (e.id === id ? { ...e, ...entry } : e))
+        : [entry, ...current],
+    );
+    return id;
+  }
   const person = (id: string | null) =>
     members.find((m) => m.user_id === id)?.name || "Everyone";
   const friendlyDate = (date: string | null) =>
@@ -1350,6 +1396,7 @@ export function useHousehold() {
               });
   return {
     activity,
+    syncDemoMeal,
     reduced,
     ready,
     loaded,

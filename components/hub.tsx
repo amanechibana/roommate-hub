@@ -62,6 +62,8 @@ import { DayDialog, Empty, ShortcutsDialog } from "./house-dialogs";
 import HouseholdSettings from "./household-settings";
 import SearchField from "./search-field";
 import HandbookTab from "./handbook-tab";
+import HouseholdLifeTab from "./household-life-tab";
+import { useHouseholdLife } from "@/lib/use-household-life";
 export default function Hub() {
   const house = useHousehold();
   const {
@@ -139,6 +141,16 @@ export default function Hub() {
     person,
     friendlyDate,
   } = house;
+  const life = useHouseholdLife({
+    enabled: session && tab === "Household life",
+    demo,
+    householdId: household?.id,
+    uid,
+    entries,
+    addItems,
+    syncDemoMeal: house.syncDemoMeal,
+    refreshHome: refresh,
+  });
   const agreements = useAgreements({
     enabled: session && !demo,
     memberId: uid,
@@ -663,6 +675,7 @@ export default function Hub() {
               key={name}
               className={tab === name ? "active" : ""}
               aria-current={tab === name ? "page" : undefined}
+              aria-label={name === "Household life" ? name : undefined}
               onClick={() => setTab(name)}
             >
               {tab === name && (
@@ -674,7 +687,7 @@ export default function Hub() {
                 />
               )}
               <Icon size={19} />
-              <span>{name}</span>
+              <span>{name === "Household life" ? "House life" : name}</span>
               {name === "Shopping list" && !!neededItems.length && (
                 <span
                   className="nav-count"
@@ -853,6 +866,8 @@ export default function Hub() {
                         "House handbook":
                           "Wi-Fi, building contacts, trash details, and manuals.",
                         "Our household": `${household.name}, ${housemates.length} ${housemates.length === 1 ? "housemate" : "housemates"}`,
+                        "Household life":
+                          "Decisions, supplies, repairs, shared dinners, and monthly targets.",
                         Overview: "",
                         Expenses: "",
                       }[tab]
@@ -862,6 +877,7 @@ export default function Hub() {
               </div>
               {tab !== "Our household" &&
                 tab !== "House handbook" &&
+                tab !== "Household life" &&
                 addButton(
                   tab === "Calendar"
                     ? "event"
@@ -890,6 +906,20 @@ export default function Hub() {
             />
           )}
 
+          {tab === "Household life" && (
+            <HouseholdLifeTab
+              life={life}
+              members={members}
+              uid={uid}
+              readOnly={readOnly}
+              entries={entries}
+              expenses={expenseController.expenses}
+              expensesLoaded={expenseController.loaded}
+              expensesError={expenseController.error}
+              today={today}
+              openShopping={() => setTab("Shopping list")}
+            />
+          )}
           {tab === "Calendar" && <CalendarTab {...house} />}
           {tab === "To-dos" && (
             <section className="panel entry-panel paper-index">
