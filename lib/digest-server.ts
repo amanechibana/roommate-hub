@@ -27,10 +27,13 @@ export type Edition = "morning" | "evening";
 
 // Vercel Cron signs its calls with the deployment's secret.
 export function cronAuthorized(request: Request) {
-  const secret = process.env.CRON_SECRET;
-  return (
-    !!secret &&
-    equalSecret(request.headers.get("authorization") ?? "", `Bearer ${secret}`)
+  return [process.env.CRON_SECRET, process.env.REMINDER_SCHEDULER_SECRET].some(
+    (secret) =>
+      !!secret &&
+      equalSecret(
+        request.headers.get("authorization") ?? "",
+        `Bearer ${secret}`,
+      ),
   );
 }
 
@@ -52,7 +55,7 @@ export async function sendDigests(
     !retry &&
     ![defaultReminderPreferences, ...Object.values(roster.members)].some(
       (preferences) =>
-        reminderDue(new Date(), preferences[edition], roster.household),
+        reminderDue(new Date(), preferences[edition], roster.household, 60),
     )
   )
     return { sent: 0, failed: 0, pruned: 0 };
@@ -88,7 +91,7 @@ export async function sendDigests(
     if (
       custom &&
       !retry &&
-      !reminderDue(new Date(), preferences[edition], roster.household)
+      !reminderDue(new Date(), preferences[edition], roster.household, 60)
     )
       continue;
     const filtered = entries.filter((e) =>

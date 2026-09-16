@@ -52,7 +52,13 @@ export type BudgetTarget = {
   target_cents: number;
 };
 export type ExpenseCategory = { expense_id: string; category: BudgetCategory };
+export type BudgetSpending = {
+  month: string;
+  category: BudgetCategory | "unclassified";
+  amount_cents: number;
+};
 export type LifeSnapshot = {
+  spending?: BudgetSpending[];
   polls: Poll[];
   votes: PollVote[];
   pantry: PantryItem[];
@@ -123,13 +129,25 @@ export function budgetSpending(
   expenses: Expense[],
   categories: ExpenseCategory[],
   month: string,
+  spending?: BudgetSpending[],
 ) {
+  if (spending) {
+    const totals = { groceries: 0, utilities: 0, unclassified: 0 };
+    for (const row of spending)
+      if (row.month === month) totals[row.category] += row.amount_cents;
+    return totals;
+  }
   const classified = new Map(categories.map((c) => [c.expense_id, c.category]));
   const totals = { groceries: 0, utilities: 0, unclassified: 0 };
   for (const expense of expenses) {
     if (expense.kind !== "expense" || !expense.date.startsWith(month)) continue;
-    totals[classified.get(expense.id) || "unclassified"] +=
-      expense.amount_cents;
+    const category = expense.category?.toLowerCase();
+    totals[
+      classified.get(expense.id) ||
+        (category === "groceries" || category === "utilities"
+          ? category
+          : "unclassified")
+    ] += expense.amount_cents;
   }
   return totals;
 }

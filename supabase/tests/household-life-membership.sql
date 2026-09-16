@@ -21,7 +21,7 @@ begin
   blocked:=false;
   begin perform public.shared_household_life('test-gateway','maintenance_save',jsonb_build_object('actor',a,'title','Invalid assignment','assignee',b,'status','open')); exception when raise_exception then blocked:=true; end;
   if not blocked then raise exception 'Former member received new repair'; end if;
-  if public.shared_household_ops('test-gateway','status')->>'schema_version'<>'024' then raise exception 'Schema version is stale'; end if;
+  if (public.shared_household_ops('test-gateway','status')->>'schema_version')::integer<24 then raise exception 'Schema version is stale'; end if;
   if has_function_privilege('anon','public.shared_household_life_before_membership(text,text,jsonb)','execute') or has_function_privilege('anon','public.shared_coordination_before_life(text,text,jsonb)','execute') then raise exception 'Membership guard bypass exposed'; end if;
 end $$;
 rollback;

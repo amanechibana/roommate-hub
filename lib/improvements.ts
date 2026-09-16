@@ -92,14 +92,15 @@ export function reminderDue(
   now: Date,
   at: string | null,
   house: HouseholdPreferences,
+  windowMinutes = 5,
 ) {
   if (!at) return false;
   const time = localClock(now, house.timezone);
-  // The scheduler polls every five minutes; each configured time has one delivery window.
+  // Allow a wider catch-up window when the external scheduler is delayed.
   const minutes = (t: string) =>
     Number(t.slice(0, 2)) * 60 + Number(t.slice(3));
   return (
-    (minutes(time) - minutes(at) + 1440) % 1440 < 5 &&
+    (minutes(time) - minutes(at) + 1440) % 1440 < windowMinutes &&
     !inQuietHours(time, house.quiet_start, house.quiet_end)
   );
 }

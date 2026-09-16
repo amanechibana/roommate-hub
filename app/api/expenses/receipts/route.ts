@@ -48,7 +48,11 @@ export async function GET(request: Request) {
   try {
     const id = new URL(request.url).searchParams.get("id");
     if (!id) return json({ error: "Choose a receipt file." }, 400);
-    const result = await sharedDatabase("receipt_file", { id }, gateway);
+    const result = await sharedDatabase(
+      "receipt_file",
+      { id, actor: await selectedMember() },
+      gateway,
+    );
     const file = result.file as HandbookFile;
     const { data, error } = await handbookStorage(
       "expense-receipts",
@@ -82,7 +86,7 @@ export async function POST(request: Request) {
     if (!receiptTypes.has(uploaded.type))
       return json({ error: "Use a PDF, JPEG, PNG, or WebP receipt." }, 400);
 
-    const home = await sharedDatabase("get");
+    const home = await sharedDatabase("get", { actor: member });
     const householdId = String(home.household?.id || "");
     if (!householdId) throw new Error("Household missing");
     const name = cleanName(uploaded.name);

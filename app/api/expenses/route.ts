@@ -21,6 +21,7 @@ export async function GET(request: Request) {
       await sharedDatabase(
         "get",
         {
+          actor: await selectedMember(),
           cursor: new URL(request.url).searchParams.get("cursor"),
           id: new URL(request.url).searchParams.get("id"),
         },
@@ -55,7 +56,7 @@ export async function POST(request: Request) {
       operation === "undo_edit"
         ? ["undo_token"]
         : operation === "delete"
-          ? ["id"]
+          ? ["id", "mutation_id"]
           : [
               "mutation_id",
               "category",

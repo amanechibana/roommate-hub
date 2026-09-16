@@ -119,13 +119,19 @@ Setup needs four server-side pieces:
    `VAPID_SUBJECT`, a `mailto:` address) in Vercel and `.env.local`.
 3. Set `CRON_SECRET` to a random value; Vercel sends it as a bearer token when
    invoking the cron route.
-4. Apply migration `025_feature_improvements.sql` and deploy with the five-minute
-   `/api/reminders/custom` cron in `vercel.json`. Use a scheduler that supports
-   this frequency; an external scheduler can call the same route with
-   `Authorization: Bearer <CRON_SECRET>`. Do not keep the older daily cron jobs
-   enabled alongside it. Selected times are delivered at the next scheduler tick,
-   within five minutes, and quiet hours always suppress scheduled/automatic pushes.
-   The explicit “send today’s digest now” test ignores the schedule and quiet hours.
+4. Apply migration `026_feature_improvements.sql`. The daily Vercel cron in
+   `vercel.json` provides a roll-forward fallback compatible with Hobby hosting.
+   For custom delivery times, configure `.github/workflows/reminders.yml` with the
+   repository variable `REMINDER_APP_URL` (the HTTPS production origin) and a
+   repository secret `REMINDER_SCHEDULER_SECRET`; put the same secret in Vercel's
+   production environment and redeploy. The workflow calls `/api/reminders/custom`
+   every five minutes. An external scheduler can instead use `CRON_SECRET`.
+   Do not also enable the older morning/evening digest cron jobs.
+   Delivery happens after the chosen time at the next available scheduler run;
+   GitHub Actions can delay scheduled jobs. A one-hour catch-up window and
+   persistent per-device claims tolerate delays without resending a digest.
+   Quiet hours suppress automatic pushes; the explicit “send today’s digest now”
+   test ignores the schedule and quiet hours.
 
 Subscriptions live in the `push_subscriptions` table behind the same
 token-gated gateway pattern as everything else, tied to the person using the
@@ -135,7 +141,7 @@ last; choosing the shared screen clears it, since a kitchen display gets no
 personal reminders. Dead endpoints are pruned automatically when a push
 bounces.
 
-Migration 025 persists delivery claims per subscribed device, edition, and household-local date. Interrupted claims expire after five minutes and failed deliveries can be retried.
+Migration 026 persists delivery claims per subscribed device, edition, and household-local date. Interrupted claims expire after five minutes and failed deliveries can be retried.
 **Our household → Household reliability** shows interrupted/failed/partial
 deliveries and lets a housemate retry outside quiet hours. A retry skips devices
 whose success was recorded. A push accepted just before the database fails may
@@ -546,12 +552,12 @@ is exercised by the current SQL tests.
 
 ## Feature improvements and rollout
 
-Apply **025_feature_improvements.sql before deploying this release**. It adds
+Apply **026_feature_improvements.sql before deploying this release**. It adds
 shared household time settings and chore templates; person-specific reminder
 preferences; shopping quantities, units and stores; checklist progress and effort;
 expense categories, retained percentage splits, receipt metadata and history
 pagination; private entry visibility; coverage approvals; and replay receipts.
-The five-minute cron keeps recurring agreements rolling forward even without push keys.
+The scheduler keeps recurring agreements rolling forward even without push keys.
 Receipt uploads use the private `expense-receipts` bucket and the existing
 `SUPABASE_SERVICE_ROLE_KEY`. Save a purchase, then reopen it to attach PDF,
 JPEG, PNG or WebP receipts (up to 10 MB each). Downloads use two-minute signed URLs.

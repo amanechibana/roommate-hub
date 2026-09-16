@@ -1,5 +1,5 @@
 "use client";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { homeRequest } from "./home-client";
 import {
   defaultHouseholdPreferences,
@@ -21,6 +21,7 @@ export function useImprovements(
   memberId: string | null,
   demo: boolean,
 ) {
+  const generation = useRef(0);
   const [household, setHousehold] = useState<HouseholdPreferences>(
     defaultHouseholdPreferences,
   );
@@ -33,18 +34,23 @@ export function useImprovements(
   const [loaded, setLoaded] = useState(demo);
   const refresh = useCallback(async () => {
     if (!householdId || demo) return;
+    const current = generation.current;
     try {
       const data = await homeRequest("/api/improvements");
+      if (current !== generation.current) return;
       setHousehold({ ...defaultHouseholdPreferences, ...data.household });
       setReminders({ ...defaultReminderPreferences, ...data.reminders });
       setCoverage(data.coverage ?? []);
       setError("");
       setLoaded(true);
     } catch (e) {
+      if (current !== generation.current) return;
       setError((e as Error).message);
     }
   }, [householdId, memberId, demo]);
   useEffect(() => {
+    generation.current++;
+    setBusy(false);
     setHousehold(defaultHouseholdPreferences);
     setReminders(defaultReminderPreferences);
     setCoverage([]);
@@ -58,17 +64,19 @@ export function useImprovements(
     return () => clearInterval(timer);
   }, [refresh]);
   async function write(operation: string, payload: object) {
+    const current = ++generation.current;
     setBusy(true);
     setError("");
     try {
       if (!demo)
         await homeRequest("/api/improvements", "POST", { operation, payload });
-      return true;
+      return current === generation.current;
     } catch (e) {
+      if (current !== generation.current) return false;
       setError((e as Error).message);
       return false;
     } finally {
-      setBusy(false);
+      if (current === generation.current) setBusy(false);
     }
   }
   return {

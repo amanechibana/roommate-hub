@@ -1,0 +1,24 @@
+name: Custom reminders
+on:
+  schedule:
+    - cron: "2-57/5 * * * *"
+  workflow_dispatch:
+permissions: {}
+concurrency:
+  group: household-reminders
+  cancel-in-progress: false
+jobs:
+  deliver:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    env:
+      APP_URL: ${{ vars.REMINDER_APP_URL }}
+      SCHEDULER_SECRET: ${{ secrets.REMINDER_SCHEDULER_SECRET }}
+    steps:
+      - name: Deliver configured reminders
+        if: env.APP_URL != '' && env.SCHEDULER_SECRET != ''
+        run: |
+          curl --fail --silent --show-error --max-time 70 \
+            --retry 2 --retry-delay 5 \
+            --header "Authorization: Bearer $SCHEDULER_SECRET" \
+            "$APP_URL/api/reminders/custom"

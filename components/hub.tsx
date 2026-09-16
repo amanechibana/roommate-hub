@@ -952,6 +952,7 @@ export default function Hub() {
               expenses={expenseController.expenses}
               expensesLoaded={expenseController.loaded}
               expensesError={expenseController.error}
+              moreExpenses={{ available: !!expenseController.nextCursor, loading: expenseController.loadingMore, load: expenseController.loadMore }}
               today={today}
               openShopping={() => setTab("Shopping list")}
             />

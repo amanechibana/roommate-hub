@@ -9,6 +9,7 @@ import {
   percentageShares,
   reminderDue,
 } from "../lib/improvements";
+import { budgetSpending } from "../lib/household-life";
 import { demoData, type Entry } from "../lib/model";
 import { collectExpensePages } from "../lib/expense-pages";
 import { overlayChange, queueable, type QueuedChange } from "../lib/offline";
@@ -255,4 +256,44 @@ test("offline ledger overlays update full-ledger balances and monthly aggregates
   );
   assert.deepEqual(cache["/api/expenses"].balances, { you: 0, alex: 0 });
   assert.equal(cache["/api/expenses"].summaries[0].amount_cents, 0);
+});
+
+test("delayed schedules catch up without sending before the chosen time", () => {
+  assert.equal(
+    reminderDue(
+      new Date("2026-09-16T12:35:00Z"),
+      "08:01",
+      defaultHouseholdPreferences,
+      60,
+    ),
+    true,
+  );
+  assert.equal(
+    reminderDue(
+      new Date("2026-09-16T12:00:00Z"),
+      "08:01",
+      defaultHouseholdPreferences,
+      60,
+    ),
+    false,
+  );
+  assert.equal(
+    reminderDue(
+      new Date("2026-09-16T13:01:00Z"),
+      "08:01",
+      defaultHouseholdPreferences,
+      60,
+    ),
+    false,
+  );
+});
+test("budget totals use complete ledger aggregates instead of the visible page", () => {
+  assert.deepEqual(
+    budgetSpending([], [], "2026-09", [
+      { month: "2026-09", category: "groceries", amount_cents: 12201 },
+      { month: "2026-08", category: "groceries", amount_cents: 999 },
+      { month: "2026-09", category: "utilities", amount_cents: 1500 },
+    ]),
+    { groceries: 12201, utilities: 1500, unclassified: 0 },
+  );
 });

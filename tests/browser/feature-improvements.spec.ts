@@ -137,3 +137,38 @@ test("global search opens matching chores and remains usable on a phone", async 
   ).toBeLessThanOrEqual(390);
   await page.screenshot({ path: "test-results/improvements-mobile-chore.png" });
 });
+test("household time and personal notification choices survive tab navigation", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await page
+    .getByRole("button", { name: "Our household", exact: true })
+    .first()
+    .click();
+  await page.getByLabel("Household timezone").fill("America/Los_Angeles");
+  await page.getByLabel("Quiet hours start").fill("23:00");
+  await page.getByLabel("Quiet hours end").fill("07:00");
+  await page.getByRole("button", { name: "Save household time" }).click();
+  await expect(page.getByText("Household time settings saved.")).toBeVisible();
+  await page.getByLabel("Morning reminder time").fill("09:17");
+  await page.getByRole("checkbox", { name: "Shopping", exact: true }).uncheck();
+  await page.getByRole("button", { name: "Save notification choices" }).click();
+  await expect(
+    page.getByText("Your notification preferences saved."),
+  ).toBeVisible();
+  await page
+    .getByRole("navigation")
+    .getByRole("button", { name: "Overview", exact: true })
+    .click();
+  await page
+    .getByRole("button", { name: "Our household", exact: true })
+    .first()
+    .click();
+  await expect(page.getByLabel("Household timezone")).toHaveValue(
+    "America/Los_Angeles",
+  );
+  await expect(page.getByLabel("Morning reminder time")).toHaveValue("09:17");
+  await expect(
+    page.getByRole("checkbox", { name: "Shopping", exact: true }),
+  ).not.toBeChecked();
+});

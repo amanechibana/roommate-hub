@@ -43,6 +43,9 @@ begin
  end loop;
  if count_rows<122 then raise exception 'Expense pagination lost records'; end if;
  if not (result ? 'balances' and result ? 'summaries') then raise exception 'Full-ledger aggregates missing'; end if;
+ result:=public.shared_household_life('test-gateway','get',jsonb_build_object('actor',a));
+ if (select sum((r->>'amount_cents')::bigint) from jsonb_array_elements(result->'spending') r)<12201 then raise exception 'Household budget omitted older expense pages'; end if;
+
  perform public.shared_home('test-gateway','create',jsonb_build_object('actor',a,'kind','request','title','Breakfast: Milk, Eggs','category','Need','quantity',2,'unit','packs','store','Corner shop','client_ids',jsonb_build_array(shopping)));
  payload:=jsonb_build_object('actor',a,'id',shopping,'client_ids',jsonb_build_array(copy1,copy2),'mutation_id',gen_random_uuid());
  result:=public.shared_home('test-gateway','split_shopping',payload);
@@ -63,7 +66,7 @@ begin
  if not (public.shared_improvements('test-gateway','claim_delivery',payload)->>'claimed')::boolean then raise exception 'Failed reminder could not retry'; end if;
  perform public.shared_improvements('test-gateway','finish_delivery',payload||jsonb_build_object('status','sent'));
  if (public.shared_improvements('test-gateway','claim_delivery',payload)->>'claimed')::boolean then raise exception 'Delivered reminder resent'; end if;
- if public.shared_household_ops('test-gateway','status','{}')->>'schema_version'<>'025' then raise exception 'Schema status outdated'; end if;
+ if public.shared_household_ops('test-gateway','status','{}')->>'schema_version'<>'026' then raise exception 'Schema status outdated'; end if;
  insert into public.agreements(household_id,slug,title) values(hid,'house','House history fixture') on conflict(household_id,slug) do update set title=excluded.title returning id into agreement;
  insert into public.agreement_events(household_id,agreement_id,kind,status,actor,created_at) select hid,agreement,'sick','done',a,clock_timestamp()+g*interval '1 millisecond' from generate_series(1,121) g;
  cursor:=null;count_rows:=0;
@@ -71,5 +74,12 @@ begin
  if jsonb_array_length(result->'events')>50 then raise exception 'Agreement history unbounded'; end if;
  count_rows:=count_rows+jsonb_array_length(result->'events');cursor:=result->>'next_cursor';exit when cursor is null; end loop;
  if count_rows<121 then raise exception 'Agreement history lost events'; end if;
+
+ update public.members set active=false where user_id=b;
+ begin perform public.shared_home('test-gateway','get',jsonb_build_object('actor',b)); raise exception 'Former member read allowed' using errcode='P0002'; exception when raise_exception then null; end;
+ begin perform public.shared_expenses('test-gateway','get',jsonb_build_object('actor',b)); raise exception 'Former member expense read allowed' using errcode='P0002'; exception when raise_exception then null; end;
+ begin perform public.shared_agreements('test-gateway','history',jsonb_build_object('actor',b)); raise exception 'Former member history read allowed' using errcode='P0002'; exception when raise_exception then null; end;
+ begin perform public.shared_improvements('test-gateway','search',jsonb_build_object('actor',b,'query','groceries')); raise exception 'Former member search allowed' using errcode='P0002'; exception when raise_exception then null; end;
+ if exists(select 1 from jsonb_array_elements(public.shared_home('test-gateway','get','{}')->'members') m where m->>'user_id'=b::text) then raise exception 'Former member remained selectable'; end if;
 end $$;
 rollback;

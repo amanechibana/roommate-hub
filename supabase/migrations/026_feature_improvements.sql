@@ -146,7 +146,7 @@ begin
    update public.entries e set quantity=case when payload ? 'quantity' then (payload->>'quantity')::numeric else e.quantity end,
     unit=case when payload ? 'unit' then trim(payload->>'unit') else e.unit end,
     store=case when payload ? 'store' then trim(payload->>'store') else e.store end,
-    checklist=case when payload ? 'checklist' then case when operation='create' then (select coalesce(jsonb_agg(value||jsonb_build_object('done',false)),'[]') from jsonb_array_elements(payload->'checklist')) when e.id<>b.id then (select coalesce(jsonb_agg(step||jsonb_build_object('done',coalesce((select (old->>'done')::boolean from jsonb_array_elements(e.checklist) old where old->>'id'=step->>'id'),false))),'[]') from jsonb_array_elements(payload->'checklist') step) else payload->'checklist' end else e.checklist end,
+    checklist=case when payload ? 'checklist' then case when operation='create' and e.id<>ids[1] then (select coalesce(jsonb_agg(value||jsonb_build_object('done',false)),'[]') from jsonb_array_elements(payload->'checklist')) when e.id<>b.id then (select coalesce(jsonb_agg(step||jsonb_build_object('done',coalesce((select (old->>'done')::boolean from jsonb_array_elements(e.checklist) old where old->>'id'=step->>'id'),false))),'[]') from jsonb_array_elements(payload->'checklist') step) else payload->'checklist' end else e.checklist end,
     effort_minutes=case when payload ? 'effort_minutes' then nullif(payload->>'effort_minutes','')::integer else e.effort_minutes end,
     visibility=case when payload ? 'visibility' then payload->>'visibility' else e.visibility end
     where household_id=hid and id=any(ids);
@@ -361,7 +361,7 @@ begin
  result:=public.shared_household_ops_before_preferences(access_token,operation,payload);
  if operation='status' then
    select household_id into hid from public.shared_home_config where gateway_hash=encode(extensions.digest(access_token,'sha256'),'hex');
-   result:=result||jsonb_build_object('schema_version','025','timezone',coalesce((select settings->>'timezone' from public.household_preferences where household_id=hid),'America/New_York'),
+   result:=result||jsonb_build_object('schema_version','026','timezone',coalesce((select settings->>'timezone' from public.household_preferences where household_id=hid),'America/New_York'),
     'custom_reminders',(select coalesce(jsonb_agg(to_jsonb(r)),'[]') from (
       select d.edition,d.date,case when bool_or(d.status='sending') then 'sending' when bool_or(d.status='failed') then case when bool_or(d.status='sent') then 'partial' else 'failed' end else 'sent' end status,
       min(d.claimed_at) started_at,max(d.finished_at) finished_at,count(*) filter(where d.status='sent') sent,count(*) filter(where d.status='failed') failed,max(d.attempts) attempts
@@ -372,4 +372,26 @@ begin
 end $$;
 revoke all on function public.shared_household_ops(text,text,jsonb) from public,authenticated;
 grant execute on function public.shared_household_ops(text,text,jsonb) to anon;
+
+-- Household life budgets use the complete ledger even when the activity list is paged.
+alter function public.shared_household_life(text,text,jsonb) rename to shared_household_life_before_pagination;
+revoke all on function public.shared_household_life_before_pagination(text,text,jsonb) from public,anon,authenticated;
+create function public.shared_household_life(access_token text,operation text,payload jsonb default '{}') returns jsonb
+language plpgsql security definer set search_path='' as $$
+declare hid uuid; result jsonb;
+begin
+ hid:=public.coordination_identity(access_token,payload->>'actor');
+ result:=public.shared_household_life_before_pagination(access_token,operation,payload);
+ if operation='get' then
+ result:=result||jsonb_build_object('spending',(select coalesce(jsonb_agg(t),'[]') from (
+ select to_char(e.date,'YYYY-MM') as month,
+ coalesce(c.category,case when lower(e.category) in ('groceries','utilities') then lower(e.category) else 'unclassified' end) category,
+ sum(e.amount_cents) amount_cents from public.household_expenses e
+ left join public.house_budget_expenses c on c.expense_id=e.id and c.household_id=e.household_id
+ where e.household_id=hid and e.kind='expense' group by 1,2) t));
+ end if;
+ return result;
+end $$;
+revoke all on function public.shared_household_life(text,text,jsonb) from public,authenticated;
+grant execute on function public.shared_household_life(text,text,jsonb) to anon;
 commit;
