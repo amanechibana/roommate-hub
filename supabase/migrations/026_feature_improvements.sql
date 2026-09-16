@@ -34,6 +34,18 @@ create function public.suppress_private_activity() returns trigger language plpg
 begin if current_setting('app.private_action',true)='true' then return null; end if; return new; end $$;
 create trigger suppress_private_activity before insert on public.house_activity for each row execute function public.suppress_private_activity();
 
+-- A selected shared screen reads as nobody; it still cannot author changes.
+create function public.improvements_read_actor(access_token text,operation text,actor text) returns text
+language plpgsql security definer set search_path='' as $$
+declare hid uuid;
+begin
+ hid:=public.coordination_identity(access_token,null);
+ if operation in ('get','history','search','entry','receipt_file') and actor is not null and exists(select 1 from public.members where household_id=hid and user_id=actor::uuid and active and name='Housemates') then return null; end if;
+ perform public.coordination_identity(access_token,actor);
+ return actor;
+end $$;
+revoke all on function public.improvements_read_actor(text,text,text) from public,anon,authenticated;
+
 alter function public.shared_home(text,text,jsonb) rename to shared_home_before_improvements;
 revoke all on function public.shared_home_before_improvements(text,text,jsonb) from public,anon,authenticated;
 create function public.shared_home(access_token text,operation text,payload jsonb default '{}') returns jsonb
@@ -42,6 +54,7 @@ language plpgsql security definer set search_path='' as $$
 declare hid uuid; actor uuid:=nullif(payload->>'actor','')::uuid; today date; first_day date; last_day date; cursor_row public.entries;
  result jsonb; rows jsonb; more boolean; n integer; b public.entries; item jsonb; old_rows jsonb; ids uuid[]; mutation uuid:=nullif(payload->>'mutation_id','')::uuid; saved public.mutation_receipts; private_action boolean:=false; titles text[]; title text; copy_id uuid;
 begin
+ payload:=payload||jsonb_build_object('actor',public.improvements_read_actor(access_token,operation,payload->>'actor'));
  hid:=public.coordination_identity(access_token,payload->>'actor');
  today:=(now() at time zone coalesce((select settings->>'timezone' from public.household_preferences where household_id=hid),'America/New_York'))::date;
  if operation in ('get','history') then
@@ -178,6 +191,7 @@ language plpgsql security definer set search_path='' as $$
 declare hid uuid; actor uuid:=nullif(payload->>'actor','')::uuid; result jsonb; cursor_row public.household_expenses; rows jsonb; more boolean;
  mutation uuid:=nullif(payload->>'mutation_id','')::uuid; saved public.mutation_receipts; old_rows jsonb; percentages jsonb; part record; total numeric:=0; cents integer; expected jsonb;
 begin
+ payload:=payload||jsonb_build_object('actor',public.improvements_read_actor(access_token,operation,payload->>'actor'));
  hid:=public.coordination_identity(access_token,payload->>'actor');
  if operation='get' then
    if payload->>'id' is not null then return jsonb_build_object('expense',(select to_jsonb(e)||jsonb_build_object('receipts',(select coalesce(jsonb_agg(jsonb_build_object('id',r.id,'file_name',r.file_name)),'[]') from public.expense_receipts r where r.expense_id=e.id)) from public.household_expenses e where household_id=hid and id=(payload->>'id')::uuid)); end if;
@@ -243,6 +257,7 @@ language plpgsql security definer set search_path='' as $$
 <<ctx>>
 declare hid uuid; result jsonb; rows jsonb; more boolean; cursor_row public.agreement_events;
 begin
+ payload:=payload||jsonb_build_object('actor',public.improvements_read_actor(access_token,operation,payload->>'actor'));
  hid:=public.coordination_identity(access_token,payload->>'actor');
  if operation not in ('get','history') then
    if exists(select 1 from public.entries e where e.household_id=hid and e.visibility='private' and (e.id::text=payload->>'entry_id' or e.id::text in(select jsonb_array_elements_text(coalesce(payload->'details'->'entry_ids','[]'))))) then raise exception 'Private items cannot be included in shared agreements'; end if;
@@ -268,6 +283,7 @@ language plpgsql security definer set search_path='' as $$
 declare hid uuid; actor uuid:=nullif(payload->>'actor','')::uuid; settings jsonb; item jsonb; row_data public.chore_coverage; e public.entries; candidate uuid;
  file_data public.expense_receipts; timezone text; edition text; day date; endpoint_hash text; query text; results jsonb;
 begin
+ payload:=payload||jsonb_build_object('actor',public.improvements_read_actor(access_token,operation,payload->>'actor'));
  hid:=public.coordination_identity(access_token,payload->>'actor');
  if operation='get' then return jsonb_build_object('household',coalesce((select p.settings from public.household_preferences p where household_id=hid),'{}'),
  'reminders',coalesce((select r.settings from public.member_reminders r where household_id=hid and member=actor),'{}'),
@@ -380,6 +396,7 @@ create function public.shared_household_life(access_token text,operation text,pa
 language plpgsql security definer set search_path='' as $$
 declare hid uuid; result jsonb;
 begin
+ payload:=payload||jsonb_build_object('actor',public.improvements_read_actor(access_token,operation,payload->>'actor'));
  hid:=public.coordination_identity(access_token,payload->>'actor');
  result:=public.shared_household_life_before_pagination(access_token,operation,payload);
  if operation='get' then

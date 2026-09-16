@@ -75,6 +75,13 @@ begin
  count_rows:=count_rows+jsonb_array_length(result->'events');cursor:=result->>'next_cursor';exit when cursor is null; end loop;
  if count_rows<121 then raise exception 'Agreement history lost events'; end if;
 
+
+ perform public.shared_home('test-gateway','get',jsonb_build_object('actor',(select user_id from public.members where household_id=hid and name='Housemates')));
+ perform public.shared_expenses('test-gateway','get',jsonb_build_object('actor',(select user_id from public.members where household_id=hid and name='Housemates')));
+ perform public.shared_agreements('test-gateway','get',jsonb_build_object('actor',(select user_id from public.members where household_id=hid and name='Housemates')));
+ perform public.shared_improvements('test-gateway','search',jsonb_build_object('query','groceries','actor',(select user_id from public.members where household_id=hid and name='Housemates')));
+ perform public.shared_household_life('test-gateway','get',jsonb_build_object('actor',(select user_id from public.members where household_id=hid and name='Housemates')));
+ begin perform public.shared_improvements('test-gateway','save_household',jsonb_build_object('actor',(select user_id from public.members where household_id=hid and name='Housemates'),'settings','{}'::jsonb)); raise exception 'Shared screen write allowed' using errcode='P0002'; exception when raise_exception then null; end;
  update public.members set active=false where user_id=b;
  begin perform public.shared_home('test-gateway','get',jsonb_build_object('actor',b)); raise exception 'Former member read allowed' using errcode='P0002'; exception when raise_exception then null; end;
  begin perform public.shared_expenses('test-gateway','get',jsonb_build_object('actor',b)); raise exception 'Former member expense read allowed' using errcode='P0002'; exception when raise_exception then null; end;

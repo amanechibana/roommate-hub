@@ -130,3 +130,62 @@ test("a changed selected person pauses offline replay until changes are reviewed
   await page.getByRole("button", { name: "Discard change" }).click();
   await expect(page.locator(".offline-banner")).toHaveCount(0);
 });
+
+test("changing person removes the previous person's private items before the next snapshot arrives", async ({
+  page,
+}) => {
+  const { data } = await mockHousehold(page);
+  data.entries.unshift({
+    ...data.entries[0],
+    id: "private-errand",
+    title: "Private appointment",
+    category: "Personal",
+    visibility: "private",
+    created_by: "you",
+    assignee: "you",
+    done: false,
+  });
+  let selected = "you";
+  let release!: () => void;
+  const held = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  await page.route("**/api/session", (route) => {
+    if (route.request().method() === "PATCH")
+      selected = route.request().postDataJSON().member_id;
+    return route.fulfill({
+      json: { authenticated: true, member_id: selected },
+    });
+  });
+  await page.route("**/api/home{,?*}", async (route) => {
+    if (selected === "alex") await held;
+    await route.fulfill({
+      json: {
+        ...data,
+        entries: data.entries.filter(
+          (e) => e.visibility !== "private" || e.created_by === selected,
+        ),
+        member_id: selected,
+        next_cursor: null,
+      },
+    });
+  });
+  await page.goto("/");
+  await page
+    .getByRole("navigation")
+    .getByRole("button", { name: /^To-dos/ })
+    .click();
+  await page.getByRole("button", { name: "Personal", exact: true }).click();
+  await expect(
+    page.locator(".task-row").filter({ hasText: "Private appointment" }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Switch person" }).click();
+  await page.getByRole("button", { name: "Barnatt", exact: true }).click();
+  await expect(
+    page.getByRole("button", { name: "Switch person" }),
+  ).toHaveAttribute("aria-label", "Switch person (now Barnatt)");
+  await expect(
+    page.locator(".task-row").filter({ hasText: "Private appointment" }),
+  ).toHaveCount(0);
+  release();
+});

@@ -1255,9 +1255,18 @@ export function useHousehold() {
         await movePushSubscription(member.name !== "Housemates");
       }
       ++loadSequence.current;
+      if (!demo)
+        setEntries((items) =>
+          items.filter(
+            (entry) =>
+              entry.visibility !== "private" ||
+              entry.created_by === member.user_id,
+          ),
+        );
       setIdentity(member.user_id);
       setUndoDeletes([]);
       setChoosingPerson(false);
+      if (!demo) void refresh(true);
     } catch (err) {
       setError((err as Error).message);
     } finally {
