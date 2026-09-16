@@ -7,10 +7,9 @@ export function billPaymentValues(
   cover: boolean,
 ): ExpenseValues | null {
   if (!entry.amount || !entry.payment_members?.includes(payer)) return null;
-  const original = splitEvenly(
-    Math.round(entry.amount * 100),
-    entry.payment_members,
-  );
+  const original =
+    entry.bill_shares ??
+    splitEvenly(Math.round(entry.amount * 100), entry.payment_members);
   const selected = cover
     ? entry.payment_members.filter((id) => !entry.paid_by?.includes(id))
     : [payer];

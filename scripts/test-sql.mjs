@@ -40,6 +40,7 @@ const suites = {
   20: ["daily-life-gaps"],
   26: [
     "feature-improvements",
+    "search-offline-chore-bill-splits",
     "household-life",
     "house-coordination",
     "household-life-membership",
@@ -47,6 +48,7 @@ const suites = {
   21: ["daily-life-gaps", "household-reliability"],
   22: ["household-life"],
   23: ["house-coordination"],
+  25: ["search-offline-chore-bill-splits"],
   24: ["household-life", "house-coordination", "household-life-membership"],
 };
 let runnerDatabase;

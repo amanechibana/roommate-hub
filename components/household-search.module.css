@@ -1,0 +1,43 @@
+.results {
+  list-style: none;
+  padding: 0;
+  margin: 12px 0;
+  max-height: 45dvh;
+  overflow: auto;
+}
+.results li {
+  border-bottom: 1px dashed var(--line, #ddd);
+}
+.result {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  text-align: left;
+  width: 100%;
+  padding: 14px 4px;
+  background: transparent;
+  border: 0;
+  color: inherit;
+}
+.result small,
+.result span {
+  color: var(--muted, #777);
+  font-size: 12px;
+}
+.result strong {
+  font-size: 15px;
+}
+.detail {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.detail p {
+  max-height: 35dvh;
+  overflow: auto;
+  line-height: 1.6;
+}
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}

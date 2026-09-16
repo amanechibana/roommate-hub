@@ -90,6 +90,12 @@ begin
           from (select * from public.house_activity where household_id=hid order by created_at desc,id desc limit 20) a)
       );
     end if;
+  result:=jsonb_set(result,'{entries}',coalesce((select jsonb_agg(value||case when value->>'kind'='task' then
+    coalesce((select jsonb_build_object('last_done_at',e.last_done_at,'last_done_by',e.last_done_by) from public.entries e
+      where e.household_id=hid and e.kind='task' and e.last_done_at is not null and (e.visibility='household' or e.created_by=ctx.actor) and
+       (e.id=(value->>'id')::uuid or (nullif(value->>'series_id','') is not null and e.series_id=(value->>'series_id')::uuid))
+      order by e.last_done_at desc,e.id limit 1),'{}'::jsonb) else '{}'::jsonb end)
+    from jsonb_array_elements(result->'entries')),'[]'));
     return result;
  end if;
  if operation in ('attempt','attempt_clear') then return public.shared_home_before_improvements(access_token,operation,payload); end if;
@@ -411,4 +417,19 @@ begin
 end $$;
 revoke all on function public.shared_household_life(text,text,jsonb) from public,authenticated;
 grant execute on function public.shared_household_life(text,text,jsonb) to anon;
+
+-- Search and the standalone shopping shell retain the same privacy rules.
+do $$ declare definition text; begin
+ definition:=pg_get_functiondef('public.shared_search(text,text,jsonb)'::regprocedure);
+ definition:=replace(definition,'hid:=public.coordination_identity(access_token,null);',
+ $replacement$payload:=payload||jsonb_build_object('actor',public.improvements_read_actor(access_token,operation,payload->>'actor'));
+ hid:=public.coordination_identity(access_token,payload->>'actor');$replacement$);
+ definition:=replace(definition,'m.household_id=hid where e.household_id=hid',
+ $replacement$m.household_id=hid where e.household_id=hid and (e.visibility='household' or e.created_by=nullif(payload->>'actor','')::uuid)$replacement$);
+ definition:=replace(definition,'e.category,e.date,e.amount,m.name','e.category,e.date,e.amount,m.name,e.store,e.unit,e.checklist');
+ execute definition;
+ definition:=pg_get_functiondef('public.shared_shopping(text,text,jsonb)'::regprocedure);
+ definition:=replace(definition,'and not b.done and b.amount>0','and not b.done and b.visibility<>''private'' and b.amount>0');
+ execute definition;
+end $$;
 commit;

@@ -1,4 +1,5 @@
 "use client";
+import { clearOfflineShopping, saveOfflineShopping } from "./offline-shopping";
 import { matchesSearch } from "./search";
 import type { HouseActivity } from "./activity";
 import { useListOrder } from "@/components/ui/list-order";
@@ -162,6 +163,16 @@ export function useHousehold() {
   const shoppingOrder = useListOrder(
     `common-ground-order:${household?.id}:shopping`,
   );
+  useEffect(() => {
+    if (!household || !(demo || loaded)) return;
+    saveOfflineShopping(household, members, uid, entries, demo);
+  }, [household, members, uid, entries, demo, loaded]);
+  useEffect(() => {
+    if (!("serviceWorker" in navigator)) return;
+    void navigator.serviceWorker
+      .register("/sw.js", { scope: "/" })
+      .catch(() => {});
+  }, []);
   const today = dateKey(new Date());
   const loadSequence = useRef(0);
   const weeks = Math.ceil(
@@ -233,6 +244,7 @@ export function useHousehold() {
   }
 
   const clearSession = useCallback(() => {
+    clearOfflineShopping();
     ++loadSequence.current;
     ++sessionGeneration.current;
     setIdentity(null);
@@ -495,6 +507,24 @@ export function useHousehold() {
           );
           if (generation !== sessionGeneration.current) return;
           if (Array.isArray(result.activity)) setActivity(result.activity);
+          if (
+            operation === "update" &&
+            typeof payload.done === "boolean" &&
+            Array.isArray(result.entries)
+          )
+            setEntries((current) =>
+              current.map((e) => {
+                const saved = result.entries.find((s: Entry) => s.id === e.id);
+                return saved && e.done === saved.done
+                  ? {
+                      ...e,
+                      completed_at: saved.completed_at,
+                      last_done_at: saved.last_done_at,
+                      last_done_by: saved.last_done_by,
+                    }
+                  : e;
+              }),
+            );
           if (operation === "payment") {
             if (result.expense) expenseController.inject(result.expense);
             if (Array.isArray(result.entries))
@@ -822,7 +852,18 @@ export function useHousehold() {
             : "task",
       });
     setEntries((current) =>
-      current.map((e) => (e.id === entry.id ? { ...e, done: !entry.done } : e)),
+      current.map((e) =>
+        e.id === entry.id
+          ? {
+              ...e,
+              done: !entry.done,
+              completed_at: entry.done ? null : new Date().toISOString(),
+              ...(e.kind === "task" && !entry.done
+                ? { last_done_at: new Date().toISOString(), last_done_by: uid }
+                : {}),
+            }
+          : e,
+      ),
     );
     persist("update", { id: entry.id, done: !entry.done });
   }
@@ -1263,6 +1304,7 @@ export function useHousehold() {
               entry.created_by === member.user_id,
           ),
         );
+      clearOfflineShopping();
       setIdentity(member.user_id);
       setUndoDeletes([]);
       setChoosingPerson(false);

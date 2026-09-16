@@ -19,6 +19,7 @@ begin
  if exists(select 1 from public.house_activity where household_id=hid and title='My private errand') then raise exception 'Private activity leaked'; end if;
  begin perform public.shared_home('test-gateway','update',jsonb_build_object('actor',b,'id',private_id,'done',false)); raise exception 'Private write allowed' using errcode='P0002'; exception when raise_exception then null; end;
  if jsonb_array_length(public.shared_improvements('test-gateway','search',jsonb_build_object('actor',b,'query','private errand'))->'results')<>0 then raise exception 'Search leaked private item'; end if;
+ if jsonb_array_length(public.shared_search('test-gateway','search',jsonb_build_object('actor',b,'query','private errand'))->'results')<>0 then raise exception 'Unified search leaked private item'; end if;
  result:=public.shared_home('test-gateway','create',jsonb_build_object('actor',a,'kind','task','title','Clean kitchen','category','Chore','date',today,'assignee',a,'client_ids',jsonb_build_array(chore),'checklist',jsonb_build_array(jsonb_build_object('id','step','title','Wash dishes','done',false)),'effort_minutes',30));
  perform public.shared_home('test-gateway','update',jsonb_build_object('actor',a,'id',chore,'undo_token',token,'effort_minutes',45,'checklist',jsonb_build_array(jsonb_build_object('id','step','title','Wash dishes','done',true))));
  perform public.shared_home('test-gateway','undo_edit',jsonb_build_object('actor',a,'undo_token',token));

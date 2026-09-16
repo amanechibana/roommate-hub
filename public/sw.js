@@ -1,7 +1,8 @@
 // Save the app shell and immutable assets only. Household API responses are
 // scoped to the selected person in device storage, never a shared HTTP cache.
+const SHOPPING_ASSETS = ["/offline-shopping.html", "/offline-shopping.js", "/offline-shopping.css"];
 const SHELL_CACHE = "common-ground-shell-v1";
-self.addEventListener("install", (event) => event.waitUntil(Promise.all([self.skipWaiting(), caches.open(SHELL_CACHE).then((cache) => cache.add("/")).catch(() => {})])));
+self.addEventListener("install", (event) => event.waitUntil(Promise.all([self.skipWaiting(), caches.open(SHELL_CACHE).then((cache) => cache.addAll(["/", ...SHOPPING_ASSETS])).catch(() => {})])));
 self.addEventListener("message", (event) => {
   if (event.data?.type !== "save-shell-assets") return;
   const urls = (event.data.urls || []).filter((value) => { try { const url = new URL(value); return url.origin === self.location.origin && url.pathname.startsWith("/_next/static/"); } catch { return false; } });
@@ -16,7 +17,7 @@ self.addEventListener("fetch", (event) => {
       if (response.ok && url.pathname === "/") { const cache = await caches.open(SHELL_CACHE); await cache.put("/", response.clone()); }
       return response;
     }).catch(async () => (await caches.match("/")) || Response.error()));
-  } else if (url.pathname.startsWith("/_next/static/") || ["/icon-192.png", "/icon-512.png"].includes(url.pathname)) {
+  } else if (url.pathname.startsWith("/_next/static/") || ["/icon-192.png", "/icon-512.png", ...SHOPPING_ASSETS].includes(url.pathname)) {
     event.respondWith(caches.open(SHELL_CACHE).then(async (cache) => (await cache.match(event.request)) || fetch(event.request).then((response) => { if (response.ok) void cache.put(event.request, response.clone()); return response; })));
   }
 });
