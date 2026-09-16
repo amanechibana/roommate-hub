@@ -34,6 +34,9 @@ import {
 } from "@/lib/expenses";
 import { paymentNote, venmoPaymentUrl } from "@/lib/settle-up";
 import type { ExpensesController } from "@/lib/use-expenses";
+import { expenseCSV, expenseJSON } from "@/lib/expense-export";
+import SearchField from "./search-field";
+import { matchesSearch } from "@/lib/search";
 import styles from "./expenses-tab.module.css";
 
 type Draft = {
@@ -63,6 +66,7 @@ export default function ExpensesTab({
   // balance, and nothing here can be authored.
   const readOnly = !memberId;
   const { reduced, celebrate } = useHouseMotion();
+  const [query, setQuery] = useState("");
   const [draft, setDraft] = useState<Draft | null>(null);
   const [copyResult, setCopyResult] = useState<{
     payment: string;
@@ -101,6 +105,24 @@ export default function ExpensesTab({
       setCopyResult({ payment: key, ok: false });
     }
   }
+  function exportLedger(format: "csv" | "json") {
+    const blob = new Blob(
+      [
+        format === "csv"
+          ? expenseCSV(expenses, members)
+          : expenseJSON(expenses, members, householdName),
+      ],
+      {
+        type: format === "csv" ? "text/csv;charset=utf-8" : "application/json",
+      },
+    );
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `common-ground-expenses.${format}`;
+    link.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
   return (
     <div className={styles.expenses}>
       <div className="page-heading">
@@ -122,6 +144,31 @@ export default function ExpensesTab({
           <Plus size={16} /> Add expense
         </Button>
       </div>
+      <div className="filters">
+        <Button
+          className="button secondary small"
+          disabled={!loaded || !!error}
+          onClick={() => exportLedger("csv")}
+        >
+          Export CSV
+        </Button>
+        <Button
+          className="button secondary small"
+          disabled={!loaded || !!error}
+          onClick={() => exportLedger("json")}
+        >
+          Export JSON
+        </Button>
+      </div>
+      {controller.undo && !readOnly && (
+        <div className="toast" role="status">
+          <span>Saved changes to “{controller.undo.before.title}”</span>
+          <Button className="undo-button" onClick={controller.undoEdit}>
+            Undo
+          </Button>
+        </div>
+      )}
+      <SearchField label="Search expenses" value={query} onChange={setQuery} />
       {error && (
         <div className={styles.error} role="alert">
           {error}
@@ -297,12 +344,28 @@ export default function ExpensesTab({
               </span>
             </div>
             <AnimatePresence initial={false}>
-              {[...new Set(expenses.map((item) => item.date.slice(0, 7)))]
+              {[
+                ...new Set(
+                  expenses
+                    .filter((item) =>
+                      matchesSearch(
+                        query,
+                        item.title,
+                        item.kind,
+                        item.date,
+                        name(item.paid_by),
+                        item.recipient ? name(item.recipient) : "",
+                      ),
+                    )
+                    .map((item) => item.date.slice(0, 7)),
+                ),
+              ]
                 .sort()
                 .reverse()
                 .map((period) => (
                   <PresenceRow key={period}>
                     <Collapsible.Root
+                      open={query ? true : undefined}
                       defaultOpen={period === month}
                       className="expense-month"
                     >
@@ -316,7 +379,18 @@ export default function ExpensesTab({
                       <Collapsible.Content className="expense-month-content">
                         <AnimatePresence initial={false}>
                           {[...expenses]
-                            .filter((item) => item.date.startsWith(period))
+                            .filter(
+                              (item) =>
+                                item.date.startsWith(period) &&
+                                matchesSearch(
+                                  query,
+                                  item.title,
+                                  item.kind,
+                                  item.date,
+                                  name(item.paid_by),
+                                  item.recipient ? name(item.recipient) : "",
+                                ),
+                            )
                             .sort(
                               (a, b) =>
                                 b.date.localeCompare(a.date) ||

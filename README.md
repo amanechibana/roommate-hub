@@ -454,3 +454,34 @@ Reminders at arbitrary times are not implemented — the only scheduled jobs
 are the morning digest and evening heads-up crons. The Supabase Data API’s
 default row cap also means households should add pagination before growing
 beyond roughly 1,000 entries.
+
+## Daily household improvements
+
+Apply migrations `019_daily_life_gaps.sql` and `020_edit_undo.sql` before deploying
+this update. Migration 018 belongs to the separate household reliability work;
+019 and 020 also work directly after 017. The history wrappers preserve gateway
+validation, and edit undo stores private, expiring snapshots rather than accepting
+restoration data from clients.
+
+- Gym sessions stay out of morning and evening plan digests.
+- Agreement proposals, signatures, amendments, relief requests and decisions,
+  and unilateral PTO/sick-day notices notify housemates using the existing push
+  configuration and quiet hours. Agreements and handbook changes appear in the
+  house activity feed. Passwords and handbook values never enter activity titles.
+- Repeating chores and events support selected weekdays and intervals of 1–52
+  weeks/months (or two-week periods), through an end date within two years.
+  Selected weekdays share one series and rotate assignees by occurrence.
+- The handbook searches values, notes, section names, and attachment filenames;
+  to-dos, shopping, notes, agreements, and expenses also have search fields.
+  Expense CSV/JSON exports include all purchases and repayments regardless of
+  the current search, retaining integer cents and member IDs.
+- The weather strip offers tomorrow and the next six days in an expandable
+  outlook, including the weekend.
+- Saved entry/series and expense edits offer Undo for ten seconds. Server
+  snapshots expire after thirty seconds; undo refuses records changed since
+  the edit, requires the original actor, and consumes each token once.
+
+Verify with `tests/daily-life-gaps.test.ts`, `supabase/tests/daily-life-gaps.sql`,
+and `tests/browser/daily-life-gaps.spec.ts`. The older `isolation.sql` targets
+legacy authenticated-user functions revoked by migration 011; gateway isolation
+is exercised by the current SQL tests.

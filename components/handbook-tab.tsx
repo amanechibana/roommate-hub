@@ -20,6 +20,8 @@ import {
   X,
 } from "lucide-react";
 import { useRef, useState, type FormEvent } from "react";
+import SearchField from "./search-field";
+import { matchesSearch } from "@/lib/search";
 import styles from "./handbook-tab.module.css";
 
 export default function HandbookTab({
@@ -31,6 +33,7 @@ export default function HandbookTab({
   demo: boolean;
   readOnly: boolean;
 }) {
+  const [query, setQuery] = useState("");
   const handbook = useHandbook({ enabled: active, demo });
   const [editing, setEditing] = useState<{
     section: HandbookSection;
@@ -62,10 +65,22 @@ export default function HandbookTab({
         The details you need at home, kept separate from the changing fridge
         notes. File links expire shortly after they open.
       </p>
+      <SearchField label="Search handbook" value={query} onChange={setQuery} />
       <div className={styles.sections}>
         {handbookSections.map((section) => {
           const entries = handbook.entries.filter(
-            (entry) => entry.section === section.id,
+            (entry) =>
+              entry.section === section.id &&
+              matchesSearch(
+                query,
+                section.label,
+                entry.title,
+                entry.value,
+                entry.notes,
+                handbook.files
+                  .filter((file) => file.entry_id === entry.id)
+                  .map((file) => file.file_name),
+              ),
           );
           return (
             <section
@@ -105,7 +120,11 @@ export default function HandbookTab({
                   />
                 ))}
                 {!entries.length && (
-                  <p className={styles.empty}>Nothing saved here yet.</p>
+                  <p className={styles.empty}>
+                    {query
+                      ? "No matches in this section."
+                      : "Nothing saved here yet."}
+                  </p>
                 )}
               </div>
             </section>

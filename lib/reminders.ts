@@ -130,7 +130,12 @@ export function memberDigest(
   // even on a day with no chores.
   const plans = entries
     .filter(
-      (e) => e.kind === "event" && !isBill(e) && !e.done && e.date === today,
+      (e) =>
+        e.kind === "event" &&
+        e.category !== "Gym" &&
+        !isBill(e) &&
+        !e.done &&
+        e.date === today,
     )
     .map((e) => `Plan today: ${e.title}`);
   if (!chores.length && !bills.length && !plans.length) return null;
@@ -175,7 +180,12 @@ export function eveningDigest(
     (e) => unpaidBy(e, member) && (e.date === today || e.date === tomorrow),
   );
   const plans = entries.filter(
-    (e) => e.kind === "event" && !isBill(e) && !e.done && e.date === tomorrow,
+    (e) =>
+      e.kind === "event" &&
+      e.category !== "Gym" &&
+      !isBill(e) &&
+      !e.done &&
+      e.date === tomorrow,
   );
   if (!chores.length && !bills.length && !plans.length && !recap.length)
     return null;

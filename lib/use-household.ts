@@ -1,4 +1,5 @@
 "use client";
+import { matchesSearch } from "./search";
 import type { HouseActivity } from "./activity";
 import { useListOrder } from "@/components/ui/list-order";
 
@@ -96,6 +97,8 @@ export function useHousehold() {
   const [agendaLimit, setAgendaLimit] = useState(3);
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
   const agendaRef = useRef<HTMLDivElement>(null);
+  const [search, setSearch] = useState("");
+  useEffect(() => setSearch(""), [tab, household?.id]);
   const [filter, setFilter] = useState("All");
   const [display, setDisplay] = useState(false);
   const [identity, setIdentity] = useState<string | null>(null);
@@ -157,7 +160,10 @@ export function useHousehold() {
     // A home-screen shortcut lands on a tab, and may ask for the add
     // dialog; a share is an add with the item filled in.
     const params = new URLSearchParams(window.location.search);
-    const wanted = tabs.find((t) => t.name === params.get("tab"))?.name;
+    const wanted =
+      params.get("tab") === "Our household"
+        ? "Our household"
+        : tabs.find((t) => t.name === params.get("tab"))?.name;
     if (wanted) setTab(wanted);
     const draft = shareDraft(params);
     const kind = (["task", "request", "event", "note"] as Kind[]).find(
@@ -555,9 +561,40 @@ export function useHousehold() {
           return e;
         });
       });
+      const undoToken = crypto.randomUUID();
+      const before = entries.filter(
+        (e) =>
+          e.id === entry.id ||
+          (scope === "series" &&
+            entry.series_id &&
+            e.series_id === entry.series_id),
+      );
       let failed = false;
-      persist("update", { ...values, id: entry.id }, [], () => {
-        failed = true;
+      persist(
+        "update",
+        { ...values, id: entry.id, undo_token: undoToken },
+        [],
+        () => {
+          failed = true;
+        },
+      );
+      const generation = sessionGeneration.current;
+      void writes.current.then(() => {
+        if (failed || generation !== sessionGeneration.current) return;
+        setNoticeAction({
+          text: `Saved changes to “${entry.title}”`,
+          label: "Undo",
+          run: () => {
+            if (demo)
+              setEntries((current) =>
+                current.map((e) => before.find((old) => old.id === e.id) || e),
+              );
+            else {
+              persist("undo_edit", { undo_token: undoToken });
+              needsRecovery.current = true;
+            }
+          },
+        });
       });
       // A note or a claimed item turned into a to-do lands fresh on whoever
       // is named, even if the name was already there. A whole-series edit
@@ -603,7 +640,13 @@ export function useHousehold() {
       const sid = crypto.randomUUID();
       const dates =
         repeat && repeat_until && rest.date
-          ? seriesDates(rest.date, repeat, repeat_until)
+          ? seriesDates(
+              rest.date,
+              repeat,
+              repeat_until,
+              createValues.repeat_days,
+              createValues.repeat_interval,
+            )
           : [rest.date || null];
       const copies = dates.map(
         (date, index) =>
@@ -674,6 +717,7 @@ export function useHousehold() {
             `Now repeats ${
               {
                 daily: "daily",
+                weekdays: "on selected weekdays",
                 weekly: "weekly",
                 biweekly: "every 2 weeks",
                 monthly: "monthly",
@@ -1167,34 +1211,48 @@ export function useHousehold() {
   );
   // Personal to-dos only ever show under their own filter: the other lists
   // are the house's, and that is where someone goes looking for one.
-  const filteredTasks = tasks.filter((e) =>
-    filter === "Personal"
-      ? isPersonal(e)
-      : !isPersonal(e) &&
-        (filter === "All" ||
-          (filter === "Mine" && e.assignee === uid) ||
-          (filter === "Open" && !e.done) ||
-          (filter === "Done" && e.done)),
-  );
+  const searchable = (e: Entry) =>
+    matchesSearch(
+      search,
+      e.title,
+      e.description,
+      e.category,
+      members.find((m) => m.user_id === (e.assignee || e.created_by))?.name,
+    );
+  const filteredTasks = tasks
+    .filter(searchable)
+    .filter((e) =>
+      filter === "Personal"
+        ? isPersonal(e)
+        : !isPersonal(e) &&
+          (filter === "All" ||
+            (filter === "Mine" && e.assignee === uid) ||
+            (filter === "Open" && !e.done) ||
+            (filter === "Done" && e.done)),
+    );
   // Personal shopping mirrors personal to-dos: it has its own lane and stays
   // out of every household filter, including Bought.
-  const filteredShopping = shopping.filter((e) =>
-    filter === "Personal"
-      ? isPersonal(e)
-      : !isPersonal(e) &&
-        (filter === "Bought"
-          ? e.done
-          : !e.done &&
-            (filter === "All" ||
-              (filter === "Mine" && e.assignee === uid) ||
-              e.category === filter)),
-  );
+  const filteredShopping = shopping
+    .filter(searchable)
+    .filter((e) =>
+      filter === "Personal"
+        ? isPersonal(e)
+        : !isPersonal(e) &&
+          (filter === "Bought"
+            ? e.done
+            : !e.done &&
+              (filter === "All" ||
+                (filter === "Mine" && e.assignee === uid) ||
+                e.category === filter)),
+    );
   // A note comes down off the fridge without being thrown away: done is
   // "taken down", and it can go back up.
   const notes = pinnedFirst(
-    entries.filter((e) => e.kind === "note" && !e.done),
+    entries.filter((e) => e.kind === "note" && !e.done).filter(searchable),
   );
-  const takenDown = entries.filter((e) => e.kind === "note" && e.done);
+  const takenDown = entries
+    .filter((e) => e.kind === "note" && e.done)
+    .filter(searchable);
   const monthEntries = entries
     .filter(
       (e) =>
@@ -1305,6 +1363,8 @@ export function useHousehold() {
     addMember,
     tasks,
     shopping,
+    search,
+    setSearch,
     filteredTasks,
     filteredShopping,
     notes,
