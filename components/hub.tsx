@@ -1,4 +1,7 @@
 "use client";
+import { useState } from "react";
+import HouseholdSearch from "./household-search";
+import { choreHistoryLabel } from "@/lib/chore-history";
 import { SaveStatus } from "./ui/save-status";
 import { EntryMenu, MemberCard, NoteComposer } from "./ui/house-controls";
 import { DraggableRow } from "./ui/list-order";
@@ -39,6 +42,7 @@ import {
   Settings,
   Share2,
   ShieldCheck,
+  Search,
   Sparkles,
   X,
 } from "lucide-react";
@@ -67,6 +71,7 @@ import { useHouseholdLife } from "@/lib/use-household-life";
 import HousePlanning from "./house-planning";
 export default function Hub() {
   const house = useHousehold();
+  const [houseSearch, setHouseSearch] = useState(false);
   const {
     reduced,
     ready,
@@ -387,6 +392,7 @@ export default function Hub() {
             ? `. Added by ${person(entry.created_by)}`
             : ""}
         </small>
+        <small>{choreHistoryLabel(entry, entries, [...members, ...house.formerMembers])}</small>
       </Button>
       {members.some(
         (m) => m.user_id === entry.assignee && m.name !== "Housemates",
@@ -773,6 +779,13 @@ export default function Hub() {
             <strong>{tab}</strong>
           </span>
           <div>
+            <Button
+              className="icon-button"
+              aria-label="Search the household"
+              onClick={() => setHouseSearch(true)}
+            >
+              <Search size={17} />
+            </Button>
             <DisplayButton onClick={() => changeDisplay(true)} />
             <span className="private-label">
               <ShieldCheck size={14} />
@@ -814,6 +827,26 @@ export default function Hub() {
             )}
           </div>
         </header>
+        <AnimatePresence>
+          {houseSearch && (
+            <HouseholdSearch
+              demo={demo}
+              entries={entries}
+              members={members}
+              expenses={expenseController.expenses}
+              onClose={() => setHouseSearch(false)}
+              onOpen={(result) => {
+                setHouseSearch(false);
+                setTab(result.tab);
+                if (result.entry) {
+                  setFilter(result.entry.category === "Personal" ? "Personal"
+                    : result.entry.kind === "request" && result.entry.done ? "Bought" : "All");
+                  if (!readOnly) setEditing({ kind: result.entry.kind, entry: result.entry });
+                }
+              }}
+            />
+          )}
+        </AnimatePresence>
         <main
           key={tab}
           className={`content ${tab === "Overview" ? "home-content" : tab === "Calendar" ? "calendar-content" : ""}`}
@@ -954,6 +987,11 @@ export default function Hub() {
             </section>
           )}
 
+          {tab === "Shopping list" && (
+            <p className="subtle">
+              <a href="/offline-shopping.html">Open saved list for offline shopping →</a>
+            </p>
+          )}
           {tab === "Shopping list" && (
             <section className="panel entry-panel paper-receipt">
               <div className="panel-heading">

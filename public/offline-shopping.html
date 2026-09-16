@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta name="theme-color" content="#f7f3eb" />
+    <title>Shopping · Common Ground</title>
+    <link rel="stylesheet" href="/offline-shopping.css" />
+    <script src="/offline-shopping.js" defer></script>
+  </head>
+  <body>
+    <main>
+      <a href="/?tab=Shopping%20list">← Back home</a>
+      <p class="eyebrow">COMMON GROUND · SAVED ON THIS DEVICE</p>
+      <h1>Shopping for the house</h1>
+      <p id="saved"></p>
+      <p id="status" role="status" aria-live="polite"></p>
+      <button id="sync" type="button">Sync now</button>
+      <p class="hint">
+        Check items off even without a signal. Priced purchases are logged once
+        when synced. Reopening keeps any existing expense; adjust it at home.
+      </p>
+      <ul id="items" aria-label="Saved shopping list"></ul>
+      <p id="empty"></p>
+    </main>
+  </body>
+</html>

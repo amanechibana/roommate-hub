@@ -21,9 +21,11 @@ export function billShare(entry: Entry, member?: string): number | null {
   if (!isBill(entry) || !entry.amount || !payers.length) return null;
   const cents = Math.round(entry.amount * 100);
   if (member) {
-    const share = splitEvenly(cents, payers)[member];
+    const share = (entry.bill_shares ?? splitEvenly(cents, payers))[member];
     return share === undefined ? null : share / 100;
   }
+  if (entry.bill_shares && new Set(Object.values(entry.bill_shares)).size > 1)
+    return null;
   return Math.round(cents / payers.length) / 100;
 }
 // Shares are the one money figure the house shows to the cent, but only
