@@ -1,6 +1,7 @@
 import { test, expect, type Page } from "@playwright/test";
 import { demoData } from "../../lib/model";
 import type { Expense } from "../../lib/expenses";
+import { mockBackground } from "./mock-background";
 
 test.skip(
   !process.env.PW_SHARED_API,
@@ -8,6 +9,7 @@ test.skip(
 );
 
 async function household(page: Page, member = "you") {
+  await mockBackground(page);
   const data = demoData();
   data.members = data.members.slice(0, 2);
   data.members[0].name = "Amane";
@@ -45,7 +47,7 @@ async function household(page: Page, member = "you") {
   await page.route("**/api/expenses", (route) =>
     route.fulfill({ json: { expenses: [] } }),
   );
-  await page.route("**/api/home", (route) =>
+  await page.route("**/api/home{,?*}", (route) =>
     route.fulfill({
       json: {
         ...data,

@@ -43,11 +43,13 @@ export default function EntryDialog({
   uid,
   onPayment,
   onCover,
+  onLogShare,
   onNudge,
 }: {
   uid: string | null;
   onPayment: (entry: Entry) => void;
   onCover: (entry: Entry) => void;
+  onLogShare?: (entry: Entry) => void;
   onNudge?: (entry: Entry, member: Member) => void;
   editing: {
     kind: Kind;
@@ -222,6 +224,7 @@ export default function EntryDialog({
           uid={uid}
           onPayment={onPayment}
           onCover={onCover}
+          onLogShare={onLogShare}
           onNudge={onNudge}
         />
       )}

@@ -1,3 +1,4 @@
+import { logApiFailure } from "@/lib/api-log";
 import {
   broadcastChange,
   json,
@@ -26,7 +27,7 @@ export async function GET() {
     const result = await sharedDatabase("get", {}, gateway);
     return json({ ...result, files_enabled: handbookStorageConfigured() });
   } catch (err) {
-    console.error("GET /api/handbook", err);
+    logApiFailure("/api/handbook", "get", err);
     return json({ error: "Could not load the house handbook." }, 503);
   }
 }
@@ -79,7 +80,7 @@ export async function POST(request: Request) {
   } catch (err) {
     if ((err as { rejected?: boolean }).rejected)
       return json({ error: (err as Error).message, rejected: true }, 400);
-    console.error("POST /api/handbook", err);
+    logApiFailure("/api/handbook", "post", err);
     return json({ error: "Could not save the handbook change." }, 400);
   }
 }

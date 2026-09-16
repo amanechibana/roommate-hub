@@ -9,7 +9,8 @@ import { useExpenses } from "@/lib/use-expenses";
 import { useHouseMotion } from "@/components/ui/motion-provider";
 import { movePushSubscription } from "@/components/push-settings";
 
-import { hasDatabase, homeRequest } from "@/lib/home-client";
+import { hasDatabase, homeRequest, homeSnapshot } from "@/lib/home-client";
+import { billPaymentValues } from "./bill-posting";
 import {
   UNDO_DURATION,
   editEntries,
@@ -63,6 +64,9 @@ export function useHousehold() {
   const [household, setHousehold] = useState<Household | null>(null);
   const [members, setMembers] = useState<Member[]>([]);
   const [entries, setEntries] = useState<Entry[]>([]);
+  const demoBillPayments = useRef(
+    new Map<string, { billId: string; members: string[]; logged: string[] }>(),
+  );
   const [activity, setActivity] = useState<HouseActivity[]>([]);
   const [tab, setTab] = useState<Tab>("Overview");
   const [editing, setEditing] = useState<{
@@ -123,6 +127,27 @@ export function useHousehold() {
     {
       drain: () => writes.current,
       resolveId: (id) => savedIds.current.get(id) || id,
+      afterDelete: (id) => {
+        if (!demo) {
+          void refresh(true);
+          return;
+        }
+        const link = demoBillPayments.current.get(id);
+        if (link)
+          setEntries((current) =>
+            current.map((e) =>
+              e.id === link.billId
+                ? {
+                    ...e,
+                    paid_by: e.paid_by?.filter(
+                      (p) => !link.members.includes(p),
+                    ),
+                  }
+                : e,
+            ),
+          );
+        demoBillPayments.current.delete(id);
+      },
     },
   );
   const taskOrder = useListOrder(`common-ground-order:${household?.id}:tasks`);
@@ -218,26 +243,31 @@ export function useHousehold() {
     setError("");
     setReady(true);
   }, []);
-  const refresh = useCallback(async (quiet = false) => {
-    if (pending.current) return;
-    const sequence = ++loadSequence.current;
-    try {
-      const data = await homeRequest("/api/home");
-      if (sequence !== loadSequence.current) return;
-      setHousehold(data.household);
-      setMembers(data.members);
-      setEntries(data.entries);
-      setActivity(data.activity || []);
-      setIdentity(data.member_id ?? null);
-      setChannel(typeof data.channel === "string" ? data.channel : null);
-      setError("");
-    } catch (err) {
-      if (!quiet && sequence === loadSequence.current)
-        setError((err as Error).message);
-    } finally {
-      if (sequence === loadSequence.current) setLoaded(true);
-    }
-  }, []);
+  const visibleMonth =
+    tab === "Calendar" ? dateKey(month).slice(0, 7) : undefined;
+  const refresh = useCallback(
+    async (quiet = false) => {
+      if (pending.current) return;
+      const sequence = ++loadSequence.current;
+      try {
+        const data = await homeSnapshot(visibleMonth);
+        if (sequence !== loadSequence.current) return;
+        setHousehold(data.household);
+        setMembers(data.members);
+        setEntries(data.entries);
+        setActivity(data.activity || []);
+        setIdentity(data.member_id ?? null);
+        setChannel(typeof data.channel === "string" ? data.channel : null);
+        setError("");
+      } catch (err) {
+        if (!quiet && sequence === loadSequence.current)
+          setError((err as Error).message);
+      } finally {
+        if (sequence === loadSequence.current) setLoaded(true);
+      }
+    },
+    [visibleMonth],
+  );
   // Change pings from other devices; a ping during a local write defers to
   // after the queue drains, like failure recovery. The 15-second poll stays
   // as the safety net, so a missed or broken ping path costs nothing.
@@ -440,6 +470,15 @@ export function useHousehold() {
           });
           if (generation !== sessionGeneration.current) return;
           if (Array.isArray(result.activity)) setActivity(result.activity);
+          if (operation === "payment") {
+            if (result.expense) expenseController.inject(result.expense);
+            if (Array.isArray(result.entries))
+              setEntries((current) =>
+                current.map(
+                  (e) => result.entries.find((s: Entry) => s.id === e.id) || e,
+                ),
+              );
+          }
           if (copies.length) {
             const saved: Entry[] = result.entries;
             if (!Array.isArray(saved) || saved.length !== copies.length)
@@ -1009,43 +1048,64 @@ export function useHousehold() {
     persist("payment", { id: entry.id, paid });
   }
   // One person paid the biller for everyone: check every payer and put the
-  // split on the ledger so the others owe them their shares. One write creates
-  // both server-side; the expense row is only injected optimistically here so
-  // a failed write can't leave a payment without its expense (or vice versa).
-  function coverBill(entry: Entry) {
-    const cents = estimateCents(entry);
-    if (!uid || !cents || !entry.payment_members?.length) return;
+  // split on the ledger so the others owe them their shares. Live expense
+  // rows are injected only from the server's authoritative payment response.
+  function postBillPayment(entry: Entry, cover: boolean) {
+    if (!uid) return;
+    const values = billPaymentValues(entry, uid, cover);
+    if (!values) return;
+    if (
+      demo &&
+      !cover &&
+      [...demoBillPayments.current.values()].some(
+        (l) => l.billId === entry.id && l.logged.includes(uid),
+      )
+    )
+      return;
     celebrate();
     setEntries((current) =>
-      current.map((e) => (e.id === entry.id ? markAllPaid(e) : e)),
+      current.map((e) =>
+        e.id === entry.id
+          ? cover
+            ? markAllPaid(e)
+            : markPaid(e, uid, true)
+          : e,
+      ),
     );
-    const expense: ExpenseValues & { id: string } = {
-      id: entry.id,
-      kind: "expense",
-      title: entry.title,
-      date: dateKey(new Date()),
-      amount_cents: cents,
-      paid_by: uid,
-      shares: splitEvenly(cents, entry.payment_members),
-      recipient: null,
-    };
-    expenseController.inject({
-      ...expense,
-      household_id: entry.household_id,
-      created_by: uid,
-      created_at: new Date().toISOString(),
-    });
+    if (demo) {
+      const id = crypto.randomUUID();
+      demoBillPayments.current.set(id, {
+        billId: entry.id,
+        members: Object.keys(values.shares).filter(
+          (p) => !entry.paid_by?.includes(p),
+        ),
+        logged: Object.keys(values.shares),
+      });
+      expenseController.inject({
+        ...values,
+        id,
+        household_id: entry.household_id,
+        created_by: uid,
+        created_at: new Date().toISOString(),
+      });
+    }
     persist(
       "payment",
-      { id: entry.id, paid: true, cover: true, expense },
+      {
+        id: entry.id,
+        paid: true,
+        ...(cover ? { cover: true } : { log_share: true }),
+      },
       [],
       expenseController.recover,
     );
     expenseController.hold(writes.current);
     setNotice(
-      `Marked everyone paid and logged ${expenseMoney(cents)} to expenses for “${entry.title}”.`,
+      `${cover ? "Marked everyone paid" : "Marked your share paid"} and logged ${expenseMoney(values.amount_cents)} to expenses for “${entry.title}”.`,
     );
   }
+  const coverBill = (entry: Entry) => postBillPayment(entry, true);
+  const logBillShare = (entry: Entry) => postBillPayment(entry, false);
   async function remove(entry: Entry, scope?: "series") {
     const wholeSeries = scope === "series" && entry.series_id;
     const removed = entries.filter((e) =>
@@ -1298,6 +1358,7 @@ export function useHousehold() {
     addItems,
     togglePayment,
     coverBill,
+    logBillShare,
     remove,
     undoDelete,
     choosePerson,

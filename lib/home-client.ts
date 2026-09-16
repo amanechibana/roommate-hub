@@ -1,4 +1,5 @@
 import { beginSave } from "./save-status";
+import { collectEntryPages } from "./home-pages";
 
 export const hasDatabase = Boolean(
   process.env.NEXT_PUBLIC_SUPABASE_URL &&
@@ -39,4 +40,12 @@ export async function homeRequest(
     finish?.(false);
     throw error;
   }
+}
+export async function homeSnapshot(month?: string) {
+  return collectEntryPages(async (cursor) => {
+    const query = new URLSearchParams();
+    if (month) query.set("month", month);
+    if (cursor) query.set("cursor", cursor);
+    return homeRequest("/api/home" + (query.size ? "?" + query : ""));
+  });
 }

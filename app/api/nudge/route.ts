@@ -1,10 +1,16 @@
+import { logApiFailure } from "@/lib/api-log";
 import {
   json,
   sameOrigin,
   sharedDatabase,
   signedIn,
   selectedMember,
+  homeSnapshotServer,
 } from "@/lib/shared-server";
+import {
+  claimNotification,
+  releaseNotification,
+} from "@/lib/notification-cooldown";
 import {
   pushConfigured,
   preparePush,
@@ -24,12 +30,8 @@ import type { Entry, Member } from "@/lib/model";
 
 export const runtime = "nodejs";
 
-// A nudge is a person poking a person, so one per to-do per quarter hour is
-// plenty: a double tap or an impatient housemate must not turn into a
-// buzzing phone. Per server instance, which is fine for a household.
-const NUDGE_COOLDOWN = 15 * 60000;
-const HANDOFF_COOLDOWN = 60000;
-const recent = new Map<string, number>();
+// SQL claims survive concurrent/cold serverless instances. Failed sends release
+// only their own claim, never a later request's slot.
 
 export async function POST(request: Request) {
   if (!sameOrigin(request)) return json({ error: "Request not allowed." }, 403);
@@ -59,7 +61,7 @@ export async function POST(request: Request) {
     return json({ error: "Invalid request." }, 400);
   try {
     const [home, push] = await Promise.all([
-      sharedDatabase("get"),
+      homeSnapshotServer(),
       sharedDatabase("get", {}, "shared_push"),
     ]);
     const members: Member[] = home.members;
@@ -99,15 +101,12 @@ export async function POST(request: Request) {
       if (quietHours(new Date()))
         return json({ sent: 0, devices: 0, quiet: true });
       const slot = `house:${entry.id}`;
-      const last = recent.get(slot);
-      if (last && Date.now() - last < NUDGE_COOLDOWN)
+      const claim = await claimNotification(slot);
+      if (!claim)
         return json(
           { error: "The house was nudged about that a moment ago." },
           429,
         );
-      for (const [key, at] of recent)
-        if (Date.now() - at >= NUDGE_COOLDOWN) recent.delete(key);
-      recent.set(slot, Date.now());
       // Sent from the roster already in hand, like a personal nudge: no
       // second fetch to fail between claiming the slot and sending.
       const devices = (push.subscriptions as Subscription[]).filter(
@@ -127,7 +126,7 @@ export async function POST(request: Request) {
           )
             sent++;
       }
-      if (!sent) recent.delete(slot);
+      if (!sent) await releaseNotification(slot, claim);
       return json({ sent, devices: devices.length, house: true });
     }
     if (!sender || !entry || !target) return json({ error: nothing }, 400);
@@ -168,9 +167,8 @@ export async function POST(request: Request) {
         : bill
           ? `${entry.id}:${target.user_id}`
           : entry.id;
-    const cooldown = handingOff ? HANDOFF_COOLDOWN : NUDGE_COOLDOWN;
-    const last = recent.get(slot);
-    if (last && Date.now() - last < cooldown)
+    const claim = await claimNotification(slot, handingOff);
+    if (!claim)
       return thanking
         ? json({ sent: 0, devices: 0, again: true })
         : handingOff
@@ -181,9 +179,6 @@ export async function POST(request: Request) {
             );
     // Claimed before the sends so an overlapping double tap sees it; a nudge
     // that reached nobody gives the slot back so a retry can go through.
-    for (const [key, at] of recent)
-      if (Date.now() - at >= NUDGE_COOLDOWN) recent.delete(key);
-    recent.set(slot, Date.now());
     const devices = (push.subscriptions as Subscription[]).filter(
       (sub) => sub.member === target.user_id,
     );
@@ -205,10 +200,10 @@ export async function POST(request: Request) {
         )
           sent++;
     }
-    if (!sent) recent.delete(slot);
+    if (!sent) await releaseNotification(slot, claim);
     return json({ sent, devices: devices.length });
   } catch (err) {
-    console.error("POST /api/nudge", err);
+    logApiFailure("/api/nudge", "post", err);
     return json({ error: "Couldn’t send the nudge. Try again." }, 503);
   }
 }

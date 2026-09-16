@@ -32,6 +32,7 @@ export async function sendPush(
     await webpush.sendNotification(
       { endpoint: sub.endpoint, keys: sub.keys },
       JSON.stringify(payload),
+      { timeout: 8000 },
     );
     return "sent";
   } catch (error) {

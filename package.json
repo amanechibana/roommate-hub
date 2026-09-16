@@ -8,6 +8,8 @@
     "start": "next start",
     "typecheck": "tsc --noEmit",
     "test": "tsx --test tests/*.test.ts",
+    "test:sql": "node scripts/test-sql.mjs",
+    "migrate": "sh scripts/migrate.sh",
     "test:browser": "playwright test",
     "format": "prettier --write ."
   },

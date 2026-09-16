@@ -21,6 +21,7 @@ export type SaveValues = Partial<Entry> & {
   rotation_partner?: string;
   paid?: boolean;
   cover?: boolean;
+  log_share?: boolean;
   undo_token?: string;
   scope?: "series";
   expense?: ExpenseValues & { id: string };

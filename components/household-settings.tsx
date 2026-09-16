@@ -5,6 +5,8 @@ import { Button } from "@/components/ui/button";
 import PushSettings from "@/components/push-settings";
 import CalendarFeed from "@/components/calendar-feed";
 import AgreementsSection from "@/components/agreements-section";
+import HouseholdReliability from "@/components/household-reliability";
+import HouseholdHistory from "@/components/household-history";
 import { AmbientToggle } from "@/components/ui/display-button";
 import { type Member } from "@/lib/model";
 import { ArrowDownToLine, Plus, ShieldCheck, Users } from "lucide-react";
@@ -82,7 +84,7 @@ export default function HouseholdSettings({
             This device is signed in as the household, so it reads the house but
             doesn’t check things off. Pick a person above to join in.
           </p>
-        ) : (
+        ) : members.filter((m) => m.name !== "Housemates").length < 2 ? (
           <>
             <h3>Add your housemates</h3>
             <p className="subtle">
@@ -105,6 +107,11 @@ export default function HouseholdSettings({
               </Button>
             </form>
           </>
+        ) : (
+          <p className="subtle">
+            Adding more housemates is disabled while the house agreements
+            support two people.
+          </p>
         )}
       </section>
       <section className="panel settings-panel">
@@ -156,6 +163,8 @@ export default function HouseholdSettings({
         entries={entries}
         refreshHousehold={refresh}
       />
+      {!demo && <HouseholdReliability readOnly={sharedScreen} />}
+      {!demo && <HouseholdHistory />}
     </div>
   );
 }

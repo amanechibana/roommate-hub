@@ -1,6 +1,7 @@
 import { test, expect } from "@playwright/test";
 import { demoData } from "../../lib/model";
 import type { Expense } from "../../lib/expenses";
+import { mockBackground } from "./mock-background";
 
 test("expenses calculate, survive tab changes, edit and record repayments", async ({
   page,
@@ -120,6 +121,7 @@ test("shared expenses save optimistically without refetch and recover failed del
   page,
 }) => {
   test.skip(!process.env.PW_SHARED_API);
+  await mockBackground(page);
   const data = demoData();
   data.members = data.members.slice(0, 2);
   let records: Expense[] = [];
@@ -132,7 +134,7 @@ test("shared expenses save optimistically without refetch and recover failed del
   await page.route("**/api/session", (route) =>
     route.fulfill({ json: { authenticated: true, member_id: "you" } }),
   );
-  await page.route("**/api/home", (route) =>
+  await page.route("**/api/home{,?*}", (route) =>
     route.fulfill({ json: { ...data, member_id: "you" } }),
   );
   await page.route("**/api/expenses", async (route) => {
