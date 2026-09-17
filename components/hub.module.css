@@ -765,21 +765,33 @@
   }
 }
 
-/* Above the phone breakpoint the sidebar is a rail: the marks and the cat,
-   with names under the icons. The wide column was six links and a lot of
-   green; the width goes to the noticeboard instead. */
+/* Let the desktop rail use its height, keeping the cat and controls in view. */
 @media (min-width: 651px) {
+  .shell {
+    --rail-width: clamp(96px, 12dvh, 144px);
+    --rail-label: clamp(10px, 1.25dvh, 14px);
+    --rail-icon: clamp(18px, 2.5dvh, 28px);
+    --rail-gap: clamp(2px, 0.45dvh, 6px);
+  }
   .shell :global(.sidebar) {
-    width: 96px;
-    padding: 20px 10px 14px;
+    width: var(--rail-width);
+    padding: clamp(8px, 1.3dvh, 18px) 10px;
     align-items: center;
   }
   .shell :global(.main-shell) {
-    margin-left: 96px;
+    margin-left: var(--rail-width);
   }
-  .shell :global(.brand) {
-    margin: 0 0 22px;
+  .shell :global(.sidebar .brand) {
+    margin: 0 0 clamp(8px, 1.5dvh, 20px);
     flex-shrink: 0;
+  }
+  .shell :global(.sidebar .brand-icon) {
+    width: clamp(40px, 5.8dvh, 64px);
+    height: clamp(40px, 5.8dvh, 64px);
+  }
+  .shell :global(.sidebar .brand-icon svg) {
+    width: var(--rail-icon);
+    height: var(--rail-icon);
   }
   .shell :global(.brand-text),
   .shell :global(.nav-label) {
@@ -787,23 +799,29 @@
   }
   .shell :global(.sidebar nav) {
     width: 100%;
-    gap: 4px;
+    gap: var(--rail-gap);
     flex: 1;
     min-height: 0;
-    justify-content: start;
     overflow: visible;
   }
   .shell :global(.sidebar nav button) {
     position: relative;
-    flex-shrink: 0;
+    flex: 1 1 0;
+    width: 100%;
     flex-direction: column;
     justify-content: center;
-    gap: 5px;
-    padding: 9px 4px 8px;
+    gap: var(--rail-gap);
+    padding: clamp(2px, 0.45dvh, 6px) 2px;
     min-height: 0;
-    font-size: 10px;
+    font-size: var(--rail-label);
     text-align: center;
     line-height: 1.15;
+  }
+  .shell :global(.sidebar nav button > svg),
+  .shell :global(.settings-link > svg) {
+    width: var(--rail-icon);
+    height: var(--rail-icon);
+    flex-shrink: 0;
   }
   .shell :global(.sidebar nav button > span:not(.nav-count)) {
     display: inline;
@@ -820,34 +838,54 @@
     margin: 0;
     min-width: 18px;
     padding: 1px 5px;
-    font-size: 9px;
+    font-size: clamp(9px, 1dvh, 12px);
+  }
+  .shell :global(.sidebar nav .nav-count) {
+    top: calc(
+      50% - (var(--rail-icon) + var(--rail-gap) + var(--rail-label) * 1.15) /
+        2 - 2px
+    );
+    right: calc(50% - var(--rail-icon) / 2 - 12px);
   }
   .shell :global(.sidebar-bottom) {
     flex-shrink: 0;
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 6px;
+    gap: var(--rail-gap);
     width: 100%;
-    padding-top: 14px;
+    padding-top: clamp(6px, 1dvh, 14px);
   }
   .shell :global(.rail-companion) {
-    width: 78px;
-    margin-bottom: 4px;
+    width: 100%;
+    margin: 0;
+  }
+  .shell :global(.rail-companion > button) {
+    max-width: none;
+    margin: 0;
   }
   .shell :global(.settings-link) {
+    width: 100%;
     flex-direction: column;
-    gap: 5px;
-    padding: 9px 4px 8px;
-    font-size: 10px;
+    justify-content: center;
+    gap: var(--rail-gap);
+    padding: clamp(4px, 0.65dvh, 9px) 4px;
+    font-size: var(--rail-label);
     text-align: center;
+    line-height: 1.15;
   }
   .shell :global(.sidebar-profile) {
-    flex-direction: column;
-    gap: 6px;
+    flex-direction: row;
+    justify-content: center;
+    gap: var(--rail-gap);
     width: 100%;
-    margin-top: 6px;
-    padding-top: 12px;
+    margin-top: clamp(3px, 0.5dvh, 7px);
+    padding-top: clamp(6px, 0.8dvh, 10px);
+  }
+  .shell :global(.sidebar-profile .avatar) {
+    width: clamp(28px, 4dvh, 44px);
+    height: clamp(28px, 4dvh, 44px);
+    font-size: var(--rail-label);
   }
   .shell :global(.profile-switch) {
     display: inline-flex;
@@ -949,32 +987,6 @@
 .shell :global(.attention-panel > .attention-list) {
   margin-top: 0;
 }
-@media (min-width: 651px) and (max-height: 850px) {
-  .shell :global(.sidebar) {
-    padding-top: 12px;
-    padding-bottom: 10px;
-  }
-  .shell :global(.sidebar .brand) {
-    margin-bottom: 12px;
-  }
-  .shell :global(.sidebar nav) {
-    gap: 2px;
-  }
-  .shell :global(.sidebar nav button) {
-    padding: 6px 3px;
-    gap: 4px;
-  }
-  .shell :global(.sidebar-bottom) {
-    padding-top: 6px;
-    gap: 3px;
-  }
-  .shell :global(.sidebar-profile) {
-    flex-direction: row;
-    justify-content: center;
-    margin-top: 3px;
-    padding-top: 8px;
-  }
-}
 @media (max-width: 1100px) {
   .shell :global(.topbar > span),
   .shell :global(.private-label) {
@@ -1028,17 +1040,4 @@
   overflow: hidden;
   clip-path: inset(50%);
   white-space: nowrap;
-}
-
-@media (min-width: 651px) and (max-height: 650px) {
-  .shell :global(.sidebar nav button) {
-    padding-block: 3px;
-    gap: 2px;
-  }
-  .shell :global(.settings-link) {
-    padding-block: 6px;
-  }
-  .shell :global(.rail-companion) {
-    margin-bottom: 0;
-  }
 }
