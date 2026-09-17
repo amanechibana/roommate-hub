@@ -12,6 +12,7 @@ import { PaperDialog } from "./ui/dialog";
 import { AnimatePresence } from "motion/react";
 import { useEffect, useRef, useState } from "react";
 import {
+  CalendarDays,
   ArrowDownLeft,
   ArrowUpRight,
   Check,
@@ -121,7 +122,6 @@ export default function ExpensesTab({
   const balances = controller.balances;
   const mine = (memberId && balances[memberId]) || 0;
   const month = today.slice(0, 7);
-  const monthTotal = controller.summary(month).total;
   const [exportError, setExportError] = useState("");
   const [summaryMonth, setSummaryMonth] = useState(month);
   useEffect(() => setSummaryMonth(month), [month]);
@@ -205,27 +205,6 @@ export default function ExpensesTab({
           <Plus size={16} /> Add expense
         </Button>
       </div>
-      {exportError && (
-        <p className="error" role="alert">
-          {exportError}
-        </p>
-      )}
-      <div className="filters">
-        <Button
-          className="button secondary small"
-          disabled={!loaded || !!error}
-          onClick={() => exportLedger("csv")}
-        >
-          Export CSV
-        </Button>
-        <Button
-          className="button secondary small"
-          disabled={!loaded || !!error}
-          onClick={() => exportLedger("json")}
-        >
-          Export JSON
-        </Button>
-      </div>
       {controller.undo && !readOnly && (
         <div className="toast" role="status">
           <span>Saved changes to “{controller.undo.before.title}”</span>
@@ -234,43 +213,6 @@ export default function ExpensesTab({
           </Button>
         </div>
       )}
-      <section className="panel monthly-summary">
-        <h2>Monthly spending summary</h2>
-        <label>
-          Summary month
-          <input
-            type="month"
-            required
-            value={summaryMonth}
-            onChange={(event) => setSummaryMonth(event.target.value)}
-          />
-        </label>
-        <strong>{expenseMoney(summary.total)} in purchases</strong>
-        <p className="subtle">
-          Repayments are excluded. Totals include the full ledger.
-        </p>
-        <div className="form-grid">
-          <div>
-            {Object.entries(summary.categories)
-              .filter(([, amount]) => amount > 0)
-              .map(([category, amount]) => (
-                <p key={category}>
-                  {category}: <strong>{expenseMoney(amount)}</strong>
-                </p>
-              ))}
-          </div>
-          <div>
-            {Object.entries(summary.members)
-              .filter(([, amount]) => amount > 0)
-              .map(([id, amount]) => (
-                <p key={id}>
-                  {name(id)} paid: <strong>{expenseMoney(amount)}</strong>
-                </p>
-              ))}
-          </div>
-        </div>
-      </section>
-      <SearchField label="Search expenses" value={query} onChange={setQuery} />
       {error && (
         <div className={styles.error} role="alert">
           {error}
@@ -303,7 +245,7 @@ export default function ExpensesTab({
         </div>
       ) : (
         <>
-          {!!expenses.length && (
+          {loaded && (
             <div
               className={`${styles.summary} ${readOnly ? styles.houseOnly : ""}`}
             >
@@ -324,119 +266,59 @@ export default function ExpensesTab({
                   </p>
                 </section>
               )}
-              <section className={`${styles.spending} panel`}>
-                <span>Shared spending this month</span>
+              <section
+                className={`${styles.spending} panel monthly-summary`}
+                aria-label="Monthly spending summary"
+              >
+                <div className={styles.monthHeading}>
+                  <span>Monthly spending</span>
+                  <label className={styles.monthPicker}>
+                    <span aria-hidden="true">
+                      {new Date(
+                        `${summaryMonth}-02T12:00:00`,
+                      ).toLocaleDateString("en-US", {
+                        month: "short",
+                        year: "numeric",
+                      })}
+                    </span>
+                    <CalendarDays size={14} aria-hidden="true" />
+                    <input
+                      aria-label="Summary month"
+                      type="month"
+                      required
+                      value={summaryMonth}
+                      onChange={(event) => {
+                        if (event.target.value)
+                          setSummaryMonth(event.target.value);
+                      }}
+                    />
+                  </label>
+                </div>
                 <strong>
-                  <AnimatedMoney cents={monthTotal} />
+                  <AnimatedMoney cents={summary.total} />
                 </strong>
-                <p>Purchases only, repayments excluded</p>
+                <details className={styles.breakdown}>
+                  <summary>Spending breakdown</summary>
+                  <p>
+                    Purchases only. Repayments excluded. Full ledger totals.
+                  </p>
+                  {Object.entries(summary.categories)
+                    .filter(([, amount]) => amount > 0)
+                    .map(([category, amount]) => (
+                      <p key={category}>
+                        {category}: <b>{expenseMoney(amount)}</b>
+                      </p>
+                    ))}
+                  {Object.entries(summary.members)
+                    .filter(([, amount]) => amount > 0)
+                    .map(([id, amount]) => (
+                      <p key={id}>
+                        {name(id)} paid: <b>{expenseMoney(amount)}</b>
+                      </p>
+                    ))}
+                </details>
               </section>
             </div>
-          )}
-          <section className={`${styles.settlements} panel`}>
-            <div className={styles.sectionHeading}>
-              <h2>Who owes whom</h2>
-              <Button
-                className="text-button"
-                hidden={readOnly}
-                onClick={() => setDraft({ kind: "settlement" })}
-              >
-                Record repayment <Plus size={14} />
-              </Button>
-            </div>
-            <p className={styles.settlementHelp}>
-              Pay outside Common Ground with Venmo, or copy the note for Zelle
-              or another payment app. Record paid only after money moves—it
-              updates the ledger and does not transfer money.
-            </p>
-            <AnimatePresence initial={false}>
-              {suggestedRepayments(balances).map((payment) => {
-                const payer = name(payment.from);
-                const recipient = name(payment.to);
-                const key = `${payment.from}-${payment.to}`;
-                const handoff = {
-                  payer,
-                  recipient,
-                  amountCents: payment.amount,
-                  household: householdName,
-                };
-                return (
-                  <PresenceRow className={styles.payment} key={key}>
-                    <span className={styles.paymentRoute}>
-                      <b>{payer}</b>
-                      <ArrowRight size={14} />
-                      <b>{recipient}</b>
-                    </span>
-                    <strong>{expenseMoney(payment.amount)}</strong>
-                    <div className={styles.paymentActions}>
-                      <a
-                        className="button secondary small"
-                        href={venmoPaymentUrl(handoff)}
-                        target="_blank"
-                        rel="noreferrer"
-                        aria-label={`Open Venmo for ${payer} to pay ${recipient} ${expenseMoney(payment.amount)}`}
-                      >
-                        Venmo <ExternalLink size={13} aria-hidden="true" />
-                      </a>
-                      <Button
-                        className="button secondary small"
-                        aria-label={`Copy payment note for ${payer} to pay ${recipient}`}
-                        onClick={() => void copyPaymentNote(payment)}
-                      >
-                        {copyResult?.payment === key && copyResult.ok ? (
-                          <Check size={13} aria-hidden="true" />
-                        ) : (
-                          <Copy size={13} aria-hidden="true" />
-                        )}
-                        {copyResult?.payment === key
-                          ? copyResult.ok
-                            ? "Copied"
-                            : "Copy failed"
-                          : "Copy note"}
-                      </Button>
-                      <Button
-                        className="button secondary small"
-                        hidden={readOnly}
-                        onClick={() =>
-                          setDraft({ kind: "settlement", ...payment })
-                        }
-                      >
-                        Record paid
-                      </Button>
-                    </div>
-                  </PresenceRow>
-                );
-              })}
-            </AnimatePresence>
-            {!suggestedRepayments(balances).length && (
-              <p className={styles.settled}>No outstanding balances.</p>
-            )}
-          </section>
-          {!!pending.length && (
-            <section className="panel">
-              <div className={styles.sectionHeading}>
-                <h2>Pending from the shopping list</h2>
-                <span>
-                  {expenseMoney(
-                    pending.reduce(
-                      (sum, entry) => sum + estimateCents(entry),
-                      0,
-                    ),
-                  )}{" "}
-                  estimated
-                </span>
-              </div>
-              {pending.map((entry) => (
-                <div className={styles.pendingRow} key={entry.id}>
-                  <span>{entry.title}</span>
-                  <strong>{expenseMoney(estimateCents(entry))}</strong>
-                </div>
-              ))}
-              <p className={styles.pendingNote}>
-                Estimates from the shopping list. Each becomes a real expense
-                when it’s marked bought.
-              </p>
-            </section>
           )}
           <section className={`${styles.activity} panel paper-ledger`}>
             <div className={styles.sectionHeading}>
@@ -444,6 +326,13 @@ export default function ExpensesTab({
               <span>
                 {expenses.length} {expenses.length === 1 ? "record" : "records"}
               </span>
+            </div>
+            <div className={styles.activitySearch}>
+              <SearchField
+                label="Search expenses"
+                value={query}
+                onChange={setQuery}
+              />
             </div>
             <AnimatePresence initial={false}>
               {[
@@ -588,8 +477,136 @@ export default function ExpensesTab({
               </div>
             )}
           </section>
+          <section className={`${styles.settlements} panel`}>
+            <div className={styles.sectionHeading}>
+              <h2>Who owes whom</h2>
+              <Button
+                className="text-button"
+                hidden={readOnly}
+                onClick={() => setDraft({ kind: "settlement" })}
+              >
+                Record repayment <Plus size={14} />
+              </Button>
+            </div>
+            <p className={styles.settlementHelp}>
+              Pay outside Common Ground with Venmo, or copy the note for Zelle
+              or another payment app. Record paid only after money moves—it
+              updates the ledger and does not transfer money.
+            </p>
+            <AnimatePresence initial={false}>
+              {suggestedRepayments(balances).map((payment) => {
+                const payer = name(payment.from);
+                const recipient = name(payment.to);
+                const key = `${payment.from}-${payment.to}`;
+                const handoff = {
+                  payer,
+                  recipient,
+                  amountCents: payment.amount,
+                  household: householdName,
+                };
+                return (
+                  <PresenceRow className={styles.payment} key={key}>
+                    <span className={styles.paymentRoute}>
+                      <b>{payer}</b>
+                      <ArrowRight size={14} />
+                      <b>{recipient}</b>
+                    </span>
+                    <strong>{expenseMoney(payment.amount)}</strong>
+                    <div className={styles.paymentActions}>
+                      <a
+                        className="button secondary small"
+                        href={venmoPaymentUrl(handoff)}
+                        target="_blank"
+                        rel="noreferrer"
+                        aria-label={`Open Venmo for ${payer} to pay ${recipient} ${expenseMoney(payment.amount)}`}
+                      >
+                        Venmo <ExternalLink size={13} aria-hidden="true" />
+                      </a>
+                      <Button
+                        className="button secondary small"
+                        aria-label={`Copy payment note for ${payer} to pay ${recipient}`}
+                        onClick={() => void copyPaymentNote(payment)}
+                      >
+                        {copyResult?.payment === key && copyResult.ok ? (
+                          <Check size={13} aria-hidden="true" />
+                        ) : (
+                          <Copy size={13} aria-hidden="true" />
+                        )}
+                        {copyResult?.payment === key
+                          ? copyResult.ok
+                            ? "Copied"
+                            : "Copy failed"
+                          : "Copy note"}
+                      </Button>
+                      <Button
+                        className="button secondary small"
+                        hidden={readOnly}
+                        onClick={() =>
+                          setDraft({ kind: "settlement", ...payment })
+                        }
+                      >
+                        Record paid
+                      </Button>
+                    </div>
+                  </PresenceRow>
+                );
+              })}
+            </AnimatePresence>
+            {!suggestedRepayments(balances).length && (
+              <p className={styles.settled}>No outstanding balances.</p>
+            )}
+          </section>
+          {!!pending.length && (
+            <section className="panel">
+              <div className={styles.sectionHeading}>
+                <h2>Pending from the shopping list</h2>
+                <span>
+                  {expenseMoney(
+                    pending.reduce(
+                      (sum, entry) => sum + estimateCents(entry),
+                      0,
+                    ),
+                  )}{" "}
+                  estimated
+                </span>
+              </div>
+              {pending.map((entry) => (
+                <div className={styles.pendingRow} key={entry.id}>
+                  <span>{entry.title}</span>
+                  <strong>{expenseMoney(estimateCents(entry))}</strong>
+                </div>
+              ))}
+              <p className={styles.pendingNote}>
+                Estimates from the shopping list. Each becomes a real expense
+                when it’s marked bought.
+              </p>
+            </section>
+          )}
         </>
       )}
+      <footer className={styles.exports} aria-label="Export expense ledger">
+        {exportError && (
+          <p className="error" role="alert">
+            {exportError}
+          </p>
+        )}
+        <div className="filters">
+          <Button
+            className="button secondary small"
+            disabled={!loaded || !!error}
+            onClick={() => exportLedger("csv")}
+          >
+            Export CSV
+          </Button>
+          <Button
+            className="button secondary small"
+            disabled={!loaded || !!error}
+            onClick={() => exportLedger("json")}
+          >
+            Export JSON
+          </Button>
+        </div>
+      </footer>
       <AnimatePresence>
         {draft && memberId && (
           <ExpenseDialog

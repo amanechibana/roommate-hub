@@ -1,7 +1,7 @@
 .grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 24px;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 16px;
   padding-bottom: 24px;
 }
 .checkin,
@@ -81,4 +81,19 @@
   .times {
     grid-template-columns: 1fr;
   }
+}
+
+.sections {
+  min-width: 0;
+}
+.composer {
+  margin: 12px 0;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+.composer summary {
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--green);
 }

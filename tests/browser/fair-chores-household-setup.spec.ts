@@ -114,6 +114,9 @@ for (const width of [1440, 390]) {
     await page.setViewportSize({ width, height: 1000 });
     await mock(page);
     await page.goto("/?tab=To-dos");
+    await page
+      .getByText("Weekly chore balance and fair assignments", { exact: true })
+      .click();
     const balance = page.getByRole("region", { name: "Weekly chore effort" });
     await expect(balance).toContainText("50 min planned");
     await expect(balance).toContainText("Take out trash · 5 min");
@@ -215,6 +218,9 @@ test("shared screens show workload and setup without assignment or setup actions
 }) => {
   await mock(page, false, true);
   await page.goto("/?tab=To-dos");
+  await page
+    .getByText("Weekly chore balance and fair assignments", { exact: true })
+    .click();
   await expect(
     page.getByRole("region", { name: "Weekly chore effort" }),
   ).toContainText("50 min planned");

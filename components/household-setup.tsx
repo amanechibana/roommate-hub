@@ -20,6 +20,7 @@ export default function HouseholdSetup({
   const count = steps.filter((s) => s.done).length;
   return (
     <section
+      id="household-setup"
       className={`panel settings-panel ${styles.setup}`}
       aria-label="Household setup checklist"
     >

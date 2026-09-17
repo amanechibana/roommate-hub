@@ -62,11 +62,6 @@ export default function AttentionView({
       className="panel attention-panel"
       aria-label="Personal attention list"
     >
-      <p className="subtle">
-        Dates follow {timezone}. Showing your open to-dos and unpaid bill
-        shares, including upcoming ones, plus requests waiting for your
-        decision.
-      </p>
       {incomplete && (
         <p role="status">Loading agreements and coverage requests…</p>
       )}
@@ -172,6 +167,11 @@ export default function AttentionView({
           </li>
         ))}
       </ul>
+      <p className="subtle">
+        Dates follow {timezone}. Showing your open to-dos and unpaid bill
+        shares, including upcoming ones, plus requests waiting for your
+        decision.
+      </p>
     </section>
   );
 }

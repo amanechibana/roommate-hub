@@ -38,6 +38,8 @@ import { collapseSeries, dayOrder, titleGroup } from "@/lib/household-actions";
 import { safeUrl, type Entry, type Kind, type Member } from "@/lib/model";
 import {
   ArrowRight,
+  Bell,
+  BookOpen,
   ExternalLink,
   Hand,
   Home,
@@ -427,7 +429,12 @@ function HubContent({ house }: { house: ReturnType<typeof useHousehold> }) {
             ? `. Added by ${person(entry.created_by)}`
             : ""}
         </small>
-        <small>{choreHistoryLabel(entry, entries, [...members, ...house.formerMembers])}</small>
+        <small>
+          {choreHistoryLabel(entry, entries, [
+            ...members,
+            ...house.formerMembers,
+          ])}
+        </small>
       </Button>
       {members.some(
         (m) => m.user_id === entry.assignee && m.name !== "Housemates",
@@ -540,9 +547,9 @@ function HubContent({ house }: { house: ReturnType<typeof useHousehold> }) {
           <h1>Who’s this?</h1>
           <p className="subtitle">Pick who’s using this device.</p>
           <p className="subtle">
-            This selects a person; it does not verify their identity. Anyone with
-            the household code can switch people, view personal items, and make
-            changes in their name.
+            This selects a person; it does not verify their identity. Anyone
+            with the household code can switch people, view personal items, and
+            make changes in their name.
           </p>
           <div className="person-picker">
             {members
@@ -717,42 +724,61 @@ function HubContent({ house }: { house: ReturnType<typeof useHousehold> }) {
         </a>
         <span className="nav-label">{household.name}</span>
         <nav aria-label="Main navigation">
-          {tabs.map(({ name, icon: Icon }) => (
-            <Button
-              key={name}
-              className={tab === name ? "active" : ""}
-              aria-current={tab === name ? "page" : undefined}
-              aria-label={name === "Household life" || name === "Needs your attention" ? name : undefined}
-              onClick={() => setTab(name)}
-            >
-              {tab === name && (
-                <m.span
-                  className="nav-highlight"
-                  layoutId={reduced ? undefined : "navigation"}
-                  transition={{ type: "spring", stiffness: 360, damping: 32 }}
-                  aria-hidden="true"
-                />
-              )}
-              <Icon size={19} />
-              <span>{name === "Household life" ? "House life" : name === "Needs your attention" ? "Attention" : name}</span>
-              {name === "Shopping list" && !!neededItems.length && (
-                <span
-                  className="nav-count"
-                  aria-label={`${neededItems.length} to pick up`}
-                >
-                  {neededItems.length}
+          {tabs
+            .filter(
+              ({ name }) =>
+                name !== "Needs your attention" && name !== "House handbook",
+            )
+            .map(({ name, icon: Icon }) => (
+              <Button
+                key={name}
+                className={tab === name ? "active" : ""}
+                aria-current={tab === name ? "page" : undefined}
+                aria-label={
+                  name === "Household life" || name === "Needs your attention"
+                    ? name
+                    : undefined
+                }
+                onClick={() => setTab(name)}
+              >
+                {tab === name && (
+                  <m.span
+                    className="nav-highlight"
+                    layoutId={reduced ? undefined : "navigation"}
+                    transition={{
+                      type: "spring",
+                      stiffness: 360,
+                      damping: 32,
+                    }}
+                    aria-hidden="true"
+                  />
+                )}
+                <Icon size={19} />
+                <span>
+                  {name === "Household life"
+                    ? "House life"
+                    : name === "Needs your attention"
+                      ? "Attention"
+                      : name}
                 </span>
-              )}
-              {name === "To-dos" && !!dueTasks.length && (
-                <span
-                  className="nav-count"
-                  aria-label={`${dueTasks.length} due`}
-                >
-                  {dueTasks.length}
-                </span>
-              )}
-            </Button>
-          ))}
+                {name === "Shopping list" && !!neededItems.length && (
+                  <span
+                    className="nav-count"
+                    aria-label={`${neededItems.length} to pick up`}
+                  >
+                    {neededItems.length}
+                  </span>
+                )}
+                {name === "To-dos" && !!dueTasks.length && (
+                  <span
+                    className="nav-count"
+                    aria-label={`${dueTasks.length} due`}
+                  >
+                    {dueTasks.length}
+                  </span>
+                )}
+              </Button>
+            ))}
         </nav>
         <div className="sidebar-bottom">
           <div className="rail-companion">
@@ -772,11 +798,6 @@ function HubContent({ house }: { house: ReturnType<typeof useHousehold> }) {
               </span>
             )}
           </Button>
-          {!demo && !readOnly && improvements.loaded && setupComplete < 4 && (
-            <Button className="text-button" onClick={() => setTab("Our household")}>
-              Finish household setup · {setupComplete}/4
-            </Button>
-          )}
           <div className="sidebar-profile">
             <Button
               className="text-button profile-switch"
@@ -825,6 +846,28 @@ function HubContent({ house }: { house: ReturnType<typeof useHousehold> }) {
           </span>
           <div>
             <Button
+              className={`topbar-link ${tab === "Needs your attention" ? "selected" : ""}`}
+              aria-label="Needs your attention"
+              aria-current={
+                tab === "Needs your attention" ? "page" : undefined
+              }
+              title="Needs your attention"
+              onClick={() => setTab("Needs your attention")}
+            >
+              <Bell size={17} />
+              <span>Attention</span>
+            </Button>
+            <Button
+              className={`topbar-link ${tab === "House handbook" ? "selected" : ""}`}
+              aria-label="House handbook"
+              aria-current={tab === "House handbook" ? "page" : undefined}
+              title="House handbook"
+              onClick={() => setTab("House handbook")}
+            >
+              <BookOpen size={17} />
+              <span>Handbook</span>
+            </Button>
+            <Button
               className="icon-button"
               aria-label="Search the household"
               onClick={() => setHouseSearch(true)}
@@ -841,17 +884,20 @@ function HubContent({ house }: { house: ReturnType<typeof useHousehold> }) {
               aria-label="Open household settings"
               onClick={() => setTab("Our household")}
             >
-              {members.map((member, i) =>
-                member.name === "Housemates" ? null : (
-                  <span
-                    key={member.user_id}
-                    title={member.name}
-                    className={`avatar tone-${i % 3}`}
-                  >
-                    {member.name.slice(0, 1).toUpperCase()}
-                  </span>
-                ),
-              )}
+              {members
+                .filter((member) => member.name !== "Housemates")
+                .slice(0, 3)
+                .map((member, i) =>
+                  member.name === "Housemates" ? null : (
+                    <span
+                      key={member.user_id}
+                      title={member.name}
+                      className={`avatar tone-${i % 3}`}
+                    >
+                      {member.name.slice(0, 1).toUpperCase()}
+                    </span>
+                  ),
+                )}
               {agreements.pendingCount > 0 && (
                 <span
                   className={`nav-count ${agreementStyles.topbarBadge}`}
@@ -883,14 +929,33 @@ function HubContent({ house }: { house: ReturnType<typeof useHousehold> }) {
               onOpen={(result) => {
                 setHouseSearch(false);
                 setTab(result.tab);
-                if (!result.entry && /^(expense|handbook):/.test(result.key)) {
-                  sessionStorage.setItem("household-search-target", JSON.stringify({id:result.key.split(":")[1],type:result.key.split(":")[0],title:result.title}));
+                if (
+                  !result.entry &&
+                  /^(expense|handbook):/.test(result.key)
+                ) {
+                  sessionStorage.setItem(
+                    "household-search-target",
+                    JSON.stringify({
+                      id: result.key.split(":")[1],
+                      type: result.key.split(":")[0],
+                      title: result.title,
+                    }),
+                  );
                   window.dispatchEvent(new Event("household-search-target"));
                 }
                 if (result.entry) {
-                  setFilter(result.entry.category === "Personal" ? "Personal"
-                    : result.entry.kind === "request" && result.entry.done ? "Bought" : "All");
-                  if (!readOnly) setEditing({ kind: result.entry.kind, entry: result.entry });
+                  setFilter(
+                    result.entry.category === "Personal"
+                      ? "Personal"
+                      : result.entry.kind === "request" && result.entry.done
+                        ? "Bought"
+                        : "All",
+                  );
+                  if (!readOnly)
+                    setEditing({
+                      kind: result.entry.kind,
+                      entry: result.entry,
+                    });
                 }
               }}
             />
@@ -944,7 +1009,8 @@ function HubContent({ house }: { house: ReturnType<typeof useHousehold> }) {
                     {
                       {
                         Calendar: "Plans and dated to-dos for your home.",
-                        "House planning": "Check in, reserve shared spaces, and plan a move.",
+                        "House planning":
+                          "Check in, reserve shared spaces, and plan a move.",
                         "To-dos": `${openTasks.length} open, ${openTasks.filter((entry) => entry.assignee === uid).length} assigned to you`,
                         "Shopping list": `${neededItems.length} ${neededItems.length === 1 ? "item" : "items"} to pick up`,
                         "House notes": `${notes.length} ${notes.length === 1 ? "note" : "notes"} shared with your home${takenDown.length ? `, ${takenDown.length} taken down` : ""}`,
@@ -953,7 +1019,8 @@ function HubContent({ house }: { house: ReturnType<typeof useHousehold> }) {
                         "Our household": `${household.name}, ${housemates.length} ${housemates.length === 1 ? "housemate" : "housemates"}`,
                         "Household life":
                           "Decisions, supplies, repairs, shared dinners, and monthly targets.",
-                        "Needs your attention": "Your chores, unpaid bills, agreements, and coverage requests in one place.",
+                        "Needs your attention":
+                          "Your chores, unpaid bills, agreements, and coverage requests in one place.",
                         Overview: "",
                         Expenses: "",
                       }[tab]
@@ -961,6 +1028,25 @@ function HubContent({ house }: { house: ReturnType<typeof useHousehold> }) {
                   </p>
                 </div>
               </div>
+              {tab === "Our household" &&
+                !demo &&
+                !readOnly &&
+                improvements.loaded &&
+                setupComplete < 4 && (
+                  <Button
+                    className="text-button setup-shortcut"
+                    onClick={() =>
+                      document
+                        .getElementById("household-setup")
+                        ?.scrollIntoView({
+                          behavior: reduced ? "instant" : "smooth",
+                          block: "start",
+                        })
+                    }
+                  >
+                    <span>Finish household setup</span> · {setupComplete}/4
+                  </Button>
+                )}
               {tab !== "Needs your attention" &&
                 tab !== "Our household" &&
                 tab !== "House handbook" &&
@@ -1003,7 +1089,9 @@ function HubContent({ house }: { house: ReturnType<typeof useHousehold> }) {
           {tab === "Expenses" && (
             <ExpensesTab
               controller={expenseController}
-              members={[...members, ...house.formerMembers].filter((member) => member.name !== "Housemates")}
+              members={[...members, ...house.formerMembers].filter(
+                (member) => member.name !== "Housemates",
+              )}
               memberId={uid}
               householdName={household.name}
               pending={householdShopping.filter(
@@ -1022,7 +1110,11 @@ function HubContent({ house }: { house: ReturnType<typeof useHousehold> }) {
               expenses={expenseController.expenses}
               expensesLoaded={expenseController.loaded}
               expensesError={expenseController.error}
-              moreExpenses={{ available: !!expenseController.nextCursor, loading: expenseController.loadingMore, load: expenseController.loadMore }}
+              moreExpenses={{
+                available: !!expenseController.nextCursor,
+                loading: expenseController.loadingMore,
+                load: expenseController.loadMore,
+              }}
               today={today}
               openShopping={() => setTab("Shopping list")}
             />
@@ -1030,18 +1122,6 @@ function HubContent({ house }: { house: ReturnType<typeof useHousehold> }) {
           {tab === "Calendar" && <CalendarTab {...house} />}
           {tab === "To-dos" && (
             <>
-              <ChoreBalance
-                entries={entries}
-                members={members}
-                today={today}
-                timezone={improvements.household.timezone}
-                readOnly={readOnly}
-                review={(entry) => setEditing({
-                  kind: "task",
-                  entry,
-                  suggestedAssignee: entry.assignee ?? undefined,
-                })}
-              />
               <section className="panel entry-panel paper-index">
                 <div className="panel-heading">
                   <SegmentedControl
@@ -1061,6 +1141,30 @@ function HubContent({ house }: { house: ReturnType<typeof useHousehold> }) {
                     />
                   </div>
                 </div>
+                {quickAdd("task")}
+                <AnimatePresence initial={false}>
+                  {filteredTasks.map(taskRow)}
+                </AnimatePresence>
+                {!filteredTasks.length && (
+                  <Empty text="Nothing here. A little breathing room." />
+                )}
+              </section>
+              <details className="page-details">
+                <summary>Weekly chore balance and fair assignments</summary>
+                <ChoreBalance
+                  entries={entries}
+                  members={members}
+                  today={today}
+                  timezone={improvements.household.timezone}
+                  readOnly={readOnly}
+                  review={(entry) =>
+                    setEditing({
+                      kind: "task",
+                      entry,
+                      suggestedAssignee: entry.assignee ?? undefined,
+                    })
+                  }
+                />
                 {!demo && (
                   <ChoreCoverage
                     entries={entries}
@@ -1070,22 +1174,10 @@ function HubContent({ house }: { house: ReturnType<typeof useHousehold> }) {
                     refresh={refresh}
                   />
                 )}
-                {quickAdd("task")}
-                <AnimatePresence initial={false}>
-                  {filteredTasks.map(taskRow)}
-                </AnimatePresence>
-                {!filteredTasks.length && (
-                  <Empty text="Nothing here. A little breathing room." />
-                )}
-              </section>
+              </details>
             </>
           )}
 
-          {tab === "Shopping list" && (
-            <p className="subtle">
-              <a href="/offline-shopping.html">Open saved list for offline shopping →</a>
-            </p>
-          )}
           {tab === "Shopping list" && (
             <section className="panel entry-panel paper-receipt">
               <div className="panel-heading">
@@ -1129,35 +1221,37 @@ function HubContent({ house }: { house: ReturnType<typeof useHousehold> }) {
                 </span>
               </div>
               {quickAdd("request")}
-              <label className="house-search">
-                Group shopping by store
-                <select
-                  aria-label="Group shopping by store"
-                  value={storeFilter}
-                  onChange={(event) => setStoreFilter(event.target.value)}
-                >
-                  <option value="">All stores</option>
-                  {[
-                    ...new Set(
-                      filteredShopping.map(
-                        (entry) => entry.store || "Any store",
+              <div className="shopping-options">
+                <label className="house-search">
+                  Store
+                  <select
+                    aria-label="Group shopping by store"
+                    value={storeFilter}
+                    onChange={(event) => setStoreFilter(event.target.value)}
+                  >
+                    <option value="">All stores</option>
+                    {[
+                      ...new Set(
+                        filteredShopping.map(
+                          (entry) => entry.store || "Any store",
+                        ),
                       ),
-                    ),
-                  ]
-                    .sort()
-                    .map((store) => (
-                      <option key={store}>{store}</option>
-                    ))}
-                </select>
-              </label>
-              <label className="checkbox-row">
-                <input
-                  type="checkbox"
-                  checked={groupStores}
-                  onChange={(event) => setGroupStores(event.target.checked)}
-                />
-                Group rows by store
-              </label>
+                    ]
+                      .sort()
+                      .map((store) => (
+                        <option key={store}>{store}</option>
+                      ))}
+                  </select>
+                </label>
+                <label className="checkbox-row">
+                  <input
+                    type="checkbox"
+                    checked={groupStores}
+                    onChange={(event) => setGroupStores(event.target.checked)}
+                  />
+                  Group rows by store
+                </label>
+              </div>
               <div className="shopping-list">
                 <AnimatePresence initial={false}>
                   {shoppingByStore.map((entry, index) => {
@@ -1318,6 +1412,13 @@ function HubContent({ house }: { house: ReturnType<typeof useHousehold> }) {
             </section>
           )}
 
+          {tab === "Shopping list" && (
+            <p className="subtle">
+              <a href="/offline-shopping.html">
+                Open saved list for offline shopping →
+              </a>
+            </p>
+          )}
           {tab === "House notes" && (
             <div className="notes-page">
               {!readOnly && (
@@ -1388,7 +1489,11 @@ function HubContent({ house }: { house: ReturnType<typeof useHousehold> }) {
                         <p>{entry.description}</p>
                         <span>
                           {person(entry.assignee || entry.created_by)},{" "}
-                          {activityWhen(Date.parse(entry.created_at), now, house.clock.timezone)}
+                          {activityWhen(
+                            Date.parse(entry.created_at),
+                            now,
+                            house.clock.timezone,
+                          )}
                         </span>
                       </Button>
                     </PresenceRow>
@@ -1408,7 +1513,11 @@ function HubContent({ house }: { house: ReturnType<typeof useHousehold> }) {
                           <strong>{entry.title}</strong>
                           <small>
                             {person(entry.assignee || entry.created_by)},{" "}
-                            {activityWhen(Date.parse(entry.created_at), now, house.clock.timezone)}
+                            {activityWhen(
+                              Date.parse(entry.created_at),
+                              now,
+                              house.clock.timezone,
+                            )}
                           </small>
                         </span>
                         {!readOnly && (
@@ -1445,7 +1554,13 @@ function HubContent({ house }: { house: ReturnType<typeof useHousehold> }) {
           )}
 
           {tab === "House planning" && (
-            <HousePlanning demo={demo} entries={entries} members={members} uid={uid} readOnly={readOnly} />
+            <HousePlanning
+              demo={demo}
+              entries={entries}
+              members={members}
+              uid={uid}
+              readOnly={readOnly}
+            />
           )}
 
           {tab === "Our household" && (
@@ -1462,9 +1577,9 @@ function HubContent({ house }: { house: ReturnType<typeof useHousehold> }) {
       </div>
       {toasts}
       {/* One dialog at a time. A crowded day hands straight off to an editor,
-        and an overlapping exit stays a dismissable layer that Radix ranks
-        above the editor: Escape reached the leaving dialog, whose close is
-        already done, and the editor sat there. */}
+    and an overlapping exit stays a dismissable layer that Radix ranks
+    above the editor: Escape reached the leaving dialog, whose close is
+    already done, and the editor sat there. */}
       <AnimatePresence mode="wait">
         {selectedDay && (
           <DayDialog
