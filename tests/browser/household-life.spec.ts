@@ -33,12 +33,16 @@ test("poll votes can change, close at the deadline, and preserve a final decisio
   await poll.getByRole("button", { name: "Yes 0", exact: true }).click();
   await expect(
     poll.getByRole("button", { name: "Yes 1", exact: true }),
-  ).toHaveAttribute("aria-pressed", "true");
+  ).toBeVisible();
   await poll.getByRole("button", { name: "No 0", exact: true }).click();
   await expect(
     poll.getByRole("button", { name: "Yes 0", exact: true }),
-  ).toHaveAttribute("aria-pressed", "false");
-  await expect(poll.getByText(/1 of 3 housemates voted/)).toBeVisible();
+  ).toBeVisible();
+  await expect(
+    poll.getByText(/1 of 3 housemates voted anonymously/),
+  ).toBeVisible();
+  await expect(poll.locator("[aria-pressed]")).toHaveCount(0);
+  await expect(poll.getByText("Amane", { exact: true })).toHaveCount(0);
   await page.clock.fastForward(61_000);
   await expect(
     poll.getByRole("button", { name: "No 1", exact: true }),
@@ -423,4 +427,107 @@ test("saved household records load across reloads and a rejected write keeps the
   await expect(
     page.getByRole("heading", { name: "Updated rice", exact: true }),
   ).toBeVisible();
+});
+
+test("anonymous poll totals survive voting, reload, and switching people without revealing ballots", async ({
+  page,
+}) => {
+  test.skip(!process.env.PW_SHARED_API, "Requires mocked shared API build");
+  await mockBackground(page);
+  let member = "a";
+  const members = [
+    { household_id: "house", user_id: "a", name: "Alex" },
+    { household_id: "house", user_id: "b", name: "Sam" },
+    { household_id: "house", user_id: "screen", name: "Housemates" },
+  ];
+  await page.route("**/api/session", async (route) => {
+    if (route.request().method() === "PATCH")
+      member = route.request().postDataJSON().member_id;
+    await route.fulfill({ json: { authenticated: true, member_id: member } });
+  });
+  await page.route("**/api/home{,?*}", (route) =>
+    route.fulfill({
+      json: {
+        household: { id: "house", name: "Test home" },
+        members,
+        entries: [],
+        member_id: member,
+      },
+    }),
+  );
+  await page.route("**/api/expenses", (route) =>
+    route.fulfill({ json: { expenses: [] } }),
+  );
+  const snapshot = {
+    ...emptyLife(),
+    polls: [
+      {
+        id: "anonymous",
+        title: "Anonymous vacuum poll",
+        options: ["Yes", "No"],
+        deadline: "2099-01-01T12:00:00Z",
+        decision: null,
+        decided_by: null,
+        decided_at: null,
+        created_by: "a",
+        created_at: "2026-09-17T12:00:00Z",
+      },
+    ],
+    votes: [{ poll_id: "anonymous", choice: 0, count: 2 }],
+  };
+  await page.route("**/api/household-life", async (route) => {
+    if (route.request().method() === "POST") {
+      const { operation, payload } = route.request().postDataJSON();
+      expect(operation).toBe("poll_vote");
+      expect(payload).toEqual({ id: "anonymous", choice: 1 });
+      snapshot.votes = [
+        { poll_id: "anonymous", choice: 0, count: 1 },
+        { poll_id: "anonymous", choice: 1, count: 1 },
+      ];
+    }
+    await route.fulfill({ json: snapshot });
+  });
+  await openLife(page);
+  const poll = page.getByRole("article", {
+    name: "Anonymous vacuum poll",
+    exact: true,
+  });
+  await expect(
+    poll.getByRole("button", { name: "Yes 2", exact: true }),
+  ).toBeVisible();
+  await poll.getByRole("button", { name: "No 0", exact: true }).click();
+  await expect(
+    poll.getByRole("button", { name: "No 1", exact: true }),
+  ).toBeVisible();
+  await expect(
+    page
+      .getByRole("status")
+      .filter({ hasText: "Your anonymous vote was saved." }),
+  ).toBeVisible();
+  await page.reload();
+  await expect(
+    poll.getByText(/2 of 2 housemates voted anonymously/),
+  ).toBeVisible();
+  await page
+    .getByRole("button", { name: "Switch person (now Alex)", exact: true })
+    .click();
+  await page.getByRole("button", { name: "Sam", exact: true }).click();
+  await expect(
+    poll.getByRole("button", { name: "Yes 1", exact: true }),
+  ).toBeVisible();
+  await expect(
+    poll.getByText(/2 of 2 housemates voted anonymously/),
+  ).toBeVisible();
+  await expect(poll.getByText(/Alex|Sam/)).toHaveCount(0);
+  await expect(poll.locator("[aria-pressed]")).toHaveCount(0);
+  await page
+    .getByRole("button", { name: "Switch person (now Sam)", exact: true })
+    .click();
+  await page
+    .getByRole("button", { name: "This is a shared screen", exact: true })
+    .click();
+  await expect(
+    poll.getByRole("button", { name: "Yes 1", exact: true }),
+  ).toBeDisabled();
+  await expect(poll.getByText(/Alex|Sam/)).toHaveCount(0);
 });

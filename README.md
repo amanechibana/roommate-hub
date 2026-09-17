@@ -40,7 +40,7 @@ House notes can be turned into a to-do, plan, or shopping item: open the note an
 
 **Household life** groups five shared tools:
 
-- **Quick polls:** ask a question with 2–6 options and a future deadline. Each housemate has one changeable vote. The server closes voting at the deadline; a housemate then saves the final decision and next steps alongside the votes. Saved decisions cannot be overwritten.
+- **Quick polls:** ask a question with 2–6 options and a future deadline. Each housemate has one changeable anonymous vote. The app receives only totals per option, never voter identities or individual ballots, even when someone switches the selected person. Database administrators can access the underlying ballots; member IDs remain stored to enforce one vote per person. The server closes voting at the deadline; a housemate then saves the final decision and next steps alongside the votes. Saved decisions cannot be overwritten.
 - **Pantry & supplies:** track staples as stocked, running low, or out. Add low/out staples to Shopping with their notes. Matching open household items are reused; bought or personal items do not block a new household request. Mark staples stocked after replenishing them.
 - **Maintenance:** describe a problem, assign a housemate to follow up, and move it from open to in progress to resolved. Resolution requires a note and records its date; requests can reopen. Attach up to 20 JPEG, PNG, or WebP photos (10 MB each) after saving. Photos use the private `house-maintenance` bucket and authenticated, short-lived links.
 - **Meal planning:** choose a shared dinner date and cook, list ingredients, and mark what is already at home. Stocked pantry matches start checked. Send missing ingredients to Shopping without duplicating open household items. Saving/editing/deleting a dinner also creates/updates/deletes its linked Together calendar plan in the same database transaction.
@@ -751,3 +751,5 @@ Apply migration 028 before production deployment. It updates server posting
 dates, check-in weeks, schedule maintenance, and agreement history windows to
 use the household timezone. The deployment gate holds production until 028 is
 confirmed.
+
+Apply migration `029_anonymous_house_polls.sql` before deploying anonymous polls. It also anonymizes responses for existing polls and saved decisions; the production deployment gate requires schema 029.

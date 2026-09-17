@@ -188,14 +188,16 @@ export default function HouseholdLifeTab({
       {section === "Quick polls" && (
         <>
           {heading(
-            "Ask the house, vote before the deadline, and save the final decision.",
+            "Ask the house, vote anonymously before the deadline, and save the final decision.",
             "poll",
           )}
           <div className={styles.grid}>
             {data.polls.map((poll) => {
               const tally = pollTally(poll, data.votes);
-              const votes = data.votes.filter((v) => v.poll_id === poll.id);
-              const mine = votes.find((v) => v.member_id === uid);
+              const voteCount = tally.reduce(
+                (total, option) => total + option.count,
+                0,
+              );
               const open = pollOpen(poll, now);
               return (
                 <article
@@ -223,7 +225,6 @@ export default function HouseholdLifeTab({
                       <div key={choice}>
                         <Button
                           disabled={!writable || busy || !open}
-                          aria-pressed={mine?.choice === choice}
                           onClick={() =>
                             perform("poll_vote", { id: poll.id, choice })
                           }
@@ -231,23 +232,15 @@ export default function HouseholdLifeTab({
                           <span>{option.option}</span>
                           <strong>{option.count}</strong>
                         </Button>
-                        {votes.some((v) => v.choice === choice) && (
-                          <small>
-                            {votes
-                              .filter((v) => v.choice === choice)
-                              .map((v) => person(v.member_id))
-                              .join(", ")}
-                          </small>
-                        )}
                       </div>
                     ))}
                   </div>
                   <p className={styles.meta}>
                     {poll.decision
-                      ? `${votes.length} votes saved`
-                      : `${votes.length} of ${people.length} housemates voted`}
-                    {mine && open
-                      ? " · Tap another option to change your vote."
+                      ? `${voteCount} anonymous votes saved`
+                      : `${voteCount} of ${people.length} housemates voted anonymously`}
+                    {open && writable
+                      ? " · Choose any option to cast or change your vote."
                       : ""}
                   </p>
                   {poll.decision ? (

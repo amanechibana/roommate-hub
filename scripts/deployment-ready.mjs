@@ -21,7 +21,7 @@ export async function deploymentReady(env = process.env, request = fetch) {
     });
     if (!response.ok) return false;
     const status = await response.json();
-    return Number(status.schema_version) >= 28;
+    return Number(status.schema_version) >= 29;
   } catch {
     return false;
   }
@@ -34,7 +34,7 @@ if (
     console.log(
       ready
         ? "Database supports this release; build continues."
-        : "Production build held: apply migration 028 and verify database access, then redeploy.",
+        : "Production build held: apply migration 029 and verify database access, then redeploy.",
     );
     process.exit(ready ? 1 : 0);
   });
