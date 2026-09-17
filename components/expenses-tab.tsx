@@ -120,6 +120,9 @@ export default function ExpensesTab({
     };
   }, [readOnly]);
   const balances = controller.balances;
+  // The settle-up panel only means something when money is owed: hide it
+  // from settled-up houses rather than announcing "no outstanding balances".
+  const suggested = suggestedRepayments(balances);
   const mine = (memberId && balances[memberId]) || 0;
   const month = today.slice(0, 7);
   const [exportError, setExportError] = useState("");
@@ -320,6 +323,84 @@ export default function ExpensesTab({
               </section>
             </div>
           )}
+          {!!suggested.length && (
+            <section className={`${styles.settlements} panel`}>
+              <div className={styles.sectionHeading}>
+                <h2>Who owes whom</h2>
+                <Button
+                  className="text-button"
+                  hidden={readOnly}
+                  onClick={() => setDraft({ kind: "settlement" })}
+                >
+                  Record repayment <Plus size={14} />
+                </Button>
+              </div>
+              <p className={styles.settlementHelp}>
+                Pay outside Common Ground with Venmo, or copy the note for Zelle
+                or another payment app. Record paid only after money moves—it
+                updates the ledger and does not transfer money.
+              </p>
+              <AnimatePresence initial={false}>
+                {suggested.map((payment) => {
+                  const payer = name(payment.from);
+                  const recipient = name(payment.to);
+                  const key = `${payment.from}-${payment.to}`;
+                  const handoff = {
+                    payer,
+                    recipient,
+                    amountCents: payment.amount,
+                    household: householdName,
+                  };
+                  return (
+                    <PresenceRow className={styles.payment} key={key}>
+                      <span className={styles.paymentRoute}>
+                        <b>{payer}</b>
+                        <ArrowRight size={14} />
+                        <b>{recipient}</b>
+                      </span>
+                      <strong>{expenseMoney(payment.amount)}</strong>
+                      <div className={styles.paymentActions}>
+                        <a
+                          className="button secondary small"
+                          href={venmoPaymentUrl(handoff)}
+                          target="_blank"
+                          rel="noreferrer"
+                          aria-label={`Open Venmo for ${payer} to pay ${recipient} ${expenseMoney(payment.amount)}`}
+                        >
+                          Venmo <ExternalLink size={13} aria-hidden="true" />
+                        </a>
+                        <Button
+                          className="button secondary small"
+                          aria-label={`Copy payment note for ${payer} to pay ${recipient}`}
+                          onClick={() => void copyPaymentNote(payment)}
+                        >
+                          {copyResult?.payment === key && copyResult.ok ? (
+                            <Check size={13} aria-hidden="true" />
+                          ) : (
+                            <Copy size={13} aria-hidden="true" />
+                          )}
+                          {copyResult?.payment === key
+                            ? copyResult.ok
+                              ? "Copied"
+                              : "Copy failed"
+                            : "Copy note"}
+                        </Button>
+                        <Button
+                          className="button secondary small"
+                          hidden={readOnly}
+                          onClick={() =>
+                            setDraft({ kind: "settlement", ...payment })
+                          }
+                        >
+                          Record paid
+                        </Button>
+                      </div>
+                    </PresenceRow>
+                  );
+                })}
+              </AnimatePresence>
+            </section>
+          )}
           <section className={`${styles.activity} panel paper-ledger`}>
             <div className={styles.sectionHeading}>
               <h2>Activity</h2>
@@ -475,85 +556,6 @@ export default function ExpensesTab({
                   Add your first expense
                 </Button>
               </div>
-            )}
-          </section>
-          <section className={`${styles.settlements} panel`}>
-            <div className={styles.sectionHeading}>
-              <h2>Who owes whom</h2>
-              <Button
-                className="text-button"
-                hidden={readOnly}
-                onClick={() => setDraft({ kind: "settlement" })}
-              >
-                Record repayment <Plus size={14} />
-              </Button>
-            </div>
-            <p className={styles.settlementHelp}>
-              Pay outside Common Ground with Venmo, or copy the note for Zelle
-              or another payment app. Record paid only after money moves—it
-              updates the ledger and does not transfer money.
-            </p>
-            <AnimatePresence initial={false}>
-              {suggestedRepayments(balances).map((payment) => {
-                const payer = name(payment.from);
-                const recipient = name(payment.to);
-                const key = `${payment.from}-${payment.to}`;
-                const handoff = {
-                  payer,
-                  recipient,
-                  amountCents: payment.amount,
-                  household: householdName,
-                };
-                return (
-                  <PresenceRow className={styles.payment} key={key}>
-                    <span className={styles.paymentRoute}>
-                      <b>{payer}</b>
-                      <ArrowRight size={14} />
-                      <b>{recipient}</b>
-                    </span>
-                    <strong>{expenseMoney(payment.amount)}</strong>
-                    <div className={styles.paymentActions}>
-                      <a
-                        className="button secondary small"
-                        href={venmoPaymentUrl(handoff)}
-                        target="_blank"
-                        rel="noreferrer"
-                        aria-label={`Open Venmo for ${payer} to pay ${recipient} ${expenseMoney(payment.amount)}`}
-                      >
-                        Venmo <ExternalLink size={13} aria-hidden="true" />
-                      </a>
-                      <Button
-                        className="button secondary small"
-                        aria-label={`Copy payment note for ${payer} to pay ${recipient}`}
-                        onClick={() => void copyPaymentNote(payment)}
-                      >
-                        {copyResult?.payment === key && copyResult.ok ? (
-                          <Check size={13} aria-hidden="true" />
-                        ) : (
-                          <Copy size={13} aria-hidden="true" />
-                        )}
-                        {copyResult?.payment === key
-                          ? copyResult.ok
-                            ? "Copied"
-                            : "Copy failed"
-                          : "Copy note"}
-                      </Button>
-                      <Button
-                        className="button secondary small"
-                        hidden={readOnly}
-                        onClick={() =>
-                          setDraft({ kind: "settlement", ...payment })
-                        }
-                      >
-                        Record paid
-                      </Button>
-                    </div>
-                  </PresenceRow>
-                );
-              })}
-            </AnimatePresence>
-            {!suggestedRepayments(balances).length && (
-              <p className={styles.settled}>No outstanding balances.</p>
             )}
           </section>
           {!!pending.length && (
