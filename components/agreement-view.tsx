@@ -550,7 +550,11 @@ export default function AgreementView({
   };
 
   const editorFor = (heading: string) =>
-    !editing ? null : slug === "house" ? houseEditor(heading) : gymEditor(heading);
+    !editing
+      ? null
+      : slug === "house"
+        ? houseEditor(heading)
+        : gymEditor(heading);
 
   const waitingFor = row
     ? members.find((m) => !row.signed_by.includes(m.user_id))
@@ -583,7 +587,7 @@ export default function AgreementView({
                 controller.propose(slug);
               }}
             >
-              Send to {other?.name ?? "your housemate"} to agree
+              Send to all housemates to agree
             </Button>
             {!other && (
               <span className="subtle">Add your housemate first.</span>

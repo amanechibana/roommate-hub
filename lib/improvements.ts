@@ -53,6 +53,7 @@ export const notificationTopics: NotificationTopic[] = [
   "nudges",
 ];
 export type ReminderPreferences = {
+  setup_reviewed?: boolean;
   morning: string | null;
   evening: string | null;
   topics: NotificationTopic[];

@@ -23,7 +23,7 @@ export default function ReminderPreferencesForm({
       </p>
     );
   return (
-    <section className="panel settings-panel">
+    <section id="household-notifications" className="panel settings-panel">
       <h2>Household time & notifications</h2>
       <p className="subtle">
         Quiet hours and timezone apply to the home. Reminder times and
@@ -91,6 +91,7 @@ export default function ReminderPreferencesForm({
           event.preventDefault();
           const data = new FormData(event.currentTarget);
           const settings: ReminderPreferences = {
+            setup_reviewed: true,
             morning: data.has("morning_enabled")
               ? String(data.get("morning"))
               : null,

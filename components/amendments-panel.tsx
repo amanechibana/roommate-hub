@@ -2,11 +2,7 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import type {
-  Agreement,
-  AgreementSlug,
-  Amendment,
-} from "@/lib/agreements";
+import type { Agreement, AgreementSlug, Amendment } from "@/lib/agreements";
 import type { Member } from "@/lib/model";
 import type { AgreementsController } from "@/lib/use-agreements";
 import styles from "./agreements.module.css";
@@ -65,7 +61,8 @@ export default function AmendmentsPanel({
     <section className={styles.subPanel}>
       <h4>Amendments</h4>
       <p className="subtle">
-        Approved amendments take effect immediately and stay on the record.
+        Amendments need approval from every other housemate. Once everyone
+        approves, they take effect and stay on the record.
       </p>
       {!list.length && (
         <p className="subtle">Nothing yet. The terms stand as signed.</p>
@@ -103,6 +100,10 @@ export default function AmendmentsPanel({
                 >
                   Withdraw
                 </Button>
+              ) : amendment.approved_by?.includes(uid) ? (
+                <span className={styles.chip}>
+                  You approved · awaiting housemates
+                </span>
               ) : declining === amendment.id ? (
                 <span className={styles.inlineForm}>
                   <input
@@ -186,7 +187,12 @@ export default function AmendmentsPanel({
         <h5>Request an amendment</h5>
         <label>
           Title
-          <input name="title" required maxLength={160} placeholder="Article, in short" />
+          <input
+            name="title"
+            required
+            maxLength={160}
+            placeholder="Article, in short"
+          />
         </label>
         <label>
           What changes, and why
@@ -222,7 +228,8 @@ export default function AmendmentsPanel({
         )}
         <div>
           <Button className="button secondary">
-            Send to {members.find((m) => m.user_id !== uid)?.name ?? "your housemate"}
+            Send to{" "}
+            {members.find((m) => m.user_id !== uid)?.name ?? "your housemate"}
           </Button>
         </div>
       </form>

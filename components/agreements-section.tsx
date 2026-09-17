@@ -74,13 +74,16 @@ export default function AgreementsSection({
           (a) =>
             a.agreement_id === agreement.id &&
             a.status === "open" &&
-            a.proposed_by !== uid,
+            a.proposed_by !== uid &&
+            !a.approved_by?.includes(uid),
         ).length +
         controller.events.filter(
           (e) =>
             e.agreement_id === agreement.id &&
             e.status === "open" &&
-            e.actor !== uid,
+            e.actor !== uid &&
+            !e.accepted_by?.includes(uid) &&
+            (!e.details.recipient || e.details.recipient === uid),
         ).length;
   return (
     <section className={`panel settings-panel ${styles.section}`}>
@@ -88,7 +91,7 @@ export default function AgreementsSection({
         <Handshake size={20} /> Agreements
       </h2>
       <p className="subtle">
-        The house rules you both sign, kept where the arguments can find them.
+        The house rules everyone signs, kept where the arguments can find them.
       </p>
       {!open && (
         <SearchField
