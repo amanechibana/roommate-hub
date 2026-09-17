@@ -17,7 +17,7 @@ const house: DocSection[] = [
     heading: "THE CLEAN SPLIT — House Living and Chore Rotation Agreement",
     paragraphs: [
       'Premises: the apartment shared by the Parties (the "Premises"). System of Record: the Roommate Hub app (the "App").',
-      'This House Living and Chore Rotation Agreement (this "Agreement") is entered into by {{party_a}} (Party A) and {{party_b}} (Party B), each a "Party," together the "Parties," effective on the date the second of them agrees in the App (the "Effective Date").',
+      'This House Living and Chore Rotation Agreement (this "Agreement") is entered into by {{parties}}, each a "Party," together the "Parties," effective on the date every current housemate agrees in the App (the "Effective Date").',
     ],
   },
   {
@@ -46,8 +46,8 @@ const house: DocSection[] = [
   {
     heading: "ARTICLE 2 — THE ROTATION",
     paragraphs: [
-      "2.1 Alternation. The weekly chores are divided into Bundle A (Kitchen & Trash, Schedule A) and Bundle B (Bathroom & Common Areas, Schedule B). The Bundles alternate between the Parties each Rotation Week. The App's parity calculation is authoritative; neither Party shall relitigate whose week it is.",
-      "2.2 First Assignment. For the first Rotation Week following the Effective Date, Bundle A is held by {{first_bundle_a}} and the other Party holds Bundle B.",
+      "2.1 Alternation. The weekly chores are divided into Bundle A (Kitchen & Trash, Schedule A) and Bundle B (Bathroom & Common Areas, Schedule B). Each Bundle rotates through every current housemate in the order recorded in the App, advancing one person each Rotation Week. Bundle B starts one person after Bundle A. With larger households, some Parties have no Bundle in a given week; over a full rotation everyone holds each Bundle equally.",
+      "2.2 First Assignment. For the first Rotation Week following the Effective Date, Bundle A is held by {{first_bundle_a}} and the next housemate in the rotation holds Bundle B.",
       "2.3 Completion. A Party completes their Bundle by checking off every Checklist item in the App before the Rotation Week ends. Items checked off without being performed are a breach of this Agreement and, more importantly, weird.",
       "2.4 No Early Credit. Doing a chore especially well does not bank credit against future weeks. Excellence is its own reward.",
     ],
@@ -62,7 +62,7 @@ const house: DocSection[] = [
   {
     heading: "ARTICLE 4 — AS-YOU-GO RULES (UNTRACKED)",
     paragraphs: [
-      "The following standards apply to both Parties at all times. They are not tracked per-instance in the App, and no scorekeeping shall be maintained; they are simply the law of the land.",
+      "The following standards apply to all Parties at all times. They are not tracked per-instance in the App, and no scorekeeping shall be maintained; they are simply the law of the land.",
       "4.1 Clean Up After Yourself. Each Party cleans up after themselves in the kitchen and the bathroom as they go, leaving each room roughly as they would wish to find it. This Section is a standard of effort rather than of outcome: the obligation is to try, every time, and an honest best effort satisfies it. The weekly Bundles exist to reset the rooms, not to store up a week of avoidable mess for whoever is holding them.",
       '4.2 Dishes. Dishes a Party uses are washed (or loaded) by the end of that night. "Soaking" is a technique, not a destination, and expires after one night.',
       "4.3 Counters. The Party who cooks wipes the counters and stove after cooking.",
@@ -75,7 +75,7 @@ const house: DocSection[] = [
   {
     heading: "ARTICLE 5 — SWAPS",
     paragraphs: [
-      "5.1 Grant. Either Party may request to Swap with the other: (a) a single chore, or (b) an entire Bundle for one Rotation Week. A Swap takes effect only when the other Party accepts it in the App.",
+      "5.1 Grant. Any Party may request to Swap with a selected housemate: (a) a single chore, or (b) an entire Bundle for one Rotation Week. A Swap takes effect only when the selected housemate accepts it in the App.",
       "5.2 Conditions. A Swap request must be made no later than {{swap_deadline}} of the Rotation Week it affects (suggested: Wednesday 11:59 PM). Each Party is limited to {{max_swaps_month}} accepted Swaps per calendar month (suggested: 2).",
       "5.3 Effect. An accepted Swap transfers the obligation for that week only. The underlying rotation parity is unaffected in later weeks. Responsibility for the swapped chore transfers fully — the requesting Party gets no opinion on how it is subsequently performed.",
     ],
@@ -85,7 +85,7 @@ const house: DocSection[] = [
     paragraphs: [
       "6.1 Grant. A Party who cannot complete a chore in a Rotation Week may Skip it in one of two modes.",
       "6.2 Rollover Skip. The chore rolls into the same Party's next Rotation Week, in addition to that week's Bundle. A Rollover Skip is unilateral — no acceptance required — but a chore may not roll over twice in a row.",
-      "6.3 Cover Skip. The other Party performs the chore, and a Cover Debt is recorded in the App. A Cover Skip requires the other Party's acceptance. A Cover Debt is repaid by performing a chore of comparable effort for the other Party within two (2) Rotation Weeks, and is extinguished only when marked repaid in the App.",
+      "6.3 Cover Skip. The selected housemate performs the chore, and a Cover Debt is recorded in the App. A Cover Skip requires the selected housemate's acceptance. A Cover Debt is repaid by performing a chore of comparable effort for the other Party within two (2) Rotation Weeks, and is extinguished only when marked repaid in the App.",
       "6.4 Conditions. Skips must be requested before the Rotation Week ends — a Skip requested after the deadline is a miss with paperwork. Each Party is limited to {{max_skips_month}} Skips per calendar month (suggested: 2). Legitimate grounds include illness, travel, and genuinely bad weeks; the Parties agree not to audit each other's reasons unless a pattern emerges.",
     ],
   },
@@ -100,7 +100,7 @@ const house: DocSection[] = [
   {
     heading: "ARTICLE 8 — AMENDMENTS AND THE APP",
     paragraphs: [
-      "8.1 Proposals. Either Party may propose an amendment in the App — to a Checklist, a condition, a cap, the Failure Clause, or any other term. The other Party is notified and may approve or decline it, with reasons.",
+      "8.1 Proposals. Any Party may propose an amendment in the App — to a Checklist, a condition, a cap, the Failure Clause, or any other term. Every other current housemate is notified and may approve or decline it, with reasons. An amendment takes effect only when every other current housemate approves it; any decline closes the proposal.",
       "8.2 Effect. An approved amendment becomes part of this Agreement immediately and is recorded in the App with its history. A declined amendment may be revised and re-proposed; it may not be implemented unilaterally.",
       "8.3 The Record. The App's version of this Agreement, its amendments, and its completion history are the authoritative record.",
     ],
@@ -110,7 +110,7 @@ const house: DocSection[] = [
     paragraphs: [
       "9.1 Spirit. This is a social agreement between roommates. It is binding as a matter of honor. If this Agreement ever comes into conflict with the Parties actually liking living together, the living-together prevails and the Agreement gets amended.",
       "9.2 Severability. If any provision proves unworkable or simply too much, the rest survives, and the Parties shall replace the offending provision with something saner.",
-      "9.3 Effective Date. This Agreement takes effect when the second Party agrees in the App, and remains in effect until replaced or dissolved by mutual agreement.",
+      "9.3 Effective Date. This Agreement takes effect when every current housemate agrees in the App, and remains in effect until replaced or dissolved by mutual agreement.",
     ],
   },
   {
@@ -148,7 +148,7 @@ const gym: DocSection[] = [
       "THE IRON PACT — Gym Attendance, Ramp-Up, and Personal Time Off Agreement",
     paragraphs: [
       'Facility: ________________ (the "Gym"). System of Record: the Roommate Hub app (the "App").',
-      'This Gym Attendance, Ramp-Up, and Personal Time Off Agreement (this "Agreement") is entered into by {{party_a}} (Party A) and {{party_b}} (Party B), each a "Party," together the "Parties," effective on the date the second of them agrees in the App (the "Effective Date").',
+      'This Gym Attendance, Ramp-Up, and Personal Time Off Agreement (this "Agreement") is entered into by {{parties}}, each a "Party," together the "Parties," effective on the date every current housemate agrees in the App (the "Effective Date").',
     ],
   },
   {
@@ -215,7 +215,7 @@ const gym: DocSection[] = [
   {
     heading: "ARTICLE 6 — RESCHEDULES",
     paragraphs: [
-      "6.1 Grant. Either Party may request to move a Session to a different time on the same day, or to another day in the same week. A Reschedule takes effect when the other Party accepts it in the App, and consumes no PTO.",
+      "6.1 Grant. Any Party may request to move a Session to a different time on the same day, or to another day in the same week. A Reschedule takes effect when every other current housemate accepts it in the App, and consumes no PTO.",
       "6.2 Conditions. A Reschedule must be requested at least ____ hours before the Session (suggested: 12), and each Party is limited to ____ Reschedules per week (suggested: 2). A request outside these conditions may still be accepted, but acceptance is a favor, not an entitlement.",
     ],
   },
@@ -223,7 +223,7 @@ const gym: DocSection[] = [
     heading: "ARTICLE 7 — PERSONAL TIME OFF",
     paragraphs: [
       "7.1 The Pool. Each Party has their own PTO pool as elected in Schedule D. Missing a Session does not touch the other Party's pool.",
-      "7.2 Spending. Spending PTO is unilateral — no approval required — but is recorded in the App at or before the missed Session, and is visible to both Parties. PTO is spent in increments of 0.25 hours.",
+      "7.2 Spending. Spending PTO is unilateral — no approval required — but is recorded in the App at or before the missed Session, and is visible to all Parties. PTO is spent in increments of 0.25 hours.",
       "7.3 Rates. A fully missed Session costs 1.0 hour. A shortened Session costs the shortfall against the Session Cap, rounded up to the nearest 0.25 hours.",
       "7.4 Exhaustion. When a Party's pool is exhausted, further absences are Unexcused Misses under Article 8. PTO cannot go negative, be borrowed from the future, or be transferred between the Parties, however moving the offer.",
       "7.5 Illness and Injury. Genuine illness or injury does not spend PTO and does not count as a miss; the affected Sessions are marked as sick days in the App. The Parties operate this on the honor system and agree not to discover a chronic condition that occurs only on Leg Day.",
@@ -240,7 +240,7 @@ const gym: DocSection[] = [
   {
     heading: "ARTICLE 9 — AMENDMENTS AND THE APP",
     paragraphs: [
-      "9.1 Proposals. Either Party may propose an amendment in the App — to the Schedule, the PTO pool, the Ramp-Up Plan, the Failure Clause, or any other term. The other Party is notified and may approve or decline it, with reasons.",
+      "9.1 Proposals. Any Party may propose an amendment in the App — to the Schedule, the PTO pool, the Ramp-Up Plan, the Failure Clause, or any other term. Every other current housemate is notified and may approve or decline it, with reasons. An amendment takes effect only when every other current housemate approves it; any decline closes the proposal.",
       "9.2 Effect. An approved amendment takes effect immediately and is recorded with its history. A declined amendment may be revised and re-proposed; it may not be implemented unilaterally, including by simply not showing up.",
       "9.3 The Record. The App's version of this Agreement, its amendments, the Schedule, the Logs, and the PTO ledger are the authoritative record.",
     ],
@@ -248,9 +248,9 @@ const gym: DocSection[] = [
   {
     heading: "ARTICLE 10 — GENERAL",
     paragraphs: [
-      "10.1 Spirit. This is a social agreement between training partners. Its purpose is that the Parties actually go. Health outranks streaks: neither Party shall train through an injury to avoid a paper consequence, and the other Party shall not let them.",
+      "10.1 Spirit. This is a social agreement between training partners. Its purpose is that the Parties actually go. Health outranks streaks: no Party shall train through an injury to avoid a paper consequence, and the other Party shall not let them.",
       "10.2 Severability. If any provision proves unworkable, the rest survives, and the Parties shall amend rather than abandon.",
-      "10.3 Effective Date. This Agreement takes effect when the second Party agrees in the App, and remains in effect until replaced or dissolved by mutual agreement.",
+      "10.3 Effective Date. This Agreement takes effect when every current housemate agrees in the App, and remains in effect until replaced or dissolved by mutual agreement.",
     ],
   },
   {
@@ -322,6 +322,8 @@ export function renderTokens(
   const gymTerms = terms as GymTerms;
   const resolve = (token: string): string => {
     switch (token) {
+      case "parties":
+        return people.map((m) => m.name).join(", ") || BLANK;
       case "party_a":
         return people[0]?.name ?? BLANK;
       case "party_b":

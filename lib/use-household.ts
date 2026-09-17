@@ -20,7 +20,6 @@ import {
   markAllPaid,
   markPaid,
   isSharedScreen,
-  occurrenceAssignee,
   yoursFirst,
   shareDraft,
   pinnedFirst,
@@ -77,6 +76,8 @@ export function useHousehold() {
     kind: Kind;
     entry?: Entry;
     date?: string;
+    setup?: "bills" | "chores";
+    suggestedAssignee?: string;
     draft?: { title: string; url: string };
   } | null>(null);
   // Something the app was opened to do — a home-screen shortcut's "add", or
@@ -726,6 +727,7 @@ export function useHousehold() {
         repeat,
         repeat_until,
         rotation_partner,
+        rotation_members,
         scope: _scope,
         ...rest
       } = createValues;
@@ -740,6 +742,11 @@ export function useHousehold() {
               createValues.repeat_interval,
             )
           : [rest.date || null];
+      const rotation =
+        rotation_members ??
+        (rotation_partner && rest.assignee
+          ? [rest.assignee, rotation_partner]
+          : []);
       const copies = dates.map(
         (date, index) =>
           ({
@@ -754,15 +761,10 @@ export function useHousehold() {
             date,
             id: crypto.randomUUID(),
             series_id: repeat ? sid : null,
-            rotation_members:
-              rotation_partner && rest.assignee
-                ? [rest.assignee, rotation_partner]
-                : [],
-            assignee: occurrenceAssignee(
-              rest.assignee || null,
-              rotation_partner,
-              index,
-            ),
+            rotation_members: rotation,
+            assignee: rotation.length
+              ? rotation[index % rotation.length]
+              : rest.assignee || null,
             payment_members:
               rest.kind === "event" &&
               ["Rent", "Bill"].includes(rest.category || "")

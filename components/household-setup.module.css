@@ -1,0 +1,67 @@
+.setup {
+  grid-column: 1 / -1;
+}
+.steps,
+.loads,
+.suggestions {
+  list-style: none;
+  padding: 0;
+  margin: 1rem 0 0;
+}
+.steps li {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 1rem;
+  align-items: start;
+  padding: 1rem 0;
+  border-top: 1px solid var(--line, #ddd);
+}
+.steps p {
+  margin: 0.35rem 0 0;
+}
+.setup progress {
+  width: 100%;
+}
+.heading,
+.actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+.balance {
+  padding: 1.25rem;
+  margin-bottom: 1rem;
+}
+.loads {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 1rem;
+}
+.loads li {
+  display: grid;
+  gap: 0.35rem;
+}
+.loads meter {
+  width: 100%;
+  accent-color: var(--sage, #72937c);
+}
+.suggestions li {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  padding: 0.7rem 0;
+  border-top: 1px solid var(--line, #ddd);
+}
+@media (max-width: 500px) {
+  .steps li {
+    gap: 0.6rem;
+  }
+  .steps li button {
+    grid-column: 2;
+    justify-self: start;
+  }
+}

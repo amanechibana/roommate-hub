@@ -38,15 +38,20 @@ export function agreementNotification(
       ...base,
       tag: `amendment-${amendment.id}`,
       member: operation === "amend" ? undefined : amendment.proposed_by,
-      title: `${name} ${operation === "amend" ? "proposed an amendment" : amendment.status + " your amendment"}`,
+      title: `${name} ${operation === "amend" ? "proposed an amendment" : amendment.status === "open" ? "approved your amendment — awaiting other housemates" : amendment.status + " your amendment"}`,
       body: `${amendment.title}${operation === "amend" ? " — your decision is needed in Agreements." : amendment.reason ? ` — ${amendment.reason}` : ""}`,
     };
   if (event && ["event", "event_decide"].includes(operation))
     return {
       ...base,
       tag: `relief-${event.id}`,
-      member: operation === "event_decide" ? event.actor : undefined,
-      title: `${name} ${operation === "event_decide" ? `${event.status} your request` : event.status === "open" ? "requested relief" : "recorded relief"}`,
+      member:
+        operation === "event_decide"
+          ? event.actor
+          : typeof event.details?.recipient === "string"
+            ? event.details.recipient
+            : undefined,
+      title: `${name} ${operation === "event_decide" ? `${event.status === "open" ? "accepted your request — awaiting other housemates" : event.status + " your request"}` : event.status === "open" ? "requested relief" : "recorded relief"}`,
       body: `${reliefLabels[event.kind] ?? event.kind}${event.hours != null ? ` (${event.hours} hours)` : ""}${event.status === "open" ? " — your decision is needed in Agreements." : " — see Agreements for details."}`,
     };
   return null;

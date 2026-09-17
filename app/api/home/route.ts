@@ -113,6 +113,7 @@ export async function POST(request: Request) {
                 "visibility",
                 "undo_token",
                 "rotation_partner",
+                "rotation_members",
                 "id",
                 "kind",
                 "title",
@@ -143,6 +144,7 @@ export async function POST(request: Request) {
       delete values.repeat;
       delete values.repeat_until;
       delete values.rotation_partner;
+      delete values.rotation_members;
     }
     const actor = await selectedMember();
     if (!actor)

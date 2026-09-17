@@ -78,19 +78,20 @@ export function gymSessions(
 
 export function houseChores(
   terms: HouseTerms,
-  memberIds: [string, string],
+  memberIds: string[],
   firstDate: Date,
 ): {
   title: string;
   description: string;
   weekday: number;
-  rotation: [string, string];
+  rotation: string[];
 }[] {
   const holderA =
     terms.first_bundle_a && memberIds.includes(terms.first_bundle_a)
       ? terms.first_bundle_a
       : memberIds[0];
-  const other = memberIds[0] === holderA ? memberIds[1] : memberIds[0];
+  if (memberIds.length < 2) return [];
+  const rotation = [holderA, ...memberIds.filter((id) => id !== holderA)];
   // Both bundles land on Saturday; weekday is the day offset from first_date
   // (zero when first_date is already a Saturday, as the hook passes it).
   const weekday = (6 - firstDate.getDay() + 7) % 7;
@@ -101,13 +102,13 @@ export function houseChores(
       title: terms.bundles.a.name,
       description: describe(terms.bundles.a.items),
       weekday,
-      rotation: [holderA, other],
+      rotation,
     },
     {
       title: terms.bundles.b.name,
       description: describe(terms.bundles.b.items),
       weekday,
-      rotation: [other, holderA],
+      rotation: [...rotation.slice(1), rotation[0]],
     },
   ];
 }

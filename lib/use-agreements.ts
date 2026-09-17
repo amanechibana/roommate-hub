@@ -281,7 +281,7 @@ export function useAgreements({
     );
   }
   function activateHouse(agreement: Agreement) {
-    if (realIds.length !== 2) return;
+    if (realIds.length < 2) return;
     const first = parseDate(nextSaturday(dateKey(new Date())));
     persist(
       "set_chores",
@@ -289,11 +289,7 @@ export function useAgreements({
         agreement_id: agreement.id,
         first_date: dateKey(first),
         weeks: CHORE_WEEKS,
-        chores: houseChores(
-          agreement.terms as HouseTerms,
-          [realIds[0], realIds[1]],
-          first,
-        ),
+        chores: houseChores(agreement.terms as HouseTerms, realIds, first),
       },
       refetchOnDrain,
     );
@@ -314,7 +310,7 @@ export function useAgreements({
         if (a.slug !== slug || a.signed_by.includes(uid)) return a;
         const signed = [...a.signed_by, uid];
         const active =
-          ids.length === 2 && ids.every((id) => signed.includes(id));
+          ids.length >= 2 && ids.every((id) => signed.includes(id));
         return {
           ...a,
           signed_by: signed,
@@ -371,22 +367,38 @@ export function useAgreements({
     const uid = memberId;
     setError("");
     const amendment = amendments.find((a) => a.id === id);
+    if (
+      !amendment ||
+      amendment.status !== "open" ||
+      amendment.proposed_by === uid ||
+      amendment.approved_by?.includes(uid)
+    )
+      return;
     const now = new Date().toISOString();
+    const approved = [...(amendment.approved_by ?? []), uid];
+    const complete = realIds.every(
+      (id) => id === amendment.proposed_by || approved.includes(id),
+    );
     setAmendments((current) =>
       current.map((a) =>
         a.id === id
           ? {
               ...a,
-              status: approve ? ("approved" as const) : ("declined" as const),
-              decided_by: uid,
+              approved_by: approve ? approved : a.approved_by,
+              status: !approve
+                ? ("declined" as const)
+                : complete
+                  ? ("approved" as const)
+                  : ("open" as const),
+              decided_by: !approve || complete ? uid : null,
               reason: reason ?? null,
-              decided_at: now,
+              decided_at: !approve || complete ? now : null,
             }
           : a,
       ),
     );
-    const patch = approve ? (amendment?.terms_patch ?? null) : null;
-    if (patch && amendment)
+    const patch = approve && complete ? (amendment.terms_patch ?? null) : null;
+    if (patch)
       setAgreements((current) =>
         current.map((a) =>
           a.id === amendment.agreement_id
@@ -399,8 +411,10 @@ export function useAgreements({
         ),
       );
     const touchesSchedule =
-      Boolean(patch) &&
-      ["template", "ramp"].some((key) => key in (patch as object));
+      Boolean(amendment.terms_patch) &&
+      ["template", "ramp"].some(
+        (key) => key in (amendment.terms_patch as object),
+      );
     const gymPatched =
       touchesSchedule &&
       agreementsRef.current.some(
@@ -410,7 +424,11 @@ export function useAgreements({
       "amend_decide",
       { id, approve, ...(reason ? { reason } : {}) },
       (result) => {
-        if (!gymPatched) return;
+        if (
+          !gymPatched ||
+          (result as { amendment?: Amendment }).amendment?.status !== "approved"
+        )
+          return;
         const row = agreementRow(result);
         if (row && row.slug === "gym" && row.status === "active")
           activateGym(row);
@@ -478,15 +496,32 @@ export function useAgreements({
     if (!memberId) return;
     const uid = memberId;
     setError("");
+    const event = events.find((e) => e.id === id);
+    if (
+      !event ||
+      event.status !== "open" ||
+      event.actor === uid ||
+      event.accepted_by?.includes(uid)
+    )
+      return;
+    const accepted = [...(event.accepted_by ?? []), uid];
+    const complete =
+      event.kind !== "reschedule" ||
+      realIds.every((id) => id === event.actor || accepted.includes(id));
     const now = new Date().toISOString();
     setEvents((current) =>
       current.map((e) =>
         e.id === id
           ? {
               ...e,
-              status: accept ? ("accepted" as const) : ("declined" as const),
-              decided_by: uid,
-              decided_at: now,
+              accepted_by: accept ? accepted : e.accepted_by,
+              status: !accept
+                ? ("declined" as const)
+                : complete
+                  ? ("accepted" as const)
+                  : ("open" as const),
+              decided_by: !accept || complete ? uid : null,
+              decided_at: !accept || complete ? now : null,
             }
           : e,
       ),

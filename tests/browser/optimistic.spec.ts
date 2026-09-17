@@ -67,12 +67,10 @@ async function home(page: Page, picked: string | null = "you") {
         date,
         id: index ? `saved-${posts.length}-${index}` : `saved-${posts.length}`,
         assignee:
-          body.payload.rotation_partner && index % 2
-            ? body.payload.rotation_partner
+          body.payload.rotation_members?.length
+            ? body.payload.rotation_members[index % body.payload.rotation_members.length]
             : body.payload.assignee,
-        rotation_members: body.payload.rotation_partner
-          ? [body.payload.assignee, body.payload.rotation_partner]
-          : [],
+        rotation_members: body.payload.rotation_members ?? [],
         payment_members:
           body.payload.kind === "event" &&
           ["Rent", "Bill"].includes(body.payload.category)
@@ -363,7 +361,7 @@ async function addAlternatingChore(page: Page) {
     .selectOption("weekly");
   await page.getByLabel("Repeat until").fill("2026-10-15");
   await page.getByLabel("Alternate each occurrence").check();
-  await page.getByLabel("Take turns with").selectOption("alex");
+  await page.getByRole("group", { name: "Take turns with" }).getByLabel("Barnatt", { exact: true }).check();
   await page.getByRole("button", { name: "Save to our home" }).click();
 }
 
@@ -381,7 +379,7 @@ test("alternating series keeps turns through edits and whole-series undo", async
     "Barnatt",
   ]);
   await expect.poll(() => mock.posts.length).toBe(1);
-  expect(mock.posts[0].payload.rotation_partner).toBe("alex");
+  expect(mock.posts[0].payload.rotation_members).toEqual(["you", "alex"]);
   await rows.first().locator(".entry-label").click();
   await page.getByLabel("Apply to every occurrence of this plan").check();
   await expect(page.getByLabel("Who’s on it?")).toBeDisabled();
