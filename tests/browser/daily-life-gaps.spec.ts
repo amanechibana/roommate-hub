@@ -89,7 +89,7 @@ test("ledger export includes full purchases even while search filters the screen
 test("handbook searches saved values and notes", async ({ page }) => {
   await page.goto("/");
   await page
-    .getByRole("navigation")
+    .locator(".topbar")
     .getByRole("button", { name: "House handbook", exact: true })
     .click();
   await page

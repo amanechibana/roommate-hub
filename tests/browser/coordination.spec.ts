@@ -33,6 +33,10 @@ for (const mobile of [false, true]) {
     await expect(
       page.getByText("Replace the sofa?", { exact: true }),
     ).toHaveCount(0);
+    await page
+      .getByRole("button", { name: "Reservations", exact: true })
+      .click();
+    await page.getByText("Reserve a resource", { exact: true }).click();
     const tomorrow = shiftDay(dateKey(new Date()), 1);
     await page.getByLabel("Starts", { exact: true }).fill(`${tomorrow}T10:00`);
     await page.getByLabel("Ends", { exact: true }).fill(`${tomorrow}T11:00`);
@@ -51,6 +55,8 @@ for (const mobile of [false, true]) {
     await expect(page.getByText("Wash bedding", { exact: true })).toHaveCount(
       0,
     );
+    await page.getByRole("button", { name: "Moving", exact: true }).click();
+    await page.getByText("Start a moving checklist", { exact: true }).click();
     await page
       .getByRole("combobox", { name: "Housemate", exact: true })
       .selectOption("alex");
@@ -200,13 +206,17 @@ test.describe("shared membership and planning", () => {
     await expect(
       page.getByRole("button", { name: "Save weekly review" }),
     ).toHaveCount(0);
+    await expect(page.getByLabel("Check-in notes")).toBeDisabled();
+    await page
+      .getByRole("button", { name: "Reservations", exact: true })
+      .click();
     await expect(
       page.getByRole("button", { name: "Reserve time" }),
     ).toHaveCount(0);
+    await page.getByRole("button", { name: "Moving", exact: true }).click();
     await expect(
       page.getByRole("button", { name: "Create checklist" }),
     ).toHaveCount(0);
-    await expect(page.getByLabel("Check-in notes")).toBeDisabled();
   });
   test("planning errors remain visible with retry", async ({ page }) => {
     await setup(page);

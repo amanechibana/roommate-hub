@@ -10,7 +10,7 @@ export default function SearchField({
 }) {
   return (
     <label className="house-search">
-      {label}
+      <span className="search-label">{label}</span>
       <input
         type="search"
         aria-label={label}

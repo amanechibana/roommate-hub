@@ -81,11 +81,25 @@ export default function HandbookTab({
           </Button>
         </div>
       )}
-      <p className={styles.intro}>
-        The details you need at home, kept separate from the changing fridge
-        notes. File links expire shortly after they open.
-      </p>
       <SearchField label="Search handbook" value={query} onChange={setQuery} />
+      {query &&
+        !handbook.entries.some((entry) =>
+          matchesSearch(
+            query,
+            handbookSections.find((section) => section.id === entry.section)
+              ?.label,
+            entry.title,
+            entry.value,
+            entry.notes,
+            handbook.files
+              .filter((file) => file.entry_id === entry.id)
+              .map((file) => file.file_name),
+          ),
+        ) && (
+          <p className={styles.empty} role="status">
+            No handbook details match your search.
+          </p>
+        )}
       <div className={styles.sections}>
         {handbookSections.map((section) => {
           const entries = handbook.entries.filter(
@@ -102,6 +116,7 @@ export default function HandbookTab({
                   .map((file) => file.file_name),
               ),
           );
+          if (query && !entries.length) return null;
           return (
             <section
               className={styles.section}
@@ -151,6 +166,10 @@ export default function HandbookTab({
           );
         })}
       </div>
+      <p className={styles.intro}>
+        The details you need at home, kept separate from the changing fridge
+        notes. File links expire shortly after they open.
+      </p>
       {editing && (
         <HandbookDialog
           editing={editing}

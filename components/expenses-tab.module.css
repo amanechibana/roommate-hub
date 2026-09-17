@@ -24,7 +24,7 @@
 }
 .balance,
 .spending {
-  padding: 24px;
+  padding: 14px 18px;
 }
 .expenses .balance {
   background: #e9f0df;
@@ -36,8 +36,8 @@
 }
 .summary strong {
   display: block;
-  margin: 12px 0 7px;
-  font-size: 34px;
+  margin: 8px 0 4px;
+  font-size: 28px;
   font-weight: 500;
   letter-spacing: -1px;
   color: #3d593b;
@@ -186,11 +186,11 @@
 }
 .empty {
   text-align: center;
-  padding: 28px 20px 34px;
+  padding: 18px 20px 22px;
   color: #6b7c61;
 }
 .empty > svg {
-  margin-bottom: 14px;
+  margin-bottom: 8px;
 }
 .empty h3 {
   font-size: 17px;
@@ -301,10 +301,10 @@
   }
   .balance,
   .spending {
-    padding: 17px 14px;
+    padding: 12px;
   }
   .summary strong {
-    font-size: 28px;
+    font-size: 24px;
   }
   .summary span,
   .summary p {
@@ -368,7 +368,7 @@
   }
   .summary span {
     display: block;
-    min-height: 30px;
+    min-height: 0;
   }
 }
 
@@ -376,4 +376,85 @@
 .summary strong :global(.animated-money) span {
   font: inherit;
   color: inherit;
+}
+
+.monthHeading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+.monthPicker {
+  position: relative;
+  display: inline-flex;
+  flex-direction: row;
+  align-items: center;
+  margin: 0;
+  gap: 6px;
+  padding: 4px 6px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  cursor: pointer;
+}
+.monthPicker:focus-within {
+  outline: 2px solid var(--green);
+  outline-offset: 2px;
+}
+.monthPicker input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  opacity: 0;
+  cursor: pointer;
+  font-size: 16px;
+}
+.monthPicker input::-webkit-calendar-picker-indicator {
+  position: absolute;
+  inset: 0;
+  width: auto;
+  height: auto;
+  cursor: pointer;
+}
+.expenses .spending {
+  padding: 14px 18px;
+}
+.breakdown summary {
+  color: var(--muted);
+  font-size: 12px;
+  cursor: pointer;
+}
+.breakdown p {
+  margin-top: 8px;
+}
+.activitySearch {
+  padding: 0 18px 12px;
+}
+.activitySearch :global(.house-search) {
+  margin: 0;
+}
+.exports {
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+}
+.exports :global(.filters) {
+  margin: 0;
+  gap: 8px;
+}
+@media (max-width: 650px) {
+  .summary {
+    gap: 8px;
+    grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr);
+  }
+  .expenses .spending {
+    padding: 12px;
+  }
+  .activitySearch {
+    padding-inline: 12px;
+  }
 }

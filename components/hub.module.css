@@ -790,8 +790,8 @@
     gap: 4px;
     flex: 1;
     min-height: 0;
-    overflow-y: auto;
-    scrollbar-width: thin;
+    justify-content: start;
+    overflow: visible;
   }
   .shell :global(.sidebar nav button) {
     position: relative;
@@ -878,4 +878,157 @@
   .shell :global(.shopping-row .row-price) {
     padding-right: 4px;
   }
+}
+
+/* Keep navigation visible; use a tighter rail on shorter windows. */
+.shell :global(.topbar-link) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-width: 36px;
+  min-height: 36px;
+  padding: 6px 9px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 12px;
+}
+.shell :global(.topbar-link:hover),
+.shell :global(.topbar-link.selected) {
+  color: var(--green);
+  background: #e9eee1;
+}
+.shell :global(.setup-shortcut) {
+  padding: 6px 9px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  font-size: 11px;
+  white-space: nowrap;
+}
+.shell :global(.page-details) {
+  margin-top: 16px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--paper);
+}
+.shell :global(.page-details > summary) {
+  padding: 12px 16px;
+  color: var(--green);
+  font-size: 13px;
+  cursor: pointer;
+}
+.shell :global(.page-details > .panel) {
+  border: 0;
+  box-shadow: none;
+}
+.shell :global(.shopping-options) {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 18px;
+  padding: 8px 16px;
+  border-top: 1px solid var(--line);
+}
+.shell :global(.shopping-options .house-search),
+.shell :global(.shopping-options .checkbox-row) {
+  margin: 0;
+  font-size: 12px;
+}
+.shell :global(.shopping-options .house-search) {
+  width: auto;
+  flex: 1 1 160px;
+}
+.shell :global(.content:not(.home-content):not(.calendar-content)) {
+  padding-top: 16px;
+}
+.shell :global(.content > .page-heading) {
+  margin-bottom: 16px;
+}
+.shell :global(.attention-panel > .attention-list) {
+  margin-top: 0;
+}
+@media (min-width: 651px) and (max-height: 850px) {
+  .shell :global(.sidebar) {
+    padding-top: 12px;
+    padding-bottom: 10px;
+  }
+  .shell :global(.sidebar .brand) {
+    margin-bottom: 12px;
+  }
+  .shell :global(.sidebar nav) {
+    gap: 2px;
+  }
+  .shell :global(.sidebar nav button) {
+    padding: 6px 3px;
+    gap: 4px;
+  }
+  .shell :global(.rail-companion) {
+    display: none;
+  }
+  .shell :global(.sidebar-bottom) {
+    padding-top: 6px;
+    gap: 3px;
+  }
+  .shell :global(.sidebar-profile) {
+    flex-direction: row;
+    justify-content: center;
+    margin-top: 3px;
+    padding-top: 8px;
+  }
+}
+@media (max-width: 1100px) {
+  .shell :global(.topbar > span),
+  .shell :global(.private-label) {
+    display: none;
+  }
+}
+@media (max-width: 650px) {
+  .shell :global(.topbar > div) {
+    gap: 4px;
+  }
+  .shell :global(.topbar-link) {
+    padding: 6px;
+  }
+  .shell :global(.topbar-link > span),
+  .shell :global(.setup-shortcut > span) {
+    display: none;
+  }
+  .shell :global(.setup-shortcut)::before {
+    content: "Setup";
+  }
+  .shell :global(.setup-shortcut) {
+    font-size: 10px;
+    padding: 6px;
+  }
+}
+
+@media (max-width: 650px) {
+  .shell :global(.topbar .avatar-stack .avatar ~ .avatar) {
+    display: none;
+  }
+  .shell :global(.topbar .avatar-stack) {
+    min-width: 32px;
+    padding-right: 0;
+  }
+}
+
+@media (max-width: 650px) {
+  .shell :global(.topbar .icon-button),
+  .shell :global(.topbar .display-toggle) {
+    min-width: 36px;
+    min-height: 36px;
+    padding: 6px;
+  }
+}
+
+.shell :global(.house-search .search-label) {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
 }

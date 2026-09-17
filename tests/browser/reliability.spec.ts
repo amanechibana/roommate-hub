@@ -231,7 +231,7 @@ test("handbook CRUD and authenticated file opening stay usable", async ({
   );
   await page.goto("/");
   await page
-    .getByRole("navigation")
+    .locator(".topbar")
     .getByRole("button", { name: "House handbook", exact: true })
     .click();
   await page
@@ -307,7 +307,7 @@ test("a shared household screen can read the handbook but gets no editing contro
   );
   await page.goto("/");
   await page
-    .getByRole("navigation")
+    .locator(".topbar")
     .getByRole("button", { name: "House handbook", exact: true })
     .click();
   await expect(
