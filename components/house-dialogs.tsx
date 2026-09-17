@@ -9,7 +9,7 @@ import { ChevronRight, Leaf, Plus, X } from "lucide-react";
 
 export function ShortcutsDialog({ onClose }: { onClose: () => void }) {
   const rows: [string, string][] = [
-    ["1 – 6", "Switch tabs"],
+    ["1 – 9", "Switch tabs"],
     ["N", "Add to the current tab"],
     ["/", "Jump to quick add"],
     ["Esc", "Close dialogs"],

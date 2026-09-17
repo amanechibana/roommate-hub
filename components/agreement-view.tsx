@@ -1,4 +1,5 @@
 "use client";
+import { useHouseholdClock } from "@/lib/household-clock";
 
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -17,7 +18,7 @@ import {
   type GymTerms,
   type HouseTerms,
 } from "@/lib/agreements";
-import { dateKey, shiftDay, type Entry, type Member } from "@/lib/model";
+import { shiftDay, type Entry, type Member } from "@/lib/model";
 import type { AgreementsController } from "@/lib/use-agreements";
 import styles from "./agreements.module.css";
 
@@ -64,6 +65,7 @@ export default function AgreementView({
   entries: Entry[];
   refreshEntries: () => void;
 }) {
+  const { today } = useHouseholdClock();
   const row = controller.agreements.find((a) => a.slug === slug);
   const other = members.find((m) => m.user_id !== uid);
   const [draft, setDraft] = useState<HouseTerms | GymTerms>(
@@ -345,7 +347,7 @@ export default function AgreementView({
                     start_time: "08:00",
                     weekly_shift_min: 15,
                     target_time: "07:00",
-                    target_date: shiftDay(dateKey(new Date()), 56),
+                    target_date: shiftDay(today, 56),
                   },
                 })
               }
@@ -550,7 +552,11 @@ export default function AgreementView({
   };
 
   const editorFor = (heading: string) =>
-    !editing ? null : slug === "house" ? houseEditor(heading) : gymEditor(heading);
+    !editing
+      ? null
+      : slug === "house"
+        ? houseEditor(heading)
+        : gymEditor(heading);
 
   const waitingFor = row
     ? members.find((m) => !row.signed_by.includes(m.user_id))

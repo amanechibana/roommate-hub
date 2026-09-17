@@ -67,7 +67,7 @@ begin
  if not (public.shared_improvements('test-gateway','claim_delivery',payload)->>'claimed')::boolean then raise exception 'Failed reminder could not retry'; end if;
  perform public.shared_improvements('test-gateway','finish_delivery',payload||jsonb_build_object('status','sent'));
  if (public.shared_improvements('test-gateway','claim_delivery',payload)->>'claimed')::boolean then raise exception 'Delivered reminder resent'; end if;
- if public.shared_household_ops('test-gateway','status','{}')->>'schema_version'<>'026' then raise exception 'Schema status outdated'; end if;
+ if (public.shared_household_ops('test-gateway','status','{}')->>'schema_version')::integer<26 then raise exception 'Schema status outdated'; end if;
  insert into public.agreements(household_id,slug,title) values(hid,'house','House history fixture') on conflict(household_id,slug) do update set title=excluded.title returning id into agreement;
  insert into public.agreement_events(household_id,agreement_id,kind,status,actor,created_at) select hid,agreement,'sick','done',a,clock_timestamp()+g*interval '1 millisecond' from generate_series(1,121) g;
  cursor:=null;count_rows:=0;

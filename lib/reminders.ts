@@ -1,3 +1,4 @@
+import { householdDate, DEFAULT_HOUSEHOLD_TIMEZONE } from "./household-time";
 import {
   billPaid,
   billShare,
@@ -17,7 +18,7 @@ export type Digest = { title: string; lines: string[] };
 
 // The household lives in one place; reminders describe that day, not the
 // server's UTC day.
-export const HOUSEHOLD_TIME_ZONE = "America/New_York";
+export const HOUSEHOLD_TIME_ZONE = DEFAULT_HOUSEHOLD_TIMEZONE;
 // Nobody wants a nudge at 2am. Between ten at night and eight in the
 // morning, household time, nudges wait; the morning digest goes at eight.
 export function quietHours(now: Date, timeZone = HOUSEHOLD_TIME_ZONE) {
@@ -31,12 +32,7 @@ export function quietHours(now: Date, timeZone = HOUSEHOLD_TIME_ZONE) {
   return hour >= 22 || hour < 8;
 }
 export function localDateKey(now: Date, timeZone = HOUSEHOLD_TIME_ZONE) {
-  return new Intl.DateTimeFormat("en-CA", {
-    timeZone,
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).format(now);
+  return householdDate(now, timeZone);
 }
 
 const money = (value: number) =>

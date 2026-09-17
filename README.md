@@ -687,3 +687,35 @@ split; edit undo and delete undo preserve shares.
 Validation: `tests/search-offline-chore-bill-splits.test.ts`,
 `supabase/tests/search-offline-chore-bill-splits.sql`, and
 `tests/browser/search-offline-chore-bill-splits.spec.ts`.
+
+### Navigation, household dates, and personal attention
+
+Each page has a bookmarkable URL, for example `/?tab=calendar`,
+`/?tab=expenses`, and `/?tab=attention`. Refresh restores that page; Back and
+Forward follow page changes. Existing named-tab shortcuts and share-sheet
+arrivals still work, and display mode keeps its URL flag.
+
+The overview, calendar, overdue labels, bill posting dates, expense forms and
+monthly totals, agreement scheduling, and attention list use the timezone in
+household reminder settings. The household clock updates at minute boundaries
+and when a device returns to the app, including across midnight and DST changes.
+
+“Needs your attention” shows the selected person's open to-dos, unpaid bill
+shares, proposed agreements, incoming amendments/requests, and coverage decisions.
+It keeps every overdue occurrence and the next upcoming occurrence of each
+series. Review opens the item or exact agreement; chores and bill shares can be
+completed directly, and the receiving housemate can approve or decline coverage.
+Shared screens do not have personal actions. Failed request loads are shown as
+an incomplete list with a retry action.
+
+Personal visibility is a convenience filter under shared household-code access.
+The sign-in screen, person picker, visibility choice, and household settings
+explain that selecting a name does not authenticate a member: any code holder
+can switch people and view their personal items or act in their name. The UI
+labels this “Personal view only”, rather than promising account-level privacy.
+Separate member authentication is not part of this change.
+
+Apply migration 028 before production deployment. It updates server posting
+dates, check-in weeks, schedule maintenance, and agreement history windows to
+use the household timezone. The deployment gate holds production until 028 is
+confirmed.

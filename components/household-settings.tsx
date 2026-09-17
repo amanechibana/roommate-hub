@@ -188,7 +188,7 @@ export default function HouseholdSettings({
       <section className="panel settings-panel">
         <h2>
           <ShieldCheck size={20} />{" "}
-          {demo ? "Make yourself at home" : "Private by design"}
+          {demo ? "Make yourself at home" : "Who can access this home"}
         </h2>
         <p>
           {demo
@@ -206,11 +206,12 @@ export default function HouseholdSettings({
         )}
         <h3>Personal visibility</h3>
         <p className="subtle">
-          Personal items are visible to housemates by default and stay off
-          shared boards and reminders. A private personal item is returned only
-          to its creator’s selected device identity. Everyone with the household
-          code can change the selected person; private items do not have
-          separate account authentication. Offline copies stay on this device
+          Personal items stay off shared boards and reminders. “Personal view
+          only” filters an item to its creator’s selected person, but anyone
+          with the household code can switch to that person, see the item, and
+          make changes in their name. This home uses a shared code, not separate
+          member sign-ins. Do not store information here that needs to be kept
+          secret from other code holders. Offline copies stay on this device
           until sign-out or a person change.
         </p>
         {!demo && !sharedScreen && <PushSettings />}

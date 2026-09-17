@@ -1,4 +1,5 @@
 "use client";
+import { useHouseholdClock } from "@/lib/household-clock";
 import { useAgreementsContext } from "./agreements-context";
 import { ptoRemaining, type GymTerms } from "@/lib/agreements";
 import { parseDate, shiftDay, type Entry, type Member } from "@/lib/model";
@@ -19,6 +20,7 @@ export default function GymStrip({
   uid: string | null;
   today: string;
 }) {
+  const { now, timezone } = useHouseholdClock();
   const agreements = useAgreementsContext();
   if (!agreements || !agreements.enabled || !uid) return null;
   const gym = agreements.agreements.find(
@@ -47,11 +49,8 @@ export default function GymStrip({
         b.date! + (b.time_of_day ?? ""),
       ),
     )[0];
-  const gymEvents = agreements.events.filter(
-    (e) => e.agreement_id === gym.id,
-  );
-  const now = new Date();
-  const pto = (id: string) => ptoRemaining(gymEvents, id, terms, now);
+  const gymEvents = agreements.events.filter((e) => e.agreement_id === gym.id);
+  const pto = (id: string) => ptoRemaining(gymEvents, id, terms, now, timezone);
   const nextLabel = next
     ? `${parseDate(next.date!).toLocaleDateString("en-US", {
         weekday: "short",

@@ -65,7 +65,8 @@ export default function Auth({ onSuccess }: { onSuccess: () => void }) {
         </form>
         <p className="auth-footnote">
           <ShieldCheck size={15} />
-          We’ll remember this device for 30 days. No email needed.
+          We’ll remember this device for 30 days. The code grants household
+          access; selecting a person does not authenticate them.
         </p>
       </section>
     </main>

@@ -1,11 +1,12 @@
 "use client";
+import { useHouseholdClock } from "@/lib/household-clock";
 import { agreementDocuments, renderTokens } from "@/lib/agreements-content";
 import type { HouseTerms } from "@/lib/agreements";
 import { useState } from "react";
 import { Button } from "./ui/button";
 import { useCoordination } from "@/lib/use-coordination";
 import { shareMoney } from "@/lib/household-actions";
-import { dateKey, type Entry, type Member } from "@/lib/model";
+import { type Entry, type Member } from "@/lib/model";
 import type { MoveItem } from "@/lib/coordination";
 import styles from "./house-planning.module.css";
 function ItemEditor({
@@ -63,6 +64,7 @@ export default function HousePlanning({
   uid: string | null;
   readOnly: boolean;
 }) {
+  const { today } = useHouseholdClock();
   const { data, loaded, busy, error, run, refresh } = useCoordination({
     demo,
     entries,
@@ -352,12 +354,7 @@ export default function HousePlanning({
               </label>
               <label>
                 Move date
-                <input
-                  type="date"
-                  name="date"
-                  defaultValue={dateKey(new Date())}
-                  required
-                />
+                <input type="date" name="date" defaultValue={today} required />
               </label>
             </div>
             <Button className="button" disabled={busy}>

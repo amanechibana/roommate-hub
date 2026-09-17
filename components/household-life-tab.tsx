@@ -82,7 +82,9 @@ export default function HouseholdLifeTab({
   const [section, setSection] = useState<Section>("Quick polls");
   const [editor, setEditor] = useState<Editor | null>(null);
   const [now, setNow] = useState(Date.now());
-  const [month, setMonth] = useState(today.slice(0, 7));
+  const currentMonth = today.slice(0, 7);
+  const [month, setMonth] = useState(currentMonth);
+  useEffect(() => setMonth(currentMonth), [currentMonth]);
   useEffect(() => {
     const timer = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(timer);

@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { dateKey } from "@/lib/model";
+import { useHouseholdClock } from "@/lib/household-clock";
+import { householdDate, householdHour } from "@/lib/household-time";
 
 function FlipDigit({ value, word = false }: { value: string; word?: boolean }) {
   const [faces, setFaces] = useState({ current: value, prev: value });
@@ -22,6 +23,7 @@ function FlipDigit({ value, word = false }: { value: string; word?: boolean }) {
 }
 
 export default function FlipClock() {
+  const { timezone } = useHouseholdClock();
   const [now, setNow] = useState(() => new Date());
   useEffect(() => {
     // Chained timeouts land each tick just past the second boundary, so the
@@ -45,12 +47,23 @@ export default function FlipClock() {
       document.removeEventListener("visibilitychange", resume);
     };
   }, []);
-  const hours = String(now.getHours() % 12 || 12);
-  const minutes = String(now.getMinutes()).padStart(2, "0");
+  const hour = householdHour(now, timezone);
+  const hours = String(hour % 12 || 12);
+  const minutes = new Intl.DateTimeFormat("en-US", {
+    timeZone: timezone,
+    minute: "2-digit",
+  })
+    .formatToParts(now)
+    .find((p) => p.type === "minute")!
+    .value.padStart(2, "0");
   const seconds = String(now.getSeconds()).padStart(2, "0");
-  const meridiem = now.getHours() < 12 ? "AM" : "PM";
-  const weekday = now.toLocaleDateString("en-US", { weekday: "long" });
+  const meridiem = hour < 12 ? "AM" : "PM";
+  const weekday = now.toLocaleDateString("en-US", {
+    timeZone: timezone,
+    weekday: "long",
+  });
   const monthDay = now.toLocaleDateString("en-US", {
+    timeZone: timezone,
     month: "long",
     day: "numeric",
   });
@@ -58,7 +71,7 @@ export default function FlipClock() {
     <>
       <time
         className="flip-clock"
-        dateTime={`${String(now.getHours()).padStart(2, "0")}:${minutes}`}
+        dateTime={`${String(hour).padStart(2, "0")}:${minutes}`}
       >
         <span className="flip-sr">{`${hours}:${minutes} ${meridiem}`}</span>
         <span className="flip-cards" aria-hidden="true">
@@ -79,7 +92,10 @@ export default function FlipClock() {
           <span className="flip-meridiem">{meridiem}</span>
         </span>
       </time>
-      <time className="flip-clock flip-date" dateTime={dateKey(now)}>
+      <time
+        className="flip-clock flip-date"
+        dateTime={householdDate(now, timezone)}
+      >
         <span className="flip-sr">{`${weekday}, ${monthDay}`}</span>
         <span className="flip-cards" aria-hidden="true">
           <FlipDigit value={weekday} word />

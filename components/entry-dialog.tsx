@@ -1,4 +1,5 @@
 "use client";
+import { useHouseholdClock } from "@/lib/household-clock";
 import {
   choreTemplates,
   calendarConflicts,
@@ -75,6 +76,7 @@ export default function EntryDialog({
   onSave: (values: SaveValues) => Promise<void>;
   onDelete: (entry: Entry, scope?: "series") => Promise<void>;
 }) {
+  const { today } = useHouseholdClock();
   const [kind, setKind] = useState<Kind>(editing.kind);
   const [validation, setValidation] = useState("");
   const [lookup, setLookup] = useState<"" | "loading" | "failed">("");
@@ -83,7 +85,7 @@ export default function EntryDialog({
     editing.entry?.date || editing.date || "",
   );
   const [repeatDays, setRepeatDays] = useState<number[]>([
-    parseDate(startDate || dateKey(new Date())).getDay(),
+    parseDate(startDate || today).getDay(),
   ]);
   const [repeatInterval, setRepeatInterval] = useState(1);
   const [repeatUntil, setRepeatUntil] = useState("");
@@ -91,7 +93,7 @@ export default function EntryDialog({
   function chooseRepeat(value: Repeat | "") {
     setRepeat(value);
     if (!value) return;
-    const start = startDate || dateKey(new Date());
+    const start = startDate || today;
     setStartDate(start);
     if (!repeatUntil) {
       const end = parseDate(start);
@@ -644,13 +646,13 @@ export default function EntryDialog({
                   if (event.target.checked && uid) setAssignee(uid);
                 }}
               />
-              Private for the selected person
+              Personal view only (household code holders can access)
             </label>
             <p className="subtle">
-              Private items are returned only when their creator is selected on
-              this device. Anyone with the household code can switch people;
-              this is not a separate password-protected account. Earlier shared
-              activity remains visible.
+              This hides the item from other selected people and shared screens.
+              Anyone with the household code can switch to your name, see this
+              item, and make changes in your name. Selecting a person is not a
+              separate sign-in. Earlier shared activity remains visible.
             </p>
           </div>
         )}

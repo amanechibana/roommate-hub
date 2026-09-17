@@ -1,4 +1,6 @@
 "use client";
+import { useHouseholdClock } from "@/lib/household-clock";
+import { householdHour } from "@/lib/household-time";
 import { activityVerb, activityWhen, type HouseActivity } from "@/lib/activity";
 
 import { AnimatePresence, m } from "motion/react";
@@ -30,7 +32,6 @@ import {
   X,
 } from "lucide-react";
 import {
-  dateKey,
   clockLabel,
   parseDate,
   shiftDay,
@@ -112,14 +113,10 @@ export default function HomeBoard({
   onToggle,
   onPay,
 }: Props) {
-  const {
-    reduced,
-    active,
-    hour,
-    month: seasonMonth,
-    weather,
-    celebration,
-  } = useHouseMotion();
+  const { reduced, active, weather, celebration } = useHouseMotion();
+  const { now, today, timezone } = useHouseholdClock();
+  const hour = householdHour(now, timezone);
+  const seasonMonth = parseDate(today).getMonth();
   const tone =
     hour >= 22 || hour < 6
       ? "night"
@@ -138,7 +135,6 @@ export default function HomeBoard({
           : seasonMonth === 11 || seasonMonth <= 1
             ? "snow"
             : "none";
-  const [now, setNow] = useState(new Date());
   const board = useRef<HTMLElement>(null);
   const [page, setPage] = useState(0);
   const [paused, setPaused] = useState(false);
@@ -148,7 +144,6 @@ export default function HomeBoard({
   const roomFor = (kind: string) => limits[kind] ?? 3;
   const [full, setFull] = useState(false);
   const [fullscreenError, setFullscreenError] = useState("");
-  const today = dateKey(now);
   const viewer = members.find(
     (member) => member.user_id === memberId && member.name !== "Housemates",
   );
@@ -287,32 +282,7 @@ export default function HomeBoard({
     resize();
     return () => observer.disconnect();
   }, [display]);
-  useEffect(() => {
-    // Refresh due dates and plan labels at local midnight, including DST days.
-    let timer: ReturnType<typeof setTimeout>;
-    const tick = () => {
-      const current = new Date();
-      setNow(current);
-      const midnight = new Date(
-        current.getFullYear(),
-        current.getMonth(),
-        current.getDate() + 1,
-      );
-      timer = setTimeout(tick, midnight.getTime() - current.getTime() + 30);
-    };
-    const resume = () => {
-      if (document.visibilityState === "visible") {
-        clearTimeout(timer);
-        tick();
-      }
-    };
-    tick();
-    document.addEventListener("visibilitychange", resume);
-    return () => {
-      clearTimeout(timer);
-      document.removeEventListener("visibilitychange", resume);
-    };
-  }, []);
+
   useEffect(() => {
     if (!display) return;
     const measure = document.createElement("canvas").getContext("2d");
@@ -503,6 +473,7 @@ export default function HomeBoard({
             {display
               ? household.name
               : now.toLocaleDateString("en-US", {
+                  timeZone: timezone,
                   weekday: "long",
                   month: "long",
                   day: "numeric",
@@ -552,7 +523,7 @@ export default function HomeBoard({
             <p className="board-lately">
               <Sparkles size={13} aria-hidden="true" />
               <span>
-                {lastActivity.line}, {activityWhen(lastActivity.at, now)}
+                {lastActivity.line}, {activityWhen(lastActivity.at, now, timezone)}
               </span>
             </p>
           )}
@@ -868,7 +839,7 @@ export default function HomeBoard({
                     <p title={note.description}>{note.description}</p>
                     <span>
                       With love, {person(note.assignee || note.created_by)},{" "}
-                      {activityWhen(Date.parse(note.created_at), now)}
+                      {activityWhen(Date.parse(note.created_at), now, timezone)}
                     </span>
                   </div>
                 ),

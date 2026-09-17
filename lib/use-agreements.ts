@@ -1,4 +1,5 @@
 "use client";
+import { householdDate } from "./household-time";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { homeRequest } from "./home-client";
 import { TAB_ID } from "./realtime";
@@ -28,12 +29,14 @@ export function useAgreements({
   members,
   householdId,
   demo,
+  today: householdToday,
 }: {
   enabled: boolean;
   memberId: string | null;
   members: Member[];
   householdId: string | undefined;
   demo: boolean;
+  today?: string;
 }) {
   const on = enabled && !demo && Boolean(householdId);
   const [agreements, setAgreements] = useState<Agreement[]>([]);
@@ -268,7 +271,7 @@ export function useAgreements({
   function activateGym(agreement: Agreement) {
     const terms = agreement.terms as GymTerms;
     const seriesId = terms.gym_series_id || crypto.randomUUID();
-    const today = new Date();
+    const today = parseDate(householdToday ?? householdDate(new Date()));
     persist(
       "set_sessions",
       {
@@ -282,7 +285,9 @@ export function useAgreements({
   }
   function activateHouse(agreement: Agreement) {
     if (realIds.length !== 2) return;
-    const first = parseDate(nextSaturday(dateKey(new Date())));
+    const first = parseDate(
+      nextSaturday(householdToday ?? householdDate(new Date())),
+    );
     persist(
       "set_chores",
       {

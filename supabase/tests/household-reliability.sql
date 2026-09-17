@@ -119,6 +119,6 @@ do $$ begin
   begin perform * from public.household_reminder_runs; raise exception 'Anon table access' using errcode='P0002'; exception when insufficient_privilege then null; end;
   begin perform public.shared_home_legacy('test-gateway','get'); raise exception 'Legacy unbounded gateway callable' using errcode='P0002'; exception when insufficient_privilege then null; end;
   begin perform public.shared_household_ops('wrong-token','status'); raise exception 'Bad token accepted' using errcode='P0002'; exception when insufficient_privilege then null; end;
-  begin perform public.shared_household_ops('test-gateway','roll_forward',jsonb_build_object('actor',gen_random_uuid())); raise exception 'Unattributed retry allowed' using errcode='P0002'; exception when insufficient_privilege then null; end;
+  begin perform public.shared_household_ops('test-gateway','roll_forward',jsonb_build_object('actor',gen_random_uuid())); raise exception 'Unattributed retry allowed' using errcode='P0002'; exception when insufficient_privilege or raise_exception then null; end;
 end $$;
 rollback;

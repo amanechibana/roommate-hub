@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
-import { useImprovements } from "@/lib/use-improvements";
+import { HouseholdClockProvider } from "@/lib/household-clock";
+import AttentionView from "./attention-view";
 import ChoreCoverage from "./chore-coverage";
 import OfflineStatus from "./offline-status";
 import HouseholdSearch from "./household-search";
@@ -74,6 +75,13 @@ import { useHouseholdLife } from "@/lib/use-household-life";
 import HousePlanning from "./house-planning";
 export default function Hub() {
   const house = useHousehold();
+  return (
+    <HouseholdClockProvider value={house.clock}>
+      <HubContent house={house} />
+    </HouseholdClockProvider>
+  );
+}
+function HubContent({ house }: { house: ReturnType<typeof useHousehold> }) {
   const [groupStores, setGroupStores] = useState(false);
   const [storeFilter, setStoreFilter] = useState("");
   const [houseSearch, setHouseSearch] = useState(false);
@@ -161,7 +169,7 @@ export default function Hub() {
     shoppingByStore.sort((a, b) =>
       (a.store || "Any store").localeCompare(b.store || "Any store"),
     );
-  const improvements = useImprovements(household?.id, uid, demo);
+  const improvements = house.improvements;
   const life = useHouseholdLife({
     enabled: session && tab === "Household life",
     demo,
@@ -178,6 +186,7 @@ export default function Hub() {
     members,
     householdId: household?.id,
     demo,
+    today,
   });
   // The shared screen reads the house but is nobody in particular, so nothing
   // that needs an author is offered. The gateway refuses that identity anyway.
@@ -393,7 +402,7 @@ export default function Hub() {
           {!!entry.checklist?.length &&
             ` · ${entry.checklist.filter((s) => s.done).length}/${entry.checklist.length} steps`}
           {entry.effort_minutes ? ` · ~${entry.effort_minutes} min` : ""}
-          {entry.visibility === "private" ? " · Private" : ""}
+          {entry.visibility === "private" ? " · Personal view" : ""}
         </span>
         <small
           className={
@@ -523,6 +532,11 @@ export default function Hub() {
           <p className="eyebrow">MAKE YOURSELF AT HOME</p>
           <h1>Who’s this?</h1>
           <p className="subtitle">Pick who’s using this device.</p>
+          <p className="subtle">
+            This selects a person; it does not verify their identity. Anyone with
+            the household code can switch people, view personal items, and make
+            changes in their name.
+          </p>
           <div className="person-picker">
             {members
               .filter((m) => m.name !== "Housemates")
@@ -634,7 +648,7 @@ export default function Hub() {
   );
 
   const PageIcon = tabs.find((item) => item.name === tab)?.icon || Settings;
-  const now = new Date();
+  const now = house.clock.now;
   // Nav badges and the house's counts are about house to-dos; the progress
   // bar counts whichever list is on show, so the Personal lane gets its own.
   const openTasks = houseTasks(tasks).filter((entry) => !entry.done);
@@ -701,7 +715,7 @@ export default function Hub() {
               key={name}
               className={tab === name ? "active" : ""}
               aria-current={tab === name ? "page" : undefined}
-              aria-label={name === "Household life" ? name : undefined}
+              aria-label={name === "Household life" || name === "Needs your attention" ? name : undefined}
               onClick={() => setTab(name)}
             >
               {tab === name && (
@@ -713,7 +727,7 @@ export default function Hub() {
                 />
               )}
               <Icon size={19} />
-              <span>{name === "Household life" ? "House life" : name}</span>
+              <span>{name === "Household life" ? "House life" : name === "Needs your attention" ? "Attention" : name}</span>
               {name === "Shopping list" && !!neededItems.length && (
                 <span
                   className="nav-count"
@@ -808,7 +822,7 @@ export default function Hub() {
             <DisplayButton onClick={() => changeDisplay(true)} />
             <span className="private-label">
               <ShieldCheck size={14} />
-              {demo ? "Demo home" : "Private household"}
+              {demo ? "Demo home" : "Household code access"}
             </span>
             <Button
               className={`icon-button avatar-stack ${agreementStyles.badgeHost}`}
@@ -927,6 +941,7 @@ export default function Hub() {
                         "Our household": `${household.name}, ${housemates.length} ${housemates.length === 1 ? "housemate" : "housemates"}`,
                         "Household life":
                           "Decisions, supplies, repairs, shared dinners, and monthly targets.",
+                        "Needs your attention": "Your chores, unpaid bills, agreements, and coverage requests in one place.",
                         Overview: "",
                         Expenses: "",
                       }[tab]
@@ -934,7 +949,8 @@ export default function Hub() {
                   </p>
                 </div>
               </div>
-              {tab !== "Our household" &&
+              {tab !== "Needs your attention" &&
+                tab !== "Our household" &&
                 tab !== "House handbook" &&
                 tab !== "Household life" &&
                 tab !== "House planning" &&
@@ -958,6 +974,20 @@ export default function Hub() {
             />
           )}
           {tab === "Overview" && <HomeBoard {...boardProps} />}
+          {tab === "Needs your attention" && (
+            <AttentionView
+              entries={entries}
+              uid={uid}
+              agreements={agreements}
+              improvements={improvements}
+              busy={busy}
+              onOpen={(entry) => setEditing({ kind: entry.kind, entry })}
+              onToggle={toggle}
+              onPay={togglePayment}
+              onNavigate={setTab}
+              refresh={refresh}
+            />
+          )}
           {tab === "Expenses" && (
             <ExpensesTab
               controller={expenseController}
@@ -1155,7 +1185,7 @@ export default function Hub() {
                             {entry.unit ? ` ${entry.unit}` : ""} ·{" "}
                             {entry.store || "Any store"} · {entry.category}
                             {entry.visibility === "private"
-                              ? " · Private"
+                              ? " · Personal view"
                               : ""}
                             {isPersonal(entry)
                               ? `, for ${entry.assignee === uid ? "you" : person(entry.assignee)}`
@@ -1332,7 +1362,7 @@ export default function Hub() {
                         <p>{entry.description}</p>
                         <span>
                           {person(entry.assignee || entry.created_by)},{" "}
-                          {activityWhen(Date.parse(entry.created_at), now)}
+                          {activityWhen(Date.parse(entry.created_at), now, house.clock.timezone)}
                         </span>
                       </Button>
                     </PresenceRow>
@@ -1352,7 +1382,7 @@ export default function Hub() {
                           <strong>{entry.title}</strong>
                           <small>
                             {person(entry.assignee || entry.created_by)},{" "}
-                            {activityWhen(Date.parse(entry.created_at), now)}
+                            {activityWhen(Date.parse(entry.created_at), now, house.clock.timezone)}
                           </small>
                         </span>
                         {!readOnly && (
