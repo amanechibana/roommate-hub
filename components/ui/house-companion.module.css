@@ -199,12 +199,7 @@
     margin-bottom: 6px;
   }
 }
-@media (max-height: 600px) and (min-width: 851px) {
-  .sill {
-    display: none;
-  }
-}
-@media (max-width: 850px) {
+@media (max-width: 650px) {
   .sill {
     display: none;
   }
@@ -232,11 +227,6 @@
     animation: none !important;
   }
 }
-@media (max-height: 600px) and (min-width: 851px) {
-  .compact {
-    display: block;
-  }
-}
 .companion[data-night="true"] .eyes {
   transform: scaleY(0.5);
   transform-origin: center;
@@ -249,4 +239,10 @@
 }
 html[data-ambient="on"] .companion[data-night="true"] .cat {
   animation-duration: 9s;
+}
+
+@media (min-width: 651px) and (max-height: 850px) {
+  .sill {
+    margin-bottom: 0;
+  }
 }

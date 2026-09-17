@@ -46,6 +46,25 @@ for (const [width, height] of [
     await expect(
       nav.getByRole("button", { name: "House handbook" }),
     ).toHaveCount(0);
+    const cat = page.getByRole("button", {
+      name: "Pet the house cat",
+      exact: true,
+    });
+    await expect(cat).toBeInViewport({ ratio: 1 });
+    if (width > 650) {
+      await expect(
+        page
+          .locator(".sidebar")
+          .getByRole("button", { name: "Pet the house cat", exact: true }),
+      ).toBeInViewport({ ratio: 1 });
+      expect(
+        await page
+          .locator(".sidebar")
+          .evaluate((el) => el.scrollHeight <= el.clientHeight + 1),
+      ).toBe(true);
+      await cat.click();
+      await expect(cat).toHaveAttribute("data-reaction", "1");
+    }
     const topbar = page.locator(".topbar");
     for (const name of [
       "Needs your attention",
