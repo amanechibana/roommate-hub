@@ -135,8 +135,13 @@
   color: var(--muted);
   overflow-wrap: anywhere;
 }
+/* Inside the expenses grid the panel gap already spaces sections; the
+   panel box itself carries no padding, so the summary brings its own. */
 .monthly-summary {
-  margin: 1rem 0;
+  padding: 20px 22px;
+}
+.monthly-summary h2 {
+  margin: 0 0 14px;
 }
 
 .store-heading {
@@ -180,5 +185,8 @@
   }
   .attention-panel {
     padding: 18px;
+  }
+  .monthly-summary {
+    padding: 16px 14px;
   }
 }
