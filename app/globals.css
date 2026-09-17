@@ -1247,6 +1247,11 @@ footer svg {
   grid-template-columns: 1fr 1fr;
   gap: 24px;
 }
+/* A panel that owns its row: the grid otherwise strands an odd half-width
+   panel next to an empty cell (5 half panels can't all pair). */
+.settings-wide {
+  grid-column: 1 / -1;
+}
 .settings-panel {
   padding: 26px;
 }
@@ -1451,6 +1456,14 @@ textarea {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 0 15px;
+}
+/* Side-by-side forms inside a full-width settings panel; collapses to one
+   column when the panel itself is single-column. */
+.form-pair {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 4px 28px;
+  align-items: start;
 }
 .dialog-actions {
   display: flex;

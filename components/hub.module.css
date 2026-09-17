@@ -559,6 +559,19 @@
   .shell :global(.settings-panel) {
     padding: 20px;
   }
+  /* Phone: the settings page is one long column — tighten the section
+     rhythm (base h3 padding-top 20px / margin-top 24px, line-height 1.7). */
+  .shell :global(.settings-panel h3) {
+    margin-top: 16px;
+    padding-top: 14px;
+  }
+  .shell :global(.settings-panel > p),
+  .shell :global(.settings-panel .subtle) {
+    line-height: 1.55;
+  }
+  .shell :global(.settings-grid) {
+    gap: 16px;
+  }
 }
 @media (max-width: 380px) {
   .shell :global(.page-symbol) {
