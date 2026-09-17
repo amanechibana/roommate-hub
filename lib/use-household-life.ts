@@ -62,7 +62,7 @@ export function useHouseholdLife({
     setError("");
     setNotice("");
     setPhotosEnabled(demo);
-  }, [householdId, demo]);
+  }, [householdId, demo, uid]);
   useEffect(
     () => () => {
       for (const url of urls.current) URL.revokeObjectURL(url);
@@ -70,7 +70,7 @@ export function useHouseholdLife({
     [],
   );
   const refresh = useCallback(async () => {
-    if (!enabled || demo || lock.current) return;
+    if (!enabled || demo || !householdId || lock.current) return;
     const read = ++sequence.current;
     const version = revision.current;
     try {
@@ -89,7 +89,7 @@ export function useHouseholdLife({
       if (read === sequence.current && version === revision.current)
         setError((err as Error).message);
     }
-  }, [enabled, demo]);
+  }, [enabled, demo, householdId, uid]);
   useEffect(() => {
     if (!enabled) return;
     void refresh();

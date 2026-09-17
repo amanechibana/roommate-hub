@@ -147,3 +147,38 @@
   color: var(--muted);
   margin-bottom: 0.35rem;
 }
+
+.attention-panel {
+  padding: 24px;
+}
+.attention-list {
+  list-style: none;
+  padding: 0;
+  margin: 20px 0 0;
+}
+.attention-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 18px;
+  padding: 18px 0;
+  border-top: 1px solid var(--border, #e2e5d8);
+}
+.attention-row p {
+  margin: 6px 0 0;
+}
+.attention-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  flex-shrink: 0;
+}
+@media (max-width: 700px) {
+  .attention-row {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+  .attention-panel {
+    padding: 18px;
+  }
+}

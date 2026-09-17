@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ArrowLeft, ChevronRight, Handshake } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAgreementsContext } from "./agreements-context";
@@ -27,9 +27,36 @@ export default function AgreementsSection({
   entries: Entry[];
   refreshHousehold: (quiet?: boolean) => void;
 }) {
+  const section = useRef<HTMLElement>(null);
   const controller = useAgreementsContext();
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState<AgreementSlug | null>(null);
+  useEffect(() => {
+    const sync = () => {
+      const slug = new URL(window.location.href).searchParams.get("agreement");
+      setOpen(slug === "house" || slug === "gym" ? slug : null);
+    };
+    sync();
+    window.addEventListener("popstate", sync);
+    window.addEventListener("household-agreement-target", sync);
+    return () => {
+      window.removeEventListener("popstate", sync);
+      window.removeEventListener("household-agreement-target", sync);
+    };
+  }, []);
+  useEffect(() => {
+    if (!open || controller?.loading) return;
+    section.current?.focus({ preventScroll: true });
+    section.current?.scrollIntoView({ block: "start" });
+  }, [open, controller?.loading]);
+  function selectAgreement(slug: AgreementSlug | null) {
+    const url = new URL(window.location.href);
+    if (slug) url.searchParams.set("agreement", slug);
+    else url.searchParams.delete("agreement");
+    if (url.href !== window.location.href)
+      window.history.pushState(null, "", url);
+    setOpen(slug);
+  }
   if (!controller?.enabled || !uid) return null;
   const real = members.filter((m) => m.name !== "Housemates");
   // Entry side effects (swaps, covers, reschedules, activation) land through
@@ -86,7 +113,11 @@ export default function AgreementsSection({
             (!e.details.recipient || e.details.recipient === uid),
         ).length;
   return (
-    <section className={`panel settings-panel ${styles.section}`}>
+    <section
+      ref={section}
+      tabIndex={-1}
+      className={`panel settings-panel ${styles.section}`}
+    >
       <h2>
         <Handshake size={20} /> Agreements
       </h2>
@@ -122,7 +153,10 @@ export default function AgreementsSection({
       ) : open ? (
         <>
           <div className={styles.backBar}>
-            <Button className="text-button" onClick={() => setOpen(null)}>
+            <Button
+              className="text-button"
+              onClick={() => selectAgreement(null)}
+            >
               <ArrowLeft size={14} /> All agreements
             </Button>
           </div>
@@ -175,7 +209,7 @@ export default function AgreementsSection({
               <Button
                 key={card.slug}
                 className={styles.row}
-                onClick={() => setOpen(card.slug)}
+                onClick={() => selectAgreement(card.slug)}
               >
                 <span className={styles.rowCopy}>
                   <strong>{AGREEMENT_TITLES[card.slug]}</strong>

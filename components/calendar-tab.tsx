@@ -84,7 +84,7 @@ export default function CalendarTab({
         <div className="actions">
           <Button
             className="button secondary small"
-            onClick={() => setMonth(new Date())}
+            onClick={() => setMonth(parseDate(today))}
           >
             Today
           </Button>

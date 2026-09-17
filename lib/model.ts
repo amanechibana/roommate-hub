@@ -1,3 +1,4 @@
+import { householdDate } from "./household-time";
 export type Kind = "task" | "event" | "request" | "note";
 export type Entry = {
   id: string;
@@ -273,7 +274,7 @@ function calendarTimes(entry: Entry) {
     `${dateKey(value).replaceAll("-", "")}T${String(value.getHours()).padStart(2, "0")}${String(value.getMinutes()).padStart(2, "0")}00`;
   return { start: compact(start), end: compact(end) };
 }
-export function demoData(): {
+export function demoData(today = householdDate(new Date())): {
   household: Household;
   members: Member[];
   entries: Entry[];
@@ -284,11 +285,7 @@ export function demoData(): {
     { user_id: "alex", name: "Alex", household_id: "demo" },
     { user_id: "sam", name: "Sam", household_id: "demo" },
   ];
-  const day = (offset: number) => {
-    const date = new Date();
-    date.setDate(date.getDate() + offset);
-    return dateKey(date);
-  };
+  const day = (offset: number) => shiftDay(today, offset);
   const base = {
     household_id: "demo",
     description: "",

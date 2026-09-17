@@ -1,4 +1,5 @@
 "use client";
+import { useHouseholdClock } from "./household-clock";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { homeRequest } from "./home-client";
 import {
@@ -8,7 +9,7 @@ import {
   weeklyItems,
   type Planning,
 } from "./coordination";
-import { dateKey, type Entry } from "./model";
+import { type Entry } from "./model";
 export function useCoordination({
   demo,
   entries = [],
@@ -18,7 +19,10 @@ export function useCoordination({
   entries?: Entry[];
   uid: string | null;
 }) {
-  const [data, setData] = useState<Planning>(() => emptyPlanning(entries));
+  const { today } = useHouseholdClock();
+  const [data, setData] = useState<Planning>(() =>
+    emptyPlanning(entries, today),
+  );
   const [loaded, setLoaded] = useState(demo),
     [busy, setBusy] = useState(false),
     [error, setError] = useState("");
@@ -174,9 +178,7 @@ export function useCoordination({
     }
   }
   return {
-    data: demo
-      ? { ...data, ...weeklyItems(entries, dateKey(new Date())) }
-      : data,
+    data: demo ? { ...data, ...weeklyItems(entries, today) } : data,
     loaded,
     busy,
     error,

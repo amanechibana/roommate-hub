@@ -1,4 +1,5 @@
 "use client";
+import { useHouseholdClock } from "@/lib/household-clock";
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -12,7 +13,6 @@ import {
   type HouseTerms,
 } from "@/lib/agreements";
 import {
-  dateKey,
   parseDate,
   shiftDay,
   type Entry,
@@ -53,9 +53,13 @@ export default function ReliefPanel({
   const other = others.find((m) => m.user_id === recipient);
   const nameOf = (id: string | null) =>
     members.find((m) => m.user_id === id)?.name ?? "Someone";
-  const now = new Date();
-  const today = dateKey(now);
-  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+  const { now, today, timezone } = useHouseholdClock();
+  const calendarNow = parseDate(today);
+  const monthStart = new Date(
+    calendarNow.getFullYear(),
+    calendarNow.getMonth(),
+    1,
+  );
   const entryIds = (e: AgreementEvent) =>
     e.entry_id
       ? [e.entry_id]
@@ -78,7 +82,9 @@ export default function ReliefPanel({
     const days = Math.abs(now.getTime() - date.getTime()) / 86400000;
     return date.toLocaleDateString(
       "en-US",
-      days < 7 ? { weekday: "short" } : { month: "short", day: "numeric" },
+      days < 7
+        ? { timeZone: timezone, weekday: "short" }
+        : { timeZone: timezone, month: "short", day: "numeric" },
     );
   };
   const requestedFor = (id: string) =>
@@ -296,7 +302,7 @@ export default function ReliefPanel({
           {members.map((member) => (
             <span key={member.user_id}>
               <strong>{member.name}</strong>{" "}
-              {choreMisses(entries, terms, member.user_id, monthStart)}
+              {choreMisses(entries, terms, member.user_id, monthStart, today)}
             </span>
           ))}
           <small>
@@ -360,7 +366,7 @@ export default function ReliefPanel({
         {members.map((member) => (
           <span key={member.user_id}>
             <strong>{member.name}</strong>{" "}
-            {ptoRemaining(events, member.user_id, terms, now)}h
+            {ptoRemaining(events, member.user_id, terms, now, timezone)}h
           </span>
         ))}
         <small>
@@ -498,6 +504,7 @@ export default function ReliefPanel({
               events,
               member.user_id,
               monthStart,
+              today,
             )}
           </span>
         ))}

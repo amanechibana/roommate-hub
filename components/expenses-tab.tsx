@@ -1,4 +1,5 @@
 "use client";
+import { useHouseholdClock } from "@/lib/household-clock";
 import { percentageShares } from "@/lib/improvements";
 import { collectExpensePages } from "@/lib/expense-pages";
 import { hasDatabase, homeRequest } from "@/lib/home-client";
@@ -24,7 +25,7 @@ import {
   ChevronDown,
 } from "lucide-react";
 import { Button } from "./ui/button";
-import { dateKey, type Entry, type Member } from "@/lib/model";
+import { type Entry, type Member } from "@/lib/model";
 import {
   expenseBalances,
   expenseMoney,
@@ -68,6 +69,7 @@ export default function ExpensesTab({
 }) {
   // A shared screen reads the ledger but is nobody in particular: no "you"
   // balance, and nothing here can be authored.
+  const { today } = useHouseholdClock();
   const readOnly = !memberId;
   const { reduced, celebrate } = useHouseMotion();
   const [query, setQuery] = useState("");
@@ -118,10 +120,11 @@ export default function ExpensesTab({
   }, [readOnly]);
   const balances = controller.balances;
   const mine = (memberId && balances[memberId]) || 0;
-  const month = dateKey(new Date()).slice(0, 7);
+  const month = today.slice(0, 7);
   const monthTotal = controller.summary(month).total;
   const [exportError, setExportError] = useState("");
   const [summaryMonth, setSummaryMonth] = useState(month);
+  useEffect(() => setSummaryMonth(month), [month]);
   const summary = controller.summary(summaryMonth);
   const formatDate = (value: string) =>
     new Intl.DateTimeFormat("en-US", {
@@ -636,6 +639,7 @@ function ExpenseDialog({
   onSave: (values: ExpenseValues) => void;
   onDelete?: () => void;
 }) {
+  const { today } = useHouseholdClock();
   const [amount, setAmount] = useState(
     draft.entry
       ? (draft.entry.amount_cents / 100).toFixed(2)
@@ -835,7 +839,7 @@ function ExpenseDialog({
               name="date"
               type="date"
               required
-              defaultValue={draft.entry?.date || dateKey(new Date())}
+              defaultValue={draft.entry?.date || today}
             />
           </label>
         </div>

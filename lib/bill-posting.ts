@@ -1,10 +1,12 @@
+import { householdDate } from "./household-time";
 import { splitEvenly, type ExpenseValues } from "./expenses";
-import { dateKey, type Entry } from "./model";
+import { type Entry } from "./model";
 
 export function billPaymentValues(
   entry: Entry,
   payer: string,
   cover: boolean,
+  today = householdDate(new Date()),
 ): ExpenseValues | null {
   if (!entry.amount || !entry.payment_members?.includes(payer)) return null;
   const original =
@@ -19,7 +21,7 @@ export function billPaymentValues(
   return {
     kind: "expense",
     title: entry.title,
-    date: dateKey(new Date()),
+    date: today,
     amount_cents,
     paid_by: payer,
     shares,

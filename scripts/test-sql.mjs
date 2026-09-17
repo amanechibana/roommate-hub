@@ -25,6 +25,14 @@ sql(
   `create schema storage; create table storage.buckets (id text primary key,name text not null,public boolean not null default false,file_size_limit bigint,allowed_mime_types text[]);`,
 );
 const suites = {
+  28: [
+    "household-timezone",
+    "fair-chores-household-setup",
+    "feature-improvements",
+    "search-offline-chore-bill-splits",
+    "household-life",
+    "household-life-membership",
+  ],
   27: [
     "fair-chores-household-setup",
     "feature-improvements",

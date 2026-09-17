@@ -1,3 +1,4 @@
+import { householdDate } from "./household-time";
 import type { Agreement } from "./agreements";
 import { billPaid, isBill, isPersonal } from "./household-actions";
 import { dateKey, parseDate, shiftDay, type Entry, type Member } from "./model";
@@ -82,8 +83,10 @@ export function bookingsOverlap(
     new Date(a.ends_at) > new Date(b.starts_at)
   );
 }
-export function emptyPlanning(entries: Entry[] = []): Planning {
-  const today = dateKey(new Date());
+export function emptyPlanning(
+  entries: Entry[] = [],
+  today = householdDate(new Date()),
+): Planning {
   return {
     resources: [
       { id: "laundry", name: "Laundry" },

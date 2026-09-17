@@ -1,4 +1,8 @@
 "use client";
+import { usePageNavigation } from "./use-page-navigation";
+import { useImprovements } from "./use-improvements";
+import { useClock } from "./household-clock";
+import { pageFromUrl } from "./navigation";
 import { clearOfflineShopping, saveOfflineShopping } from "./offline-shopping";
 import { matchesSearch } from "./search";
 import type { HouseActivity } from "./activity";
@@ -71,7 +75,7 @@ export function useHousehold() {
     new Map<string, { billId: string; members: string[]; logged: string[] }>(),
   );
   const [activity, setActivity] = useState<HouseActivity[]>([]);
-  const [tab, setTab] = useState<Tab>("Overview");
+  const [tab, setTab] = usePageNavigation();
   const [editing, setEditing] = useState<{
     kind: Kind;
     entry?: Entry;
@@ -117,6 +121,9 @@ export function useHousehold() {
   // refuses that identity as an actor, so the app must not offer it writes.
   const sharedScreen = isSharedScreen(identity, members);
   const uid = demo ? identity || "you" : sharedScreen ? null : identity;
+  const improvements = useImprovements(household?.id, uid, demo);
+  const clock = useClock(improvements.household.timezone);
+  const { today } = clock;
   const pending = useRef(0);
   const writes = useRef(Promise.resolve());
   const needsRecovery = useRef(false);
@@ -127,7 +134,8 @@ export function useHousehold() {
     household?.id,
     uid,
     demo,
-    tab === "Expenses" ||
+    tab === "Needs your attention" ||
+      tab === "Expenses" ||
       tab === "Overview" ||
       tab === "Household life" ||
       display,
@@ -174,7 +182,9 @@ export function useHousehold() {
       .register("/sw.js", { scope: "/" })
       .catch(() => {});
   }, []);
-  const today = dateKey(new Date());
+  useEffect(() => {
+    setMonth(parseDate(today));
+  }, [household?.id, clock.timezone]);
   const loadSequence = useRef(0);
   const weeks = Math.ceil(
     (new Date(month.getFullYear(), month.getMonth(), 1).getDay() +
@@ -202,18 +212,16 @@ export function useHousehold() {
     // A home-screen shortcut lands on a tab, and may ask for the add
     // dialog; a share is an add with the item filled in.
     const params = new URLSearchParams(window.location.search);
-    const wanted =
-      params.get("tab") === "Our household"
-        ? "Our household"
-        : tabs.find((t) => t.name === params.get("tab"))?.name;
-    if (wanted) setTab(wanted);
+    const wanted = params.has("tab")
+      ? pageFromUrl(new URL(window.location.href))
+      : undefined;
     const draft = shareDraft(params);
     const kind = (["task", "request", "event", "note"] as Kind[]).find(
       (k) => k === params.get("add"),
     );
     if (draft) setArrival({ kind: "request", tab: "Shopping list", draft });
     else if (kind) setArrival({ kind, tab: wanted ?? kindTabs[kind] });
-    else if (wanted) setArrival({ tab: wanted });
+
     return () => window.removeEventListener("popstate", sync);
   }, []);
   // Waits for the house, and for an add, for a housemate: a signed-out
@@ -227,7 +235,7 @@ export function useHousehold() {
     // The query was the only copy until now; a reload must not offer the
     // same thing twice.
     const url = new URL(window.location.href);
-    for (const key of ["title", "text", "url", "tab", "add"])
+    for (const key of ["title", "text", "url", "add"])
       url.searchParams.delete(key);
     window.history.replaceState(null, "", url);
     if (sharedScreen && arrival.kind) return;
@@ -1029,7 +1037,7 @@ export function useHousehold() {
       {
         kind: "expense",
         title: entry.title,
-        date: dateKey(new Date()),
+        date: today,
         amount_cents: cents,
         paid_by: uid,
         shares: splitEvenly(cents, payers),
@@ -1189,7 +1197,7 @@ export function useHousehold() {
   // rows are injected only from the server's authoritative payment response.
   function postBillPayment(entry: Entry, cover: boolean) {
     if (!uid) return;
-    const values = billPaymentValues(entry, uid, cover);
+    const values = billPaymentValues(entry, uid, cover, today);
     if (!values) return;
     if (
       demo &&
@@ -1540,6 +1548,8 @@ export function useHousehold() {
                   : { year: "numeric" }),
               });
   return {
+    improvements,
+    clock,
     activity,
     syncDemoMeal,
     reduced,

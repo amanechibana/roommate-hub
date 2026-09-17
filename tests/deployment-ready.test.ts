@@ -12,7 +12,8 @@ test("production waits for the required schema while previews and demos continue
     new Response(JSON.stringify({ schema_version: version }));
   assert.equal(await deploymentReady(env, response("024")), false);
   assert.equal(await deploymentReady(env, response("026")), false);
-  assert.equal(await deploymentReady(env, response("027")), true);
+  assert.equal(await deploymentReady(env, response("027")), false);
+  assert.equal(await deploymentReady(env, response("028")), true);
   assert.equal(await deploymentReady(env, response("invalid")), false);
   assert.equal(
     await deploymentReady(

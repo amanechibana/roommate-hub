@@ -1,3 +1,4 @@
+import { householdDate, DEFAULT_HOUSEHOLD_TIMEZONE } from "./household-time";
 import { dateKey, type Entry } from "./model";
 
 export type AgreementSlug = "house" | "gym";
@@ -165,10 +166,13 @@ function inPtoWindow(
   iso: string,
   period: "month" | "year",
   now: Date,
+  timezone: string,
 ): boolean {
-  const date = new Date(iso);
-  if (date.getFullYear() !== now.getFullYear()) return false;
-  return period === "year" || date.getMonth() === now.getMonth();
+  const length = period === "year" ? 4 : 7;
+  return (
+    householdDate(new Date(iso), timezone).slice(0, length) ===
+    householdDate(now, timezone).slice(0, length)
+  );
 }
 
 export function ptoSpent(
@@ -176,13 +180,14 @@ export function ptoSpent(
   memberId: string,
   terms: GymTerms,
   now: Date,
+  timezone = DEFAULT_HOUSEHOLD_TIMEZONE,
 ): number {
   return events
     .filter(
       (event) =>
         event.kind === "pto" &&
         event.actor === memberId &&
-        inPtoWindow(event.created_at, terms.pto.period, now),
+        inPtoWindow(event.created_at, terms.pto.period, now, timezone),
     )
     .reduce((sum, event) => sum + (event.hours ?? 0), 0);
 }
@@ -192,8 +197,12 @@ export function ptoRemaining(
   memberId: string,
   terms: GymTerms,
   now: Date,
+  timezone = DEFAULT_HOUSEHOLD_TIMEZONE,
 ): number {
-  return Math.max(0, terms.pto.hours - ptoSpent(events, memberId, terms, now));
+  return Math.max(
+    0,
+    terms.pto.hours - ptoSpent(events, memberId, terms, now, timezone),
+  );
 }
 
 export function pendingForMember(
@@ -235,9 +244,9 @@ export function unexcusedGymMisses(
   events: AgreementEvent[],
   memberId: string,
   monthStart: Date,
+  today = householdDate(new Date()),
 ): number {
   const [start, end] = monthWindow(monthStart);
-  const today = dateKey(new Date());
   const covered = new Set(
     events
       .filter(
@@ -270,10 +279,10 @@ export function choreMisses(
   terms: HouseTerms,
   memberId: string,
   monthStart: Date,
+  today = householdDate(new Date()),
 ): number {
   const series = terms.chore_series_ids ?? [];
   const [start, end] = monthWindow(monthStart);
-  const today = dateKey(new Date());
   // Swaps, covers, and rollovers all rewrite the entry itself (assignee or
   // date), so an uncovered miss is simply a past, undone, still-assigned row.
   return entries.filter(

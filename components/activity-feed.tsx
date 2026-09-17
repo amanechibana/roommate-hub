@@ -1,4 +1,5 @@
 "use client";
+import { useHouseholdClock } from "@/lib/household-clock";
 import { activityVerb, activityWhen, type HouseActivity } from "@/lib/activity";
 import type { Member } from "@/lib/model";
 
@@ -9,7 +10,7 @@ export default function ActivityFeed({
   activity: HouseActivity[];
   members: Member[];
 }) {
-  const now = new Date();
+  const { now, timezone } = useHouseholdClock();
   return (
     <section className="panel activity-feed" aria-labelledby="activity-title">
       <h2 id="activity-title">Lately at home</h2>
@@ -26,9 +27,15 @@ export default function ActivityFeed({
               </span>
               <time
                 dateTime={item.created_at}
-                title={new Date(item.created_at).toLocaleString()}
+                title={new Date(item.created_at).toLocaleString("en-US", {
+                  timeZone: timezone,
+                })}
               >
-                {activityWhen(new Date(item.created_at).getTime(), now)}
+                {activityWhen(
+                  new Date(item.created_at).getTime(),
+                  now,
+                  timezone,
+                )}
               </time>
             </li>
           ))}
