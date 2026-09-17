@@ -215,14 +215,23 @@ export default function CalendarTab({
                   i,
               );
               const key = dateKey(date);
-              const dayEntries = dayOrder(
-                entries.filter(
-                  (e) => e.date === key && ["task", "event"].includes(e.kind),
-                ),
-              );
+              const outside = date.getMonth() !== month.getMonth();
+              // This tab's reads are bounded to the month itself, so a
+              // bordering day's entries are only ever passing through (a
+              // wider window from another tab, or the previous month's
+              // fetch still settling). Rendering them let next month's
+              // plans flash in the outside cells.
+              const dayEntries = outside
+                ? []
+                : dayOrder(
+                    entries.filter(
+                      (e) =>
+                        e.date === key && ["task", "event"].includes(e.kind),
+                    ),
+                  );
               return (
                 <div
-                  className={`calendar-cell ${date.getMonth() !== month.getMonth() ? "outside" : ""} ${key === today ? "is-today" : ""}`}
+                  className={`calendar-cell ${outside ? "outside" : ""} ${key === today ? "is-today" : ""}`}
                   key={key}
                 >
                   <Button
