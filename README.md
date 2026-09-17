@@ -511,7 +511,7 @@ Suggested order:
 4. **Guests / quiet hours:** shipped as calendar categories with date ranges and optional times; they also appear on the overview and wall display.
 5. **Calendar subscription:** shipped and read-only. Its derived secret URL is revoked by changing the household code; two-way sync/conflict resolution is out of scope.
 6. **Shopping enrichment:** optional product metadata from approved retailer APIs. Current store links are manual; no Amazon login, price scraping, checkout, or purchase automation.
-7. **Membership management:** shipped for the current two-person household: owner-controlled invitations and removal, leaving, and ownership transfer. Larger rosters and independent account recovery remain future work.
+7. **Membership management:** shipped for larger households: owner-controlled invitations and removal, leaving, and ownership transfer. Agreements require unanimous approval and chores support roster rotations. Independent account recovery remains future work.
 
 Chore reminders and push notifications shipped as the daily morning digest;
 shared expenses shipped as the Expenses tab. Data amounts are USD; events can
@@ -555,7 +555,7 @@ is exercised by the current SQL tests.
 
 Apply **026_feature_improvements.sql before deploying this release**. The Vercel
 ignore command checks the production schema and holds deployments until schema
-026 is available; the current app stays live. After applying the migration,
+026 is available; the current app stays live. This release also requires migration 027. After applying the migrations,
 redeploy the merged commit. Preview and demo builds proceed normally. It adds
 shared household time settings and chore templates; person-specific reminder
 preferences; shopping quantities, units and stores; checklist progress and effort;
@@ -627,8 +627,8 @@ checks. Amounts in checklist notes do not post to Expenses. Shared screens can
 read all three features but cannot change them.
 
 In **Our household**, the owner adds a housemate's name and privately shares
-the existing household code. The two-person limit remains while agreements
-require a pair; departing housemates free a slot for replacements. Migration
+the existing household code. Households support larger rosters after migration 027; recurring chores and
+agreements include every current housemate. Migration
 022 assigns a legacy shared-screen owner to the first named housemate in
 alphabetical order; existing named owners remain owners. Ownership must be
 transferred before the owner leaves. Removing or leaving archives membership,
@@ -687,6 +687,38 @@ split; edit undo and delete undo preserve shares.
 Validation: `tests/search-offline-chore-bill-splits.test.ts`,
 `supabase/tests/search-offline-chore-bill-splits.sql`, and
 `tests/browser/search-offline-chore-bill-splits.spec.ts`.
+
+## Fair chore effort, larger households, and guided setup
+
+Apply **027_fair_chores_household_setup.sql** with `npm run migrate` before
+deploying this release. The production build gate requires schema version 027.
+
+**To-dos** shows Monday–Sunday chore workload in estimated minutes, alongside
+completed minutes credited to the person who checked off each occurrence in
+the household timezone. Week arrows show earlier and upcoming schedules.
+Personal work, undated chores, and chores outside the selected week are excluded;
+missing estimates are flagged rather than counted as zero-effort chores.
+Suggestions distribute larger pending chores first, respect away dates, and
+keep completed work fixed. Review opens the chore editor; save explicitly to
+change that occurrence. Suggestions recalculate after every saved assignment.
+
+Owners can invite more than two housemates. Recurring chores can rotate through
+any selected set of at least two current housemates, with the first assignee
+going first. Agreement bundles rotate through the complete roster with staggered
+starting assignments; over a full rotation everyone holds each bundle equally.
+Every current housemate must sign agreements and approve amendments. Chore swap
+and cover requests name a recipient; only that recipient can answer. Joint gym reschedules require every other
+housemate’s acceptance. Invitations
+archive existing signed agreements and reset them to draft for the new roster,
+while preserving past completions and payment history. Existing bill shares
+stay as originally recorded; new bills include the current roster.
+
+**Our household** includes a live setup checklist for invitations, recurring
+bills, recurring chores with effort and rotations, and notification choices.
+The checklist opens prefilled recurring bill and chore forms, or jumps to the
+member and notification settings. Saved notification choices complete that
+step even when reminders are disabled; enabling push on a device is separate.
+Shared screens can read setup and workload but cannot make changes.
 
 ### Navigation, household dates, and personal attention
 

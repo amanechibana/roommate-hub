@@ -209,11 +209,14 @@ test("incoming agreement amendments and requests are actionable; own and closed 
       amendment,
       { ...amendment, id: "own", proposed_by: "you" },
       { ...amendment, id: "closed", status: "approved" },
+      { ...amendment, id: "already-approved", approved_by: ["you"] },
     ],
     events: [
       event,
       { ...event, id: "my-request", actor: "you" },
       { ...event, id: "done", status: "accepted" },
+      { ...event, id: "already-accepted", accepted_by: ["you"] },
+      { ...event, id: "other-recipient", details: { recipient: "sam" } },
     ],
   });
   assert.deepEqual(

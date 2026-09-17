@@ -3,6 +3,8 @@ import { useState } from "react";
 import { HouseholdClockProvider } from "@/lib/household-clock";
 import AttentionView from "./attention-view";
 import ChoreCoverage from "./chore-coverage";
+import ChoreBalance from "./chore-balance";
+import { householdSetup } from "@/lib/household-setup";
 import OfflineStatus from "./offline-status";
 import HouseholdSearch from "./household-search";
 import { choreHistoryLabel } from "@/lib/chore-history";
@@ -191,6 +193,11 @@ function HubContent({ house }: { house: ReturnType<typeof useHousehold> }) {
   // The shared screen reads the house but is nobody in particular, so nothing
   // that needs an author is offered. The gateway refuses that identity anyway.
   const readOnly = sharedScreen;
+  const setupComplete = householdSetup(
+    members,
+    entries,
+    !!improvements.reminders.setup_reviewed,
+  ).filter((step) => step.done).length;
   const whoAmI = readOnly ? "Household" : person(uid || null);
   // A housemate's load counts a repeating chore once, the way the overview
   // does. Every future occurrence is open too, and "52 open to-dos" is
@@ -765,6 +772,11 @@ function HubContent({ house }: { house: ReturnType<typeof useHousehold> }) {
               </span>
             )}
           </Button>
+          {!demo && !readOnly && improvements.loaded && setupComplete < 4 && (
+            <Button className="text-button" onClick={() => setTab("Our household")}>
+              Finish household setup · {setupComplete}/4
+            </Button>
+          )}
           <div className="sidebar-profile">
             <Button
               className="text-button profile-switch"
@@ -1017,42 +1029,56 @@ function HubContent({ house }: { house: ReturnType<typeof useHousehold> }) {
           )}
           {tab === "Calendar" && <CalendarTab {...house} />}
           {tab === "To-dos" && (
-            <section className="panel entry-panel paper-index">
-              <div className="panel-heading">
-                <SegmentedControl
-                  label="To-do filters"
-                  values={["All", "Mine", "Personal", "Open", "Done"]}
-                  value={filter}
-                  onChange={setFilter}
-                />
-                <div className="list-progress">
-                  <span>
-                    {doneCount} of {listTasks.length} done
-                  </span>
-                  <progress
-                    aria-label="To-do completion"
-                    value={doneCount}
-                    max={Math.max(1, listTasks.length)}
+            <>
+              <ChoreBalance
+                entries={entries}
+                members={members}
+                today={today}
+                timezone={improvements.household.timezone}
+                readOnly={readOnly}
+                review={(entry) => setEditing({
+                  kind: "task",
+                  entry,
+                  suggestedAssignee: entry.assignee ?? undefined,
+                })}
+              />
+              <section className="panel entry-panel paper-index">
+                <div className="panel-heading">
+                  <SegmentedControl
+                    label="To-do filters"
+                    values={["All", "Mine", "Personal", "Open", "Done"]}
+                    value={filter}
+                    onChange={setFilter}
                   />
+                  <div className="list-progress">
+                    <span>
+                      {doneCount} of {listTasks.length} done
+                    </span>
+                    <progress
+                      aria-label="To-do completion"
+                      value={doneCount}
+                      max={Math.max(1, listTasks.length)}
+                    />
+                  </div>
                 </div>
-              </div>
-              {!demo && (
-                <ChoreCoverage
-                  entries={entries}
-                  members={members}
-                  uid={uid}
-                  controller={improvements}
-                  refresh={refresh}
-                />
-              )}
-              {quickAdd("task")}
-              <AnimatePresence initial={false}>
-                {filteredTasks.map(taskRow)}
-              </AnimatePresence>
-              {!filteredTasks.length && (
-                <Empty text="Nothing here. A little breathing room." />
-              )}
-            </section>
+                {!demo && (
+                  <ChoreCoverage
+                    entries={entries}
+                    members={members}
+                    uid={uid}
+                    controller={improvements}
+                    refresh={refresh}
+                  />
+                )}
+                {quickAdd("task")}
+                <AnimatePresence initial={false}>
+                  {filteredTasks.map(taskRow)}
+                </AnimatePresence>
+                {!filteredTasks.length && (
+                  <Empty text="Nothing here. A little breathing room." />
+                )}
+              </section>
+            </>
           )}
 
           {tab === "Shopping list" && (

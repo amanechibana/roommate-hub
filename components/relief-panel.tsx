@@ -46,7 +46,11 @@ export default function ReliefPanel({
     (e) => e.agreement_id === agreement.id,
   );
   const openEvents = events.filter((e) => e.status === "open");
-  const other = members.find((m) => m.user_id !== uid);
+  const others = members.filter(
+    (m) => m.user_id !== uid && m.name !== "Housemates" && m.active !== false,
+  );
+  const [recipient, setRecipient] = useState(others[0]?.user_id ?? "");
+  const other = others.find((m) => m.user_id === recipient);
   const nameOf = (id: string | null) =>
     members.find((m) => m.user_id === id)?.name ?? "Someone";
   const { now, today, timezone } = useHouseholdClock();
@@ -91,9 +95,9 @@ export default function ReliefPanel({
       case "swap":
         return `${nameOf(e.actor)} asks to swap ${what || "a chore"}`;
       case "skip_cover":
-        return `${nameOf(e.actor)} asks ${
-          e.actor === uid ? (other?.name ?? "them") : "you"
-        } to cover ${what || "a chore"}`;
+        return `${nameOf(e.actor)} asks ${nameOf(
+          String(e.details.recipient ?? ""),
+        )} to cover ${what || "a chore"}`;
       case "reschedule":
         return `${nameOf(e.actor)} proposes moving ${what || "a session"} to ${String(e.details.new_date ?? "")} ${String(e.details.new_time ?? "")}`;
       default:
@@ -110,9 +114,14 @@ export default function ReliefPanel({
             <small>{friendlyIso(e.created_at)}</small>
           </span>
           <span className={styles.itemActions}>
-            {e.actor === uid ? (
+            {e.actor === uid ||
+            e.accepted_by?.includes(uid) ||
+            (e.details.recipient && e.details.recipient !== uid) ? (
               <span className={styles.chip}>
-                Waiting for {other?.name ?? "them"}
+                Waiting for{" "}
+                {e.details.recipient
+                  ? nameOf(String(e.details.recipient))
+                  : "housemates"}
               </span>
             ) : (
               <>
@@ -170,8 +179,21 @@ export default function ReliefPanel({
         <h4>Relief valves</h4>
         <p className="subtle">
           Swaps and skips, per Articles 5 and 6. Swap and cover requests wait
-          for the other of you.
+          for the selected housemate.
         </p>
+        <label>
+          Request a swap or cover from
+          <select
+            value={recipient}
+            onChange={(event) => setRecipient(event.target.value)}
+          >
+            {others.map((m) => (
+              <option key={m.user_id} value={m.user_id}>
+                {m.name}
+              </option>
+            ))}
+          </select>
+        </label>
         <h5>This week’s bundles</h5>
         {!weekChores.length && (
           <p className="subtle">No bundle chores on the calendar this week.</p>
@@ -207,12 +229,12 @@ export default function ReliefPanel({
                       className="button secondary small"
                       onClick={() => {
                         controller.createEvent(agreement.id, "skip_cover", {
-                          details: { entry_ids: [chore.id] },
+                          details: { entry_ids: [chore.id], recipient },
                         });
                         setSkipFor(null);
                       }}
                     >
-                      Ask {other?.name ?? "them"} to cover
+                      Ask {other?.name ?? "a housemate"} to cover
                     </Button>
                     <Button
                       className="text-button"
@@ -227,7 +249,7 @@ export default function ReliefPanel({
                       className="button secondary small"
                       onClick={() =>
                         controller.createEvent(agreement.id, "swap", {
-                          details: { entry_ids: [chore.id] },
+                          details: { entry_ids: [chore.id], recipient },
                         })
                       }
                     >
@@ -336,8 +358,8 @@ export default function ReliefPanel({
     <section className={styles.subPanel}>
       <h4>Relief valves</h4>
       <p className="subtle">
-        PTO, sick days, and reschedules, per Articles 6 and 7. Reschedules wait
-        for the other of you.
+        PTO, sick days, and reschedules, per Articles 6 and 7. Reschedules need
+        acceptance from every other housemate.
       </p>
       <h5>PTO remaining</h5>
       <p className={styles.statLine}>

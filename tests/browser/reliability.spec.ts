@@ -50,7 +50,7 @@ async function mockHome(page: Page) {
   return data;
 }
 
-test("Settings surface attachment/digest status, retry, history, and the two-person limit", async ({
+test("Settings surface attachment/digest status, retry, history, and larger-household invitations", async ({
   page,
 }) => {
   const data = await mockHome(page);
@@ -103,10 +103,10 @@ test("Settings surface attachment/digest status, retry, history, and the two-per
     .click();
   await expect(page.getByText("Handbook attachments:")).toContainText("off");
   await expect(
-    page.getByRole("button", { name: "Add housemate", exact: true }),
-  ).toHaveCount(0);
+    page.getByRole("button", { name: "Invite housemate", exact: true }),
+  ).toBeVisible();
   await expect(
-    page.getByText(/Households currently support two people/),
+    page.getByRole("region", { name: "Household setup checklist" }),
   ).toBeVisible();
   await page.getByRole("button", { name: "Retry morning delivery" }).click();
   await expect(page.getByText(/Morning: sent/)).toBeVisible();

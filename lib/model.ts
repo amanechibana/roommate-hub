@@ -25,6 +25,7 @@ export type Entry = {
   effort_minutes?: number | null;
   visibility?: "household" | "private";
   bill_shares?: Record<string, number> | null;
+  completed_by?: string | null;
   completed_at?: string | null;
   last_done_at?: string | null;
   last_done_by?: string | null;

@@ -27,13 +27,17 @@ sql(
 const suites = {
   28: [
     "household-timezone",
+    "fair-chores-household-setup",
     "feature-improvements",
     "search-offline-chore-bill-splits",
     "household-life",
-    "house-coordination",
     "household-life-membership",
-    "household-reliability",
-    "agreements",
+  ],
+  27: [
+    "fair-chores-household-setup",
+    "feature-improvements",
+    "search-offline-chore-bill-splits",
+    "household-life",
   ],
   1: ["isolation"],
   4: ["device-identity"],

@@ -67,6 +67,8 @@ export default function EntryDialog({
     kind: Kind;
     entry?: Entry;
     date?: string;
+    setup?: "bills" | "chores";
+    suggestedAssignee?: string;
     draft?: { title: string; url: string };
   };
   members: Member[];
@@ -80,15 +82,33 @@ export default function EntryDialog({
   const [kind, setKind] = useState<Kind>(editing.kind);
   const [validation, setValidation] = useState("");
   const [lookup, setLookup] = useState<"" | "loading" | "failed">("");
-  const [repeat, setRepeat] = useState<Repeat | "">("");
+  const [repeat, setRepeat] = useState<Repeat | "">(
+    editing.setup === "bills"
+      ? "monthly"
+      : editing.setup === "chores"
+        ? "weekly"
+        : "",
+  );
   const [startDate, setStartDate] = useState(
-    editing.entry?.date || editing.date || "",
+    editing.entry?.date ||
+      editing.date ||
+      (editing.setup ? dateKey(new Date()) : ""),
   );
   const [repeatDays, setRepeatDays] = useState<number[]>([
     parseDate(startDate || today).getDay(),
   ]);
   const [repeatInterval, setRepeatInterval] = useState(1);
-  const [repeatUntil, setRepeatUntil] = useState("");
+  const [repeatUntil, setRepeatUntil] = useState(
+    editing.setup
+      ? dateKey(
+          new Date(
+            new Date().getFullYear(),
+            new Date().getMonth() + 6,
+            new Date().getDate(),
+          ),
+        )
+      : "",
+  );
   const [rangeEnd, setRangeEnd] = useState("");
   function chooseRepeat(value: Repeat | "") {
     setRepeat(value);
@@ -102,10 +122,15 @@ export default function EntryDialog({
     }
   }
   const [wholeSeries, setWholeSeries] = useState(false);
-  const [alternating, setAlternating] = useState(false);
-  const [assignee, setAssignee] = useState(editing.entry?.assignee || "");
+  const [alternating, setAlternating] = useState(editing.setup === "chores");
+  const [assignee, setAssignee] = useState(
+    editing.suggestedAssignee ||
+      editing.entry?.assignee ||
+      (editing.setup === "chores" ? (uid ?? "") : ""),
+  );
   const [category, setCategory] = useState(
-    editing.entry?.category || categories[editing.kind][0],
+    editing.entry?.category ||
+      (editing.setup === "bills" ? "Bill" : categories[editing.kind][0]),
   );
   const entry = editing.entry;
   const [checklist, setChecklist] = useState<ChecklistStep[]>(
@@ -238,10 +263,17 @@ export default function EntryDialog({
       setValidation("Choose a start time before adding an end time.");
       return;
     }
-    const partner = String(data.get("rotation_partner") || "");
+    const rotation = [assignee, ...data.getAll("rotation_member").map(String)];
     const rotating = kind === "task" && repeating && alternating;
-    if (rotating && (!assignee || !partner || assignee === partner)) {
-      setValidation("Choose two different people to take turns.");
+    if (
+      rotating &&
+      (!assignee ||
+        rotation.length < 2 ||
+        new Set(rotation).size !== rotation.length)
+    ) {
+      setValidation(
+        "Choose a first assignee and at least one other housemate to take turns.",
+      );
       return;
     }
     const warnings =
@@ -332,7 +364,7 @@ export default function EntryDialog({
             repeat_interval: rangedEvent ? 1 : repeatInterval,
           }
         : {}),
-      ...(rotating ? { rotation_partner: partner } : {}),
+      ...(rotating ? { rotation_members: rotation } : {}),
       ...(entry?.series_id && wholeSeries ? { scope: "series" as const } : {}),
     });
   }
@@ -825,19 +857,30 @@ export default function EntryDialog({
                 Alternate each occurrence
               </label>
               {alternating && (
-                <label>
-                  Take turns with
-                  <select name="rotation_partner" required defaultValue="">
-                    <option value="">Choose a housemate</option>
-                    {members
-                      .filter((m) => m.user_id !== assignee)
-                      .map((m) => (
-                        <option key={m.user_id} value={m.user_id}>
-                          {m.name}
-                        </option>
-                      ))}
-                  </select>
-                </label>
+                <fieldset>
+                  <legend>Take turns with</legend>
+                  <p className="subtle">
+                    The first assignee goes first, followed by selected
+                    housemates in the order below.
+                  </p>
+                  {members
+                    .filter(
+                      (m) =>
+                        m.name !== "Housemates" &&
+                        m.active !== false &&
+                        m.user_id !== assignee,
+                    )
+                    .map((m) => (
+                      <label className="checkbox-row" key={m.user_id}>
+                        <input
+                          type="checkbox"
+                          name="rotation_member"
+                          value={m.user_id}
+                        />
+                        {m.name}
+                      </label>
+                    ))}
+                </fieldset>
               )}
             </>
           )}

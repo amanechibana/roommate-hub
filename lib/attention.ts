@@ -71,7 +71,8 @@ export function attentionItems({
       (a) =>
         a.agreement_id === agreement.id &&
         a.status === "open" &&
-        a.proposed_by !== uid,
+        a.proposed_by !== uid &&
+        !a.approved_by?.includes(uid),
     ))
       result.push({
         id: amendment.id,
@@ -85,7 +86,9 @@ export function attentionItems({
       (e) =>
         e.agreement_id === agreement.id &&
         e.status === "open" &&
-        e.actor !== uid,
+        e.actor !== uid &&
+        !e.accepted_by?.includes(uid) &&
+        (!e.details.recipient || e.details.recipient === uid),
     ))
       result.push({
         id: event.id,

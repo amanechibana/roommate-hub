@@ -589,7 +589,7 @@ export default function AgreementView({
                 controller.propose(slug);
               }}
             >
-              Send to {other?.name ?? "your housemate"} to agree
+              Send to all housemates to agree
             </Button>
             {!other && (
               <span className="subtle">Add your housemate first.</span>

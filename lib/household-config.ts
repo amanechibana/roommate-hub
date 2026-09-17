@@ -23,6 +23,7 @@ export type SaveValues = Partial<Entry> & {
   time_of_day?: string | null;
   end_time?: string | null;
   rotation_partner?: string;
+  rotation_members?: string[];
   paid?: boolean;
   cover?: boolean;
   log_share?: boolean;

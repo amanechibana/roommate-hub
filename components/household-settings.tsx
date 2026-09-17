@@ -5,6 +5,7 @@ import { AnimatePresence } from "motion/react";
 import { PaperDialog } from "./ui/dialog";
 import { Button } from "@/components/ui/button";
 
+import HouseholdSetup from "./household-setup";
 import ReminderPreferencesForm from "./reminder-preferences";
 import type { ImprovementsController } from "@/lib/use-improvements";
 import PushSettings from "@/components/push-settings";
@@ -32,6 +33,8 @@ type Props = Pick<
   | "uid"
   | "setChoosingPerson"
   | "refresh"
+  | "setTab"
+  | "setEditing"
 > & {
   improvements: ImprovementsController;
   avatar: (member: Member, index: number) => import("react").ReactNode;
@@ -52,6 +55,8 @@ export default function HouseholdSettings({
   uid,
   setChoosingPerson,
   refresh,
+  setTab,
+  setEditing,
 }: Props) {
   const [confirm, setConfirm] = useState<{
     operation: "remove_member" | "leave" | "transfer_owner";
@@ -63,7 +68,30 @@ export default function HouseholdSettings({
 
   return (
     <div className="settings-grid">
-      <section className="panel settings-panel">
+      <HouseholdSetup
+        members={members}
+        entries={entries}
+        notificationsReviewed={!!improvements.reminders.setup_reviewed}
+        readOnly={sharedScreen}
+        navigate={(step) => {
+          if (step === "members")
+            document
+              .getElementById("household-members")
+              ?.scrollIntoView({ behavior: "smooth" });
+          else if (step === "notifications")
+            document
+              .getElementById("household-notifications")
+              ?.scrollIntoView({ behavior: "smooth" });
+          else {
+            setTab(step === "bills" ? "Calendar" : "To-dos");
+            setEditing({
+              kind: step === "bills" ? "event" : "task",
+              setup: step === "bills" ? "bills" : "chores",
+            });
+          }
+        }}
+      />
+      <section id="household-members" className="panel settings-panel">
         <h2>
           <Users size={20} /> {household.name}
         </h2>
@@ -129,13 +157,14 @@ export default function HouseholdSettings({
             This device is signed in as the household, so it reads the house but
             doesn’t check things off. Pick a person above to join in.
           </p>
-        ) : owner &&
-          members.filter((m) => m.name !== "Housemates").length < 2 ? (
+        ) : owner ? (
           <>
             <h3>Invite a housemate</h3>
             <p className="subtle">
               Add their name, then share the household code with them privately.
               They can open this site and choose their name after signing in.
+              Adding a housemate returns existing agreements to draft so
+              everyone can review and sign them together.
             </p>
             <form onSubmit={addMember}>
               <label>
@@ -155,9 +184,7 @@ export default function HouseholdSettings({
           </>
         ) : (
           <p className="subtle">
-            {owner
-              ? "Households currently support two people. You can invite a replacement after a housemate leaves."
-              : "The household owner manages invitations and removals."}
+            The household owner manages invitations and removals.
           </p>
         )}
         {!sharedScreen && (

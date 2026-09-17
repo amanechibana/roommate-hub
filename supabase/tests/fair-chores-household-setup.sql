@@ -1,0 +1,67 @@
+begin;
+do $$
+declare hid uuid; a uuid; b uuid; c uuid; d uuid; ag uuid; am uuid; ev uuid; result jsonb; sid uuid; eid uuid; today date:=current_date;
+begin
+ select household_id into hid from public.shared_home_config;
+ select owner_id into a from public.households where id=hid;
+ select user_id into b from public.members where household_id=hid and active and name<>'Housemates' and user_id<>a;
+ result:=public.shared_home('test-gateway','member',jsonb_build_object('actor',a,'name','Third housemate'));
+ c:=(result->>'member_id')::uuid;
+ result:=public.shared_coordination('test-gateway','invite',jsonb_build_object('actor',a,'name','Fourth housemate'));
+ d:=(result->>'member_id')::uuid;
+ if (select count(*) from public.members where household_id=hid and active and name<>'Housemates')<>4 then raise exception 'Larger roster not saved'; end if;
+ begin perform public.shared_home('test-gateway','member',jsonb_build_object('actor',b,'name','Unauthorized'));raise exception 'Non-owner invited' using errcode='P0002';exception when raise_exception then null;end;
+ result:=public.shared_home('test-gateway','create',jsonb_build_object('actor',a,'kind','task','category','Chore','title','Bathroom','date',today,'repeat','weekly','repeat_until',today+21,'assignee',a,'rotation_members',jsonb_build_array(a,b,c,d),'effort_minutes',45));
+ sid:=(result->'entries'->0->>'series_id')::uuid;
+ if (select array_agg(assignee order by date) from public.entries where series_id=sid)<>array[a,b,c,d] then raise exception 'Four-person recurrence not rotating'; end if;
+ if exists(select 1 from public.entries where series_id=sid and (effort_minutes<>45 or rotation_members<>array[a,b,c,d])) then raise exception 'Rotation lost metadata'; end if;
+ begin perform public.shared_home('test-gateway','create',jsonb_build_object('actor',a,'kind','task','category','Chore','title','Invalid','date',today,'repeat','weekly','repeat_until',today+7,'assignee',a,'rotation_members',jsonb_build_array(a,a)));raise exception 'Duplicate rotation accepted' using errcode='P0002';exception when raise_exception then null;end;
+ result:=public.shared_agreements('test-gateway','save',jsonb_build_object('actor',a,'slug','house','title','Larger home agreement','terms','{"bundles":{},"max_swaps_month":2}'::jsonb));
+ ag:=(result->'agreement'->>'id')::uuid;
+ perform public.shared_agreements('test-gateway','propose',jsonb_build_object('actor',a,'slug','house'));
+ perform public.shared_agreements('test-gateway','sign',jsonb_build_object('actor',b,'slug','house'));
+ perform public.shared_agreements('test-gateway','sign',jsonb_build_object('actor',c,'slug','house'));
+ if (select status from public.agreements where id=ag)<>'proposed' then raise exception 'Agreement activated without all signatures'; end if;
+ perform public.shared_agreements('test-gateway','sign',jsonb_build_object('actor',d,'slug','house'));
+ result:=public.shared_agreements('test-gateway','set_chores',jsonb_build_object('actor',a,'agreement_id',ag,'first_date',today,'weeks',4,'chores',jsonb_build_array(jsonb_build_object('title','Bundle','description','Clean','weekday',0,'rotation',jsonb_build_array(a,b,c,d)))));
+ sid:=(result->'series_ids'->>0)::uuid;
+ if (select array_agg(assignee order by date) from public.entries where series_id=sid)<>array[a,b,c,d] then raise exception 'Agreement recurrence not rotating'; end if;
+ result:=public.shared_agreements('test-gateway','amend',jsonb_build_object('actor',a,'agreement_id',ag,'title','More swaps','body','Allow three swaps','terms_patch','{"max_swaps_month":3}'::jsonb));
+ am:=(result->'amendment'->>'id')::uuid;
+ perform public.shared_agreements('test-gateway','amend_decide',jsonb_build_object('actor',b,'id',am,'approve',true));
+ if (select status from public.agreement_amendments where id=am)<>'open' or (select terms->>'max_swaps_month' from public.agreements where id=ag)<>'2' then raise exception 'Amendment applied before unanimous approval'; end if;
+ begin perform public.shared_agreements('test-gateway','amend_decide',jsonb_build_object('actor',b,'id',am,'approve',true));raise exception 'Duplicate vote accepted' using errcode='P0002';exception when raise_exception then null;end;
+ perform public.shared_agreements('test-gateway','amend_decide',jsonb_build_object('actor',c,'id',am,'approve',true));
+ perform public.shared_agreements('test-gateway','amend_decide',jsonb_build_object('actor',d,'id',am,'approve',true));
+ if (select status from public.agreement_amendments where id=am)<>'approved' or (select terms->>'max_swaps_month' from public.agreements where id=ag)<>'3' then raise exception 'Unanimous amendment not applied'; end if;
+ select id into eid from public.entries where series_id=sid and assignee=a;
+ result:=public.shared_agreements('test-gateway','event',jsonb_build_object('actor',a,'agreement_id',ag,'kind','swap','details',jsonb_build_object('entry_ids',jsonb_build_array(eid),'recipient',c)));
+ ev:=(result->'event'->>'id')::uuid;
+ begin perform public.shared_agreements('test-gateway','event_decide',jsonb_build_object('actor',b,'id',ev,'accept',true));raise exception 'Wrong recipient accepted swap' using errcode='P0002';exception when raise_exception then null;end;
+ perform public.shared_agreements('test-gateway','event_decide',jsonb_build_object('actor',c,'id',ev,'accept',true));
+ if (select assignee from public.entries where id=eid)<>c then raise exception 'Swap did not use selected housemate'; end if;
+ -- Joint reschedules require approval from every other current member.
+ result:=public.shared_home('test-gateway','create',jsonb_build_object('actor',a,'kind','event','category','Gym','title','Joint session','date',today,'time_of_day','07:00'));
+ eid:=(result->'entries'->0->>'id')::uuid;
+ result:=public.shared_agreements('test-gateway','event',jsonb_build_object('actor',a,'agreement_id',ag,'kind','reschedule','entry_id',eid,'details',jsonb_build_object('new_date',today+1,'new_time','08:00')));
+ ev:=(result->'event'->>'id')::uuid;
+ perform public.shared_agreements('test-gateway','event_decide',jsonb_build_object('actor',b,'id',ev,'accept',true));
+ perform public.shared_agreements('test-gateway','event_decide',jsonb_build_object('actor',c,'id',ev,'accept',true));
+ if (select date from public.entries where id=eid)<>today then raise exception 'Rescheduled before unanimous approval'; end if;
+ perform public.shared_agreements('test-gateway','event_decide',jsonb_build_object('actor',d,'id',ev,'accept',true));
+ if (select date from public.entries where id=eid)<>today+1 then raise exception 'Unanimous reschedule not applied'; end if;
+ -- The rolling schedule must retain four-person parity beyond its first horizon.
+ update public.agreement_schedule_state set through_date=today-7,anchor_date=today-35 where series_id=sid;
+ delete from public.entries where series_id=sid and date>=today;
+ result:=public.shared_household_ops('test-gateway','roll_forward',jsonb_build_object('actor',a));
+ if coalesce((result->>'failed')::integer,0)>0 then raise exception 'Rolling rotation failed'; end if;
+ if (select assignee from public.entries where series_id=sid and date=today)<>b then raise exception 'Rolling rotation lost roster parity'; end if;
+ -- Notification checklist progress is saved for a member even when they opt out.
+ perform public.shared_improvements('test-gateway','save_reminders',jsonb_build_object('actor',a,'settings','{"morning":null,"evening":null,"topics":[],"setup_reviewed":true}'::jsonb));
+ if not (select (settings->>'setup_reviewed')::boolean from public.member_reminders where household_id=hid and member=a) then raise exception 'Setup progress not saved'; end if;
+ perform public.shared_coordination('test-gateway','invite',jsonb_build_object('actor',a,'name','Fifth housemate'));
+ if (select status from public.agreements where id=ag)<>'draft' or exists(select 1 from public.agreement_schedule_state where household_id=hid) then raise exception 'Invitation did not reset agreement roster'; end if;
+ if not exists(select 1 from public.house_membership_agreement_archive where household_id=hid and agreement->>'id'=ag::text) then raise exception 'Invitation discarded signed history'; end if;
+ if has_function_privilege('anon','public.shared_agreements_before_history(text,text,jsonb)','execute') then raise exception 'Legacy agreement gateway exposed'; end if;
+end $$;
+rollback;

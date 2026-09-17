@@ -57,6 +57,7 @@ export type Amendment = {
   terms_patch: Record<string, unknown> | null;
   status: "open" | "approved" | "declined" | "withdrawn";
   proposed_by: string;
+  approved_by?: string[];
   decided_by: string | null;
   reason: string | null;
   created_at: string;
@@ -77,6 +78,7 @@ export type AgreementEvent = {
   kind: AgreementEventKind;
   status: "open" | "accepted" | "declined" | "done";
   actor: string;
+  accepted_by?: string[];
   hours: number | null;
   details: Record<string, unknown>;
   created_at: string;
@@ -217,10 +219,17 @@ export function pendingForMember(
     ).length +
     amendments.filter(
       (amendment) =>
-        amendment.status === "open" && amendment.proposed_by !== uid,
+        amendment.status === "open" &&
+        amendment.proposed_by !== uid &&
+        !amendment.approved_by?.includes(uid),
     ).length +
-    events.filter((event) => event.status === "open" && event.actor !== uid)
-      .length
+    events.filter(
+      (event) =>
+        event.status === "open" &&
+        event.actor !== uid &&
+        !event.accepted_by?.includes(uid) &&
+        (!event.details.recipient || event.details.recipient === uid),
+    ).length
   );
 }
 
