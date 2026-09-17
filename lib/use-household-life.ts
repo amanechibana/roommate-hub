@@ -51,6 +51,7 @@ export function useHouseholdLife({
   const [notice, setNotice] = useState("");
   const [photosEnabled, setPhotosEnabled] = useState(demo);
   const lock = useRef(false);
+  const demoVotes = useRef(new Map<string, number>());
   const revision = useRef(0);
   const sequence = useRef(0);
   const urls = useRef(new Set<string>());
@@ -58,6 +59,7 @@ export function useHouseholdLife({
     revision.current++;
     sequence.current++;
     setData(emptyLife());
+    demoVotes.current.clear();
     setLoaded(demo);
     setError("");
     setNotice("");
@@ -146,7 +148,12 @@ export function useHouseholdLife({
               ? `Added ${result.added} ${result.added === 1 ? "item" : "items"} to shopping.`
               : "Everything needed is already on the shopping list.",
           );
-        else setNotice("Saved to your household.");
+        else
+          setNotice(
+            operation === "poll_vote"
+              ? "Your anonymous vote was saved."
+              : "Saved to your household.",
+          );
         if (operation.endsWith("_shop") || operation.startsWith("meal_"))
           await refreshHome();
         return;
@@ -178,12 +185,24 @@ export function useHouseholdLife({
         if (!poll) throw new Error("Poll not found.");
         if (operation === "poll_vote") {
           if (!pollOpen(poll)) throw new Error("Voting has ended.");
+          const choice = Number(payload.choice);
+          const previous = demoVotes.current.get(id);
+          const counts = poll.options.map((_, index) => {
+            const count = data.votes
+              .filter((v) => v.poll_id === id && v.choice === index)
+              .reduce((total, v) => total + v.count, 0);
+            return {
+              poll_id: id,
+              choice: index,
+              count:
+                count - Number(previous === index) + Number(choice === index),
+            };
+          });
           next.votes = [
-            ...data.votes.filter(
-              (v) => !(v.poll_id === id && v.member_id === uid),
-            ),
-            { poll_id: id, member_id: uid!, choice: Number(payload.choice) },
+            ...data.votes.filter((v) => v.poll_id !== id),
+            ...counts.filter((v) => v.count > 0),
           ];
+          demoVotes.current.set(id, choice);
         } else {
           if (pollOpen(poll) || poll.decision)
             throw new Error("Wait until the deadline to save a decision.");
@@ -299,7 +318,12 @@ export function useHouseholdLife({
             : []),
         ];
       setData(next);
-      if (!operation.endsWith("_shop")) setNotice("Saved to your household.");
+      if (!operation.endsWith("_shop"))
+        setNotice(
+          operation === "poll_vote"
+            ? "Your anonymous vote was saved."
+            : "Saved to your household.",
+        );
     });
   }
   async function upload(requestId: string, file: File) {

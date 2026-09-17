@@ -29,13 +29,13 @@ test("poll closes exactly at the deadline and a saved decision stays closed", ()
   );
   assert.deepEqual(
     pollTally(poll, [
-      { poll_id: "poll", member_id: "a", choice: 0 },
-      { poll_id: "poll", member_id: "b", choice: 1 },
-      { poll_id: "other", member_id: "a", choice: 0 },
+      { poll_id: "poll", choice: 0, count: 3 },
+      { poll_id: "poll", choice: 1, count: 2 },
+      { poll_id: "other", choice: 0, count: 3 },
     ]),
     [
-      { option: "Yes", count: 1 },
-      { option: "No", count: 1 },
+      { option: "Yes", count: 3 },
+      { option: "No", count: 2 },
     ],
   );
 });

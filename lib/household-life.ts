@@ -10,7 +10,7 @@ export type Poll = {
   created_by: string;
   created_at: string;
 };
-export type PollVote = { poll_id: string; member_id: string; choice: number };
+export type PollVoteCount = { poll_id: string; choice: number; count: number };
 export type PantryItem = {
   id: string;
   title: string;
@@ -60,7 +60,7 @@ export type BudgetSpending = {
 export type LifeSnapshot = {
   spending?: BudgetSpending[];
   polls: Poll[];
-  votes: PollVote[];
+  votes: PollVoteCount[];
   pantry: PantryItem[];
   maintenance: MaintenanceRequest[];
   photos: MaintenancePhoto[];
@@ -104,11 +104,12 @@ export type LifeOperation = keyof typeof lifeAllowlists;
 export function pollOpen(poll: Poll, now = Date.now()) {
   return !poll.decision && Date.parse(poll.deadline) > now;
 }
-export function pollTally(poll: Poll, votes: PollVote[]) {
+export function pollTally(poll: Poll, votes: PollVoteCount[]) {
   return poll.options.map((option, choice) => ({
     option,
-    count: votes.filter((v) => v.poll_id === poll.id && v.choice === choice)
-      .length,
+    count: votes
+      .filter((v) => v.poll_id === poll.id && v.choice === choice)
+      .reduce((total, v) => total + v.count, 0),
   }));
 }
 export function missingIngredients(
