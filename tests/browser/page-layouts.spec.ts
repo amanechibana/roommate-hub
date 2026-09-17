@@ -5,6 +5,7 @@ import { mockBackground } from "./mock-background";
 for (const [width, height] of [
   [1440, 900],
   [1280, 720],
+  [1280, 1200],
   [1024, 600],
   [800, 568],
   [390, 844],
@@ -62,8 +63,6 @@ for (const [width, height] of [
           .locator(".sidebar")
           .evaluate((el) => el.scrollHeight <= el.clientHeight + 1),
       ).toBe(true);
-      await cat.click();
-      await expect(cat).toHaveAttribute("data-reaction", "1");
     }
     const topbar = page.locator(".topbar");
     for (const name of [
@@ -105,6 +104,10 @@ for (const [width, height] of [
     await page.screenshot({
       path: `test-results/layout-expenses-${width}.png`,
     });
+    if (width > 650) {
+      await cat.click();
+      await expect(cat).toHaveAttribute("data-reaction", "1");
+    }
     await topbar
       .getByRole("button", { name: "Needs your attention", exact: true })
       .click();
@@ -168,4 +171,36 @@ test("expense details and export remain available below the ledger", async ({
   expect((await download).suggestedFilename()).toBe(
     "common-ground-expenses.csv",
   );
+});
+
+test("sidebar scales continuously as the window grows", async ({ page }) => {
+  test.skip(!!process.env.PW_SHARED_API, "Uses the demo frame.");
+  await page.setViewportSize({ width: 1280, height: 600 });
+  await page.goto("/?tab=expenses");
+  await expect(
+    page.getByRole("heading", { name: "Expenses", exact: true }),
+  ).toBeVisible();
+  const sizes = () =>
+    page.locator(".sidebar").evaluate((el) => {
+      const button = el.querySelector("nav button")!;
+      return {
+        rail: el.getBoundingClientRect().width,
+        link: button.getBoundingClientRect().height,
+        icon: button.querySelector("svg")!.getBoundingClientRect().width,
+        label: parseFloat(getComputedStyle(button).fontSize),
+        cat: el.querySelector(".rail-companion button")!.getBoundingClientRect()
+          .width,
+        empty:
+          el.querySelector(".sidebar-bottom")!.getBoundingClientRect().top -
+          el.querySelector("nav button:last-child")!.getBoundingClientRect()
+            .bottom,
+      };
+    });
+  const short = await sizes();
+  await page.setViewportSize({ width: 1280, height: 1000 });
+  const tall = await sizes();
+  for (const key of ["rail", "link", "icon", "label", "cat"] as const)
+    expect(tall[key]).toBeGreaterThan(short[key]);
+  expect(short.empty).toBeLessThan(2);
+  expect(tall.empty).toBeLessThan(2);
 });
