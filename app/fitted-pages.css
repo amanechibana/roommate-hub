@@ -110,7 +110,7 @@ body:has(.fitted-app) {
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
   overflow: hidden;
-  min-height: 0;
+  min-height: 32px;
 }
 .fitted-app .board-entry-copy small {
   white-space: nowrap;
@@ -227,12 +227,10 @@ body:has(.fitted-app) {
 }
 .calendar-panel .day-number {
   flex-shrink: 0;
-  height: 22px;
-  width: 22px;
 }
 .calendar-panel .calendar-event {
-  padding: 2px 4px;
-  line-height: 18px;
+  padding: 3px 4px;
+  line-height: 20px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -243,13 +241,16 @@ body:has(.fitted-app) {
   right: 4px;
   top: 4px;
   border: 0;
-  padding: 3px 5px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 6px;
   border-radius: 4px;
   background: #e8ddc9;
   color: #85684a;
   font-size: 10px;
-  min-width: 26px;
-  height: 22px;
+  min-width: 28px;
+  height: 28px;
 }
 .agenda-pager {
   display: none;
