@@ -157,6 +157,32 @@ export function subwayColor(route: string): string {
   return routeColors[normalizeSubwayRoute(route)] ?? "6E6E73";
 }
 
+/** WCAG relative luminance of a six-digit hex colour. */
+function luminance(hex: string): number {
+  const n = parseInt(hex, 16);
+  const channel = (shift: number) => {
+    const s = ((n >> shift) & 255) / 255;
+    return s <= 0.03928 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4;
+  };
+  return 0.2126 * channel(16) + 0.7152 * channel(8) + 0.0722 * channel(0);
+}
+
+/**
+ * Badge label colour that keeps 4.5:1 contrast over the line colours in use.
+ * White only clears the bar on dark lines; lighter ones (PATH orange, MTA
+ * yellow) read better — and pass — with black.
+ */
+export function badgeText(colors: string[]): string {
+  const lum = colors.map(luminance);
+  const worst = (score: (l: number) => number) => Math.min(...lum.map(score));
+  const white = worst((l) => 1.05 / (l + 0.05));
+  const black = worst((l) => (l + 0.05) / 0.05);
+  if (white >= 4.5) return "#fff";
+  if (black >= 4.5) return "#000";
+  // Mixed two-tone pairs can strand both choices; take the stronger one.
+  return white >= black ? "#fff" : "#000";
+}
+
 /** One stop on the household's departure board. */
 export type CommuteStation = {
   system: "path" | "subway";
