@@ -27,12 +27,12 @@
   padding: 14px 18px;
 }
 .expenses .balance {
-  background: #e9f0df;
-  border-color: #cddbbf;
+  background: var(--sage);
+  border-color: var(--line);
 }
 .summary span {
   font-size: 12px;
-  color: #5c7052;
+  color: var(--green);
 }
 .summary strong {
   display: block;
@@ -40,12 +40,12 @@
   font-size: 28px;
   font-weight: 500;
   letter-spacing: -1px;
-  color: #3d593b;
+  color: var(--green);
   font-variant-numeric: tabular-nums;
 }
 .summary p {
   margin: 0;
-  color: #6b7861;
+  color: var(--green);
   font-size: 12px;
 }
 .sectionHeading {
@@ -459,29 +459,16 @@
   }
 }
 
-/* The spending cell is a dark panel in night mode; .balance keeps its light
-   card, so only the spending text flips. */
-@media (prefers-color-scheme: dark) {
-  .spending span,
-  .spending p,
-  .sectionHeading > span,
-  .pendingRow > strong {
-    color: var(--muted);
-  }
-  .spending strong {
-    color: var(--ink);
-  }
-  .settlementHelp,
-  .settled,
-  .pendingNote,
-  .row,
-  .empty {
-    color: var(--muted);
-  }
-  .empty h3 {
-    color: var(--ink);
-  }
-  .pendingRow {
-    border-color: var(--line);
-  }
+/* The summary cells ride dark panels in night mode; the tints above that
+   aren't tokens yet get flipped here, grouped by target. */
+:global(:root[data-theme="dark"]) :is(.spending span, .spending p, .sectionHeading > span, .pendingRow > strong),
+:global(:root[data-theme="dark"]) :is(.settlementHelp, .settled, .pendingNote, .row, .empty) {
+  color: var(--muted);
+}
+:global(:root[data-theme="dark"]) .spending strong,
+:global(:root[data-theme="dark"]) .empty h3 {
+  color: var(--ink);
+}
+:global(:root[data-theme="dark"]) .pendingRow {
+  border-color: var(--line);
 }

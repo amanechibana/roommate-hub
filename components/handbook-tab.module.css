@@ -14,7 +14,7 @@
 }
 
 .section {
-  background: #fffdf7;
+  background: var(--paper);
   border: 1px solid var(--line);
   border-radius: 11px;
   overflow: hidden;
@@ -27,8 +27,8 @@
   align-items: center;
   gap: 12px;
   padding: 17px 18px 14px;
-  border-bottom: 1px solid #e8dfd0;
-  background: #f8f3e9;
+  border-bottom: 1px solid var(--line);
+  background: var(--paper-warm);
 }
 
 .section h2,

@@ -28,8 +28,8 @@
     0 4px 10px #51412e17;
 }
 .button.secondary {
-  background: #fffcf5;
-  border-color: #ded6c7;
+  background: var(--card);
+  border-color: var(--line);
 }
 .icon-button {
   border-radius: 9px;
@@ -477,25 +477,26 @@ html[data-ambient="on"] .skeleton {
   display: none;
 }
 
-@media (prefers-color-scheme: dark) {
-  .shell .sidebar {
-    background: #263a2f;
-  }
-  .expenses .balance {
-    background: #354533;
-    border-color: #52634e;
-  }
-  .expenses .row:hover,
-  .expenses .payment:hover,
-  .expenses .pendingRow:hover {
-    background: #394635;
-  }
-  .expenses .rowIcon {
-    background: #4a4031;
-  }
-  .expenses .repaymentIcon {
-    background: #3d4d3b;
-  }
+:where(:root[data-theme="dark"]) .shell .sidebar {
+  background: #263a2f;
+}
+:where(:root[data-theme="dark"]) :is(.expenses .row:hover, .expenses .payment:hover, .expenses .pendingRow:hover) {
+  background: #394635;
+}
+:where(:root[data-theme="dark"]) .expenses .rowIcon {
+  background: #4a4031;
+}
+:where(:root[data-theme="dark"]) .expenses .repaymentIcon {
+  background: #3d4d3b;
+}
+:where(:root[data-theme="dark"]) .icon-button:hover:not(:disabled) {
+  background: #394635;
+}
+:where(:root[data-theme="dark"]) .display-toggle {
+  border-color: var(--line);
+  background: var(--sage);
+  color: var(--green);
+  box-shadow: none;
 }
 
 /* Presence owns dialog removal; the portal keeps it above every board surface. */
