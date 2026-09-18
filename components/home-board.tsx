@@ -275,7 +275,20 @@ export default function HomeBoard({
     if (!rows) return;
     const resize = () => {
       const room = Math.max(1, Math.min(3, Math.floor(rows.clientHeight / 64)));
-      setLimits({ event: room, task: room, request: room, note: room });
+      // A fridge note is taller than a list row (headline plus clamped
+      // lines), so the fridge is measured in its own unit against the same
+      // budget — otherwise a full stack grows the page past the fold.
+      const note = board.current?.querySelector<HTMLElement>(
+        ".fridge-stack .fridge-message",
+      );
+      const noteRoom =
+        note && note.scrollHeight > 0
+          ? Math.max(
+              1,
+              Math.min(3, Math.floor(rows.clientHeight / note.scrollHeight)),
+            )
+          : room;
+      setLimits({ event: room, task: room, request: room, note: noteRoom });
     };
     const observer = new ResizeObserver(resize);
     observer.observe(rows);
@@ -823,7 +836,7 @@ export default function HomeBoard({
           </div>
           {notes.length ? (
             <div className="fridge-stack">
-              {(display ? visible(notes, roomFor("note")) : notes).map(
+              {visible(notes, roomFor("note")).map(
                 (note) => (
                   <div className="fridge-message" key={note.id}>
                     <h3>

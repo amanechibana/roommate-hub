@@ -1,36 +1,44 @@
 "use client";
 
 import { useLayoutEffect, useState } from "react";
-import { Monitor, Moon, Sun } from "lucide-react";
+import { Clock, Moon, Sun } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import styles from "./theme-toggle.module.css";
 
-type Preference = "auto" | "light" | "dark";
+type Preference = "light" | "dark" | "time";
 const STORAGE_KEY = "rh-theme";
 
-const OPTIONS: { value: Preference; label: string; Icon: typeof Sun }[] = [
-  { value: "auto", label: "Theme: follow system", Icon: Monitor },
-  { value: "light", label: "Theme: light", Icon: Sun },
-  { value: "dark", label: "Theme: night", Icon: Moon },
-];
+const ORDER: Preference[] = ["light", "dark", "time"];
 
+const LABELS: Record<Preference, string> = {
+  light: "Theme: light",
+  dark: "Theme: night",
+  time: "Theme: light by day, night by evening",
+};
+
+// "time" follows the device clock, never the OS color scheme: 7am–7pm is
+// light, evenings and nights are dark.
 function resolve(pref: Preference): "light" | "dark" {
-  if (pref !== "auto") return pref;
-  return matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+  if (pref !== "time") return pref;
+  const hour = new Date().getHours();
+  return hour >= 7 && hour < 19 ? "light" : "dark";
 }
 
 function savedPreference(): Preference {
   const saved = localStorage.getItem(STORAGE_KEY);
-  return saved === "light" || saved === "dark" ? saved : "auto";
+  if (saved === "light" || saved === "dark" || saved === "time") return saved;
+  // Also covers the old "auto" value from the system-scheme days.
+  return "time";
 }
 
 export function ThemeToggle() {
   const [pref, setPref] = useState<Preference>(() =>
-    typeof window === "undefined" ? "auto" : savedPreference(),
+    typeof window === "undefined" ? "time" : savedPreference(),
   );
 
   // React's dev remount clears the attribute the head script set; re-apply it.
-  // While the preference is auto, follow the OS scheme as it changes.
+  // The tick also rolls the theme over when "time" crosses the 7am/7pm line
+  // while the page is open, and picks up storage written before this mount.
   useLayoutEffect(() => {
     const apply = () =>
       document.documentElement.setAttribute(
@@ -38,31 +46,27 @@ export function ThemeToggle() {
         resolve(savedPreference()),
       );
     apply();
-    const media = matchMedia("(prefers-color-scheme: dark)");
-    media.addEventListener("change", apply);
-    return () => media.removeEventListener("change", apply);
+    const timer = setInterval(apply, 60_000);
+    return () => clearInterval(timer);
   }, []);
 
-  function choose(next: Preference) {
+  function cycle() {
+    const next = ORDER[(ORDER.indexOf(pref) + 1) % ORDER.length];
     setPref(next);
     localStorage.setItem(STORAGE_KEY, next);
     document.documentElement.setAttribute("data-theme", resolve(next));
   }
 
+  const Icon = pref === "light" ? Sun : pref === "dark" ? Moon : Clock;
+
   return (
-    <div className={styles.toggle} role="group" aria-label="Theme">
-      {OPTIONS.map(({ value, label, Icon }) => (
-        <Button
-          key={value}
-          className={`${styles.option} ${pref === value ? styles.selected : ""}`}
-          aria-label={label}
-          aria-pressed={pref === value}
-          title={label}
-          onClick={() => choose(value)}
-        >
-          <Icon size={15} />
-        </Button>
-      ))}
-    </div>
+    <Button
+      className={styles.option}
+      onClick={cycle}
+      title={LABELS[pref]}
+      aria-label={LABELS[pref]}
+    >
+      <Icon size={15} />
+    </Button>
   );
 }

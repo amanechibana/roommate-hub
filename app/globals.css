@@ -2087,6 +2087,18 @@ textarea {
 :where(:root[data-theme="dark"]) :is(.empty, .subtle, .subtitle, label, .copy small) {
   color: var(--muted);
 }
+/* The calendar keeps several literal cream surfaces from the daytime board;
+   give each its night equivalent so no cream squares survive into dark mode. */
+:where(:root[data-theme="dark"]) .calendar-cell.outside {
+  background: #394635;
+  color: #b0b5a5;
+}
+:where(:root[data-theme="dark"]) .is-today .day-number {
+  color: #273f30;
+}
+:where(:root[data-theme="dark"]) .calendar-event.rent {
+  color: #e0b39c;
+}
 
 .shopping-list {
   overflow: hidden;

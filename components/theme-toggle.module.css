@@ -1,9 +1,5 @@
-/* Matches .topbar-link's rail treatment (hub.module.css), sized for icons. */
-.toggle {
-  display: flex;
-  align-items: center;
-  gap: 2px;
-}
+/* Single cycling button — light, night, or by time of day.
+   Matches .topbar-link's rail treatment (hub.module.css), sized for icons. */
 .option {
   display: inline-flex;
   align-items: center;
@@ -16,8 +12,7 @@
   background: transparent;
   color: var(--muted);
 }
-.option:hover,
-.option.selected {
+.option:hover {
   color: var(--green);
   background: var(--sage);
 }

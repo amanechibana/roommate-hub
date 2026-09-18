@@ -40,11 +40,12 @@ export default function RootLayout({
       suppressHydrationWarning
     >
       <head>
-        {/* Resolve the saved theme (auto follows the OS) before first paint,
-            so dark users never see a light flash. Storage key: rh-theme. */}
+        {/* Resolve the saved theme before first paint, so dark users never
+            see a light flash. "time" follows the device clock: 7am–7pm is
+            light, evenings and nights dark. Storage key: rh-theme. */}
         <script
           dangerouslySetInnerHTML={{
-            __html: `(function(){try{var p=localStorage.getItem("rh-theme");var t=p==="light"||p==="dark"?p:matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light";document.documentElement.setAttribute("data-theme",t)}catch(e){}})()`,
+            __html: `(function(){try{var p=localStorage.getItem("rh-theme");var t;if(p==="light"||p==="dark"){t=p}else{var h=new Date().getHours();t=h>=7&&h<19?"light":"dark"}document.documentElement.setAttribute("data-theme",t)}catch(e){}})()`,
           }}
         />
       </head>

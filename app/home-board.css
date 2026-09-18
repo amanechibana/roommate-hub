@@ -356,8 +356,9 @@
   background: #f5e1b5;
   border-color: #e7d1a5;
 }
-/* The fridge keeps its sticky-note yellow in night mode, so its heading
-   must keep the original brown ink rather than the theme token. */
+/* The fridge card paints literal sticky-note colors rather than theme
+   tokens, so its heading must pin the original brown ink. Night mode
+   overrides this below, and the wall display re-pins it after that. */
 .fridge-card .board-card-heading h2 {
   color: #5d4939;
 }
@@ -420,6 +421,43 @@
   margin-top: auto;
   padding: 7px 0;
   font-size: 11px;
+  color: #8a6847;
+}
+/* Night: the fridge dims like a sticky note left in the dark — deep honey
+   paper with pale honey ink, instead of neon yellow on a deep board. */
+:where(:root[data-theme="dark"]) .fridge-card {
+  background: #423824;
+  border-color: #2f281a;
+}
+:where(:root[data-theme="dark"]) .fridge-card .board-card-heading h2 {
+  color: #e9d9ae;
+}
+:where(:root[data-theme="dark"]) .fridge-message h3,
+:where(:root[data-theme="dark"]) .fridge-message h3 button {
+  color: #e6d4a3;
+}
+:where(:root[data-theme="dark"]) .fridge-message > p {
+  color: #cdb98a;
+}
+:where(:root[data-theme="dark"]) .fridge-message > span {
+  color: #b6a378;
+}
+/* The wall display stays in daytime colors no matter the theme. */
+.wall-display .fridge-card {
+  background: #f5e1b5;
+  border-color: #e7d1a5;
+}
+.wall-display .fridge-card .board-card-heading h2 {
+  color: #5d4939;
+}
+.wall-display .fridge-message h3,
+.wall-display .fridge-message h3 button {
+  color: #775238;
+}
+.wall-display .fridge-message > p {
+  color: #846648;
+}
+.wall-display .fridge-message > span {
   color: #8a6847;
 }
 .board-more {
@@ -1908,4 +1946,14 @@
 :where(:root[data-theme="dark"]) .home-content .demo-banner {
   background: var(--sage);
   color: var(--muted);
+}
+/* The receipt's torn edge: cream teeth on a dark card read as a bright
+   zigzag, so the teeth follow the card's tone and the notch line follows
+   --line's dark value. Wall display removes the teeth entirely. */
+:where(:root[data-theme="dark"]) .everyday-board .paper-receipt::after {
+  background:
+    linear-gradient(135deg, #262c25 50%, transparent 50%) 0 0 / 16px 16px,
+    linear-gradient(45deg, #262c25 50%, transparent 50%) 0 0 / 16px 16px,
+    var(--bg);
+  filter: drop-shadow(0 -1px 0 #454d42);
 }

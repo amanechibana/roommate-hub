@@ -252,6 +252,12 @@ body:has(.fitted-app) {
   min-width: 28px;
   height: 28px;
 }
+/* Night value for the cream more-count chip; it lives here because the
+   light rule above is here and file order beats a globals override. */
+:where(:root[data-theme="dark"]) .day-more {
+  background: #475043;
+  color: #d6d0bc;
+}
 .agenda-pager {
   display: none;
 }
