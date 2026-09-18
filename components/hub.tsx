@@ -17,6 +17,7 @@ import { activityWhen } from "@/lib/activity";
 import { HouseCompanion } from "@/components/ui/house-companion";
 import { expenseBalances } from "@/lib/expenses";
 import ExpensesTab from "./expenses-tab";
+import { ThemeToggle } from "./theme-toggle";
 import styles from "./hub.module.css";
 
 import {
@@ -875,6 +876,7 @@ function HubContent({ house }: { house: ReturnType<typeof useHousehold> }) {
               <Search size={17} />
             </Button>
             <DisplayButton onClick={() => changeDisplay(true)} />
+            <ThemeToggle />
             <span className="private-label">
               <ShieldCheck size={14} />
               {demo ? "Demo home" : "Household code access"}

@@ -34,7 +34,7 @@
 }
 .card {
   padding: 22px;
-  background: #fffdf7;
+  background: var(--paper);
   border: 1px solid var(--line);
   border-radius: 12px;
   box-shadow: 1px 3px 0 #8f735509;
@@ -84,12 +84,12 @@
   text-align: left;
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: #f8f3e9;
+  background: var(--paper-warm);
   padding: 12px;
   color: var(--ink);
 }
 .votes button[aria-pressed="true"] {
-  background: #e6edde;
+  background: var(--sage);
   border-color: var(--sage);
 }
 .votes small,
@@ -186,7 +186,7 @@
   padding: 40px 24px;
   text-align: center;
   color: var(--muted);
-  background: #fffdf7;
+  background: var(--paper);
   border: 1px dashed var(--line);
   border-radius: 12px;
   font-size: 13px;
@@ -272,7 +272,7 @@
   margin-top: 20px;
 }
 .ledger {
-  background: #fffdf7;
+  background: var(--paper);
   border: 1px solid var(--line);
   border-radius: 10px;
 }

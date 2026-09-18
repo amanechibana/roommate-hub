@@ -1,0 +1,23 @@
+/* Matches .topbar-link's rail treatment (hub.module.css), sized for icons. */
+.toggle {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+.option {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 30px;
+  min-height: 30px;
+  padding: 5px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--muted);
+}
+.option:hover,
+.option.selected {
+  color: var(--green);
+  background: var(--sage);
+}

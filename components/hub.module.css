@@ -369,7 +369,7 @@
 }
 .shell :global(.settings-panel h3) {
   padding-top: 20px;
-  border-top: 1px solid #e6ebde;
+  border-top: 1px solid var(--line);
   margin-top: 24px;
 }
 .shell :global(.member-row) {
@@ -377,12 +377,12 @@
   margin: 0;
 }
 .shell :global(.member-row + .member-row) {
-  border-top: 1px solid #edf0e7;
+  border-top: 1px solid var(--line);
 }
 /* Preserve the noticeboard, with clearer edges and stronger text contrast. */
 .shell :global(.board-card) {
   border-radius: 12px;
-  border-color: #d9dfce;
+  border-color: var(--line);
   box-shadow: 0 3px 12px #30452d07;
 }
 .shell :global(.plans-card) {
@@ -390,7 +390,7 @@
 }
 .shell :global(.chores-card) {
   border-top: 3px solid #7e9467;
-  background: #eef2e4;
+  background: var(--sage);
 }
 .shell :global(.groceries-card) {
   border-top: 3px solid #c4a16a;
@@ -399,21 +399,21 @@
   border-top: 3px solid #c9ae72;
 }
 .shell :global(.board-card-heading > span) {
-  color: #6e7861;
+  color: var(--muted);
 }
 .shell :global(.board-entry-copy small) {
-  color: #6f7665;
+  color: var(--muted);
 }
 .shell :global(.calendar-panel .panel-heading) {
-  background: #f4f7ed;
+  background: var(--paper-warm);
 }
 .shell :global(.calendar-panel .weekday) {
-  color: #6f7c65;
-  background: #f9faf3;
+  color: var(--muted);
+  background: var(--paper-warm);
   font-weight: 600;
 }
 .shell :global(.calendar-panel .calendar-cell.today) {
-  background: #eef3e5;
+  background: var(--sage);
 }
 .shell :global(.calendar-panel .calendar-event) {
   border-radius: 5px;
@@ -1057,52 +1057,52 @@
 
 /* Night palette for the app frame — .shell owns these vars, so the :root dark
    block in globals.css can't flip them; mirror it here. The topbar's light
-   colors are scoped here too, for the same reason. */
-@media (prefers-color-scheme: dark) {
-  .shell {
-    --ink: #eee8d9;
-    --muted: #b0b5a5;
-    --green: #b8cba5;
-    --line: #475043;
-    --paper: #2d342b;
-    background: #20251f;
-  }
-  .shell :global(.topbar) {
-    background: #293329;
-    border-color: #475043;
-  }
-  .shell :global(.topbar > span) {
-    color: var(--muted);
-  }
-  .shell :global(.topbar strong) {
-    color: var(--ink);
-  }
-  .shell :global(.topbar-link:hover),
-  .shell :global(.topbar-link.selected) {
-    background: #394635;
-  }
-  /* Hardcoded paper colors above need dark counterparts; grouped by target. */
-  .shell :global(.subtitle),
-  .shell :global(.entry-label small),
-  .shell :global(.list-progress),
-  .shell :global(.entry-panel .panel-heading .subtle),
-  .shell :global(.settings-panel > p),
-  .shell :global(.settings-panel .subtle),
-  .shell :global(.completed .entry-label > span),
-  .shell :global(.completed .entry-label h2) {
-    color: var(--muted);
-  }
-  .shell :global(.entry-label > span),
-  .shell :global(.shopping-row .entry-label h2),
-  .shell :global(.settings-panel > h2),
-  .shell :global(.shopping-row .row-price) {
-    color: var(--ink);
-  }
-  .shell :global(.entry-label small.overdue) {
-    color: var(--terracotta);
-  }
-  .shell :global(.demo-banner) {
-    background: #394635;
-    color: var(--green);
-  }
+   colors are scoped here too, for the same reason. :global keeps :root out of
+   the module's local scope; the added specificity only strengthens night
+   overrides, which sit at the file's end. */
+:global(:root[data-theme="dark"]) .shell {
+  --ink: #eee8d9;
+  --muted: #b0b5a5;
+  --green: #b8cba5;
+  --line: #475043;
+  --paper: #2d342b;
+  background: #20251f;
+}
+:global(:root[data-theme="dark"]) .shell :global(.topbar) {
+  background: #293329;
+  border-color: #475043;
+}
+:global(:root[data-theme="dark"]) .shell :global(.topbar > span) {
+  color: var(--muted);
+}
+:global(:root[data-theme="dark"]) .shell :global(.topbar strong) {
+  color: var(--ink);
+}
+:global(:root[data-theme="dark"]) .shell :global(.topbar-link:hover),
+:global(:root[data-theme="dark"]) .shell :global(.topbar-link.selected) {
+  background: #394635;
+}
+/* Hardcoded paper colors above need dark counterparts; grouped by target. */
+:global(:root[data-theme="dark"]) .shell :global(.subtitle),
+:global(:root[data-theme="dark"]) .shell :global(.entry-label small),
+:global(:root[data-theme="dark"]) .shell :global(.list-progress),
+:global(:root[data-theme="dark"]) .shell :global(.entry-panel .panel-heading .subtle),
+:global(:root[data-theme="dark"]) .shell :global(.settings-panel > p),
+:global(:root[data-theme="dark"]) .shell :global(.settings-panel .subtle),
+:global(:root[data-theme="dark"]) .shell :global(.completed .entry-label > span),
+:global(:root[data-theme="dark"]) .shell :global(.completed .entry-label h2) {
+  color: var(--muted);
+}
+:global(:root[data-theme="dark"]) .shell :global(.entry-label > span),
+:global(:root[data-theme="dark"]) .shell :global(.shopping-row .entry-label h2),
+:global(:root[data-theme="dark"]) .shell :global(.settings-panel > h2),
+:global(:root[data-theme="dark"]) .shell :global(.shopping-row .row-price) {
+  color: var(--ink);
+}
+:global(:root[data-theme="dark"]) .shell :global(.entry-label small.overdue) {
+  color: var(--terracotta);
+}
+:global(:root[data-theme="dark"]) .shell :global(.demo-banner) {
+  background: #394635;
+  color: var(--green);
 }

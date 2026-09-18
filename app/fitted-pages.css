@@ -517,12 +517,7 @@ body:has(.fitted-app) {
 }
 
 /* Meta smalls ride on the dark panels in night mode. */
-@media (prefers-color-scheme: dark) {
-  .entry-dialog .agenda-entry small {
-    color: var(--muted);
-  }
-  .home-pager,
-  .agenda-pager {
-    color: var(--muted);
-  }
+:where(:root[data-theme="dark"]) :is(.home-pager, .agenda-pager),
+:where(:root[data-theme="dark"]) .entry-dialog .agenda-entry small {
+  color: var(--muted);
 }

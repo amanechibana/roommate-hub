@@ -33,7 +33,21 @@ export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en" className={`${body.variable} ${displayFace.variable}`}>
+    <html
+      lang="en"
+      className={`${body.variable} ${displayFace.variable}`}
+      data-theme="light"
+      suppressHydrationWarning
+    >
+      <head>
+        {/* Resolve the saved theme (auto follows the OS) before first paint,
+            so dark users never see a light flash. Storage key: rh-theme. */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{var p=localStorage.getItem("rh-theme");var t=p==="light"||p==="dark"?p:matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light";document.documentElement.setAttribute("data-theme",t)}catch(e){}})()`,
+          }}
+        />
+      </head>
       <body>
         <MotionProvider>{children}</MotionProvider>
       </body>
