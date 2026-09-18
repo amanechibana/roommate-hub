@@ -514,3 +514,14 @@ body:has(.fitted-app) {
     display: none;
   }
 }
+
+/* Meta smalls ride on the dark panels in night mode. */
+@media (prefers-color-scheme: dark) {
+  .entry-dialog .agenda-entry small {
+    color: var(--muted);
+  }
+  .home-pager,
+  .agenda-pager {
+    color: var(--muted);
+  }
+}

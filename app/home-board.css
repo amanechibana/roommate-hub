@@ -48,32 +48,12 @@
     color: #9a896c;
   }
 }
-:root {
-  --bg: #f8f2e8;
-  --paper: #fffdf7;
-  --ink: #453d33;
-  --muted: #807467;
-  --line: #e7ddce;
-  --green: #646e50;
-}
-body {
-  background-image: radial-gradient(#a8866120 0.6px, transparent 0.6px);
-  background-size: 6px 6px;
-}
-.sidebar {
-  background: #eee6d8;
-  border-color: #ded4c4;
-}
 .house-selector {
   background: #e7ddca;
   border-color: #ddd0b9;
 }
 .house-selector small {
   color: #776d59;
-}
-.topbar {
-  background: #fbf7ef;
-  height: 66px;
 }
 .topbar .private-label {
   display: none;
@@ -1828,5 +1808,17 @@ body {
   }
   .board-pay span {
     display: none;
+  }
+}
+
+/* The paper-card colors above keep their light values in dark mode; these
+   two sit on the dark shell background and need warm counterparts. */
+@media (prefers-color-scheme: dark) {
+  .board-kicker,
+  .board-balance {
+    color: #d3a678;
+  }
+  .agenda-entry > span > small {
+    color: var(--muted);
   }
 }
