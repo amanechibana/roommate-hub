@@ -20,6 +20,7 @@ import {
   stationKey,
   toggleFilter,
   subwayColor,
+  badgeText,
   type SubwayStation,
 } from "../lib/transit";
 import {
@@ -234,6 +235,17 @@ test("keeps PATH status text but not plain countdowns", () => {
     result.departures.find((d) => d.headsign === "Newark")?.status,
     "",
   );
+});
+
+test("picks badge text that keeps 4.5:1 over every line colour", () => {
+  // Dark lines keep white; light ones flip to black.
+  assert.equal(badgeText(["0039A6"]), "#fff");
+  assert.equal(badgeText(["996633"]), "#fff");
+  assert.equal(badgeText(["FF9900"]), "#000");
+  assert.equal(badgeText(["FCCC0A"]), "#000");
+  assert.equal(badgeText(["00933C"]), "#000");
+  // Two-tone PATH trains need one colour that clears both halves.
+  assert.equal(badgeText(["4D92FB", "FF9900"]), "#000");
 });
 
 test("returns an empty board for a station with no trains listed", () => {

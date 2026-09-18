@@ -35,6 +35,7 @@ import {
   sameStation,
   searchPathStations,
   subwayColor,
+  badgeText,
   toggleFilter,
   type CommuteStation,
   type Departure,
@@ -95,11 +96,13 @@ function when(departure: Departure, now: number): string {
 
 function badgeStyle(colors: string[]) {
   const valid = colors.filter((color) => /^[0-9a-fA-F]{6}$/.test(color));
-  if (!valid.length) return { background: "#6e6e73" };
-  if (valid.length === 1) return { background: `#${valid[0]}` };
+  if (!valid.length) return { background: "#6e6e73", color: "#fff" };
+  const color = badgeText(valid);
+  if (valid.length === 1) return { background: `#${valid[0]}`, color };
   // PATH runs two-toned services; show both halves.
   return {
     background: `linear-gradient(135deg, #${valid[0]} 50%, #${valid[1]} 50%)`,
+    color,
   };
 }
 
