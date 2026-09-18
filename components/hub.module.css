@@ -1054,3 +1054,55 @@
   clip-path: inset(50%);
   white-space: nowrap;
 }
+
+/* Night palette for the app frame — .shell owns these vars, so the :root dark
+   block in globals.css can't flip them; mirror it here. The topbar's light
+   colors are scoped here too, for the same reason. */
+@media (prefers-color-scheme: dark) {
+  .shell {
+    --ink: #eee8d9;
+    --muted: #b0b5a5;
+    --green: #b8cba5;
+    --line: #475043;
+    --paper: #2d342b;
+    background: #20251f;
+  }
+  .shell :global(.topbar) {
+    background: #293329;
+    border-color: #475043;
+  }
+  .shell :global(.topbar > span) {
+    color: var(--muted);
+  }
+  .shell :global(.topbar strong) {
+    color: var(--ink);
+  }
+  .shell :global(.topbar-link:hover),
+  .shell :global(.topbar-link.selected) {
+    background: #394635;
+  }
+  /* Hardcoded paper colors above need dark counterparts; grouped by target. */
+  .shell :global(.subtitle),
+  .shell :global(.entry-label small),
+  .shell :global(.list-progress),
+  .shell :global(.entry-panel .panel-heading .subtle),
+  .shell :global(.settings-panel > p),
+  .shell :global(.settings-panel .subtle),
+  .shell :global(.completed .entry-label > span),
+  .shell :global(.completed .entry-label h2) {
+    color: var(--muted);
+  }
+  .shell :global(.entry-label > span),
+  .shell :global(.shopping-row .entry-label h2),
+  .shell :global(.settings-panel > h2),
+  .shell :global(.shopping-row .row-price) {
+    color: var(--ink);
+  }
+  .shell :global(.entry-label small.overdue) {
+    color: var(--terracotta);
+  }
+  .shell :global(.demo-banner) {
+    background: #394635;
+    color: var(--green);
+  }
+}

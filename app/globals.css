@@ -1,10 +1,11 @@
 :root {
-  --bg: #f8f7f3;
-  --paper: #fffefa;
-  --ink: #30382d;
-  --muted: #82857b;
-  --line: #e9e9e0;
-  --green: #4f6149;
+  --bg: #f8f2e8;
+  --paper: #fffdf7;
+  --ink: #453d33;
+  --muted: #807467;
+  --ink-muted: #6b7168;
+  --line: #e7ddce;
+  --green: #646e50;
   --terracotta: #bc6c50;
   --sage: #e9eee3;
   --peach: #f7e8dd;
@@ -28,6 +29,8 @@ body {
   font-family: var(--font-body), sans-serif;
   font-size: 14px;
   -webkit-font-smoothing: antialiased;
+  background-image: radial-gradient(#a8866120 0.6px, transparent 0.6px);
+  background-size: 6px 6px;
 }
 button,
 input,
@@ -278,7 +281,7 @@ nav button.active {
   flex-direction: column;
 }
 .topbar {
-  height: 76px;
+  height: 66px;
   border-bottom: 1px solid var(--line);
   display: flex;
   align-items: center;
@@ -286,7 +289,7 @@ nav button.active {
   padding: 0 42px;
   color: #878b7f;
   font-size: 11px;
-  background: #faf9f6;
+  background: #fbf7ef;
 }
 .topbar > span,
 .topbar > div {
@@ -2026,6 +2029,7 @@ textarea {
     --paper: #2d342b;
     --ink: #eee8d9;
     --muted: #b0b5a5;
+    --ink-muted: #9aa394;
     --line: #475043;
     --green: #b8cba5;
     --terracotta: #e39b7d;
@@ -2058,6 +2062,9 @@ textarea {
   }
   .topbar {
     background: #293329;
+  }
+  .topbar strong {
+    color: var(--ink);
   }
   .panel,
   .entry-dialog {

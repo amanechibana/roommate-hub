@@ -458,3 +458,30 @@
     padding-inline: 12px;
   }
 }
+
+/* The spending cell is a dark panel in night mode; .balance keeps its light
+   card, so only the spending text flips. */
+@media (prefers-color-scheme: dark) {
+  .spending span,
+  .spending p,
+  .sectionHeading > span,
+  .pendingRow > strong {
+    color: var(--muted);
+  }
+  .spending strong {
+    color: var(--ink);
+  }
+  .settlementHelp,
+  .settled,
+  .pendingNote,
+  .row,
+  .empty {
+    color: var(--muted);
+  }
+  .empty h3 {
+    color: var(--ink);
+  }
+  .pendingRow {
+    border-color: var(--line);
+  }
+}
