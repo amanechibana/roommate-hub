@@ -167,7 +167,7 @@
   align-items: center;
   gap: 18px;
   padding: 18px 0;
-  border-top: 1px solid var(--border, #e2e5d8);
+  border-top: 1px solid var(--line);
 }
 .attention-row p {
   margin: 6px 0 0;

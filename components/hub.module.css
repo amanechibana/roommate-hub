@@ -316,7 +316,7 @@
   gap: 22px;
 }
 .shell :global(.notes-grid .notice-board) {
-  background: #fbf2d7;
+  background: var(--member-paper, #fbf2d7);
   border: 1px solid #e7d9ad;
   border-radius: 12px;
   padding: 14px 0 0;
@@ -326,11 +326,11 @@
     0 12px 24px #57492306;
 }
 .shell :global(.notes-grid .notice-board:nth-child(3n + 2)) {
-  background: #eaf0df;
+  background: var(--member-paper, #eaf0df);
   border-color: #d5dfc1;
 }
 .shell :global(.notes-grid .notice-board:nth-child(3n + 3)) {
-  background: #f2e9e3;
+  background: var(--member-paper, #f2e9e3);
   border-color: #e3d5cb;
 }
 .shell :global(.note-preview) {
@@ -1105,4 +1105,79 @@
 :global(:root[data-theme="dark"]) .shell :global(.demo-banner) {
   background: #394635;
   color: var(--green);
+}
+/* Dark counterparts for the remaining hardcoded surfaces (controls, chips,
+   note cards). */
+:global(:root[data-theme="dark"]) .shell :global(.panel) {
+  border-color: var(--line);
+}
+:global(:root[data-theme="dark"]) .shell :global(.button.secondary) {
+  color: var(--green);
+  border-color: var(--line);
+  background: #394635;
+}
+:global(:root[data-theme="dark"]) .shell :global(.page-symbol) {
+  color: var(--green);
+  background: #394635;
+  border-color: var(--line);
+}
+:global(:root[data-theme="dark"]) .shell :global(.segmented-control) {
+  background: #293329;
+  border-color: var(--line);
+}
+:global(:root[data-theme="dark"]) .shell :global(.segmented-control button) {
+  color: var(--muted);
+}
+:global(:root[data-theme="dark"]) .shell :global(.segment-highlight) {
+  background: var(--paper);
+  border-color: var(--line);
+}
+:global(:root[data-theme="dark"]) .shell :global(.list-progress progress),
+:global(:root[data-theme="dark"]) .shell :global(.list-progress progress::-webkit-progress-bar) {
+  background: var(--line);
+}
+:global(:root[data-theme="dark"]) .shell :global(.quick-add input),
+:global(:root[data-theme="dark"]) .shell :global(.quick-add textarea) {
+  background: var(--paper);
+  border-color: var(--line);
+}
+:global(:root[data-theme="dark"]) .shell :global(.quick-add input::placeholder),
+:global(:root[data-theme="dark"]) .shell :global(.quick-add textarea::placeholder) {
+  color: var(--muted);
+}
+:global(:root[data-theme="dark"]) .shell :global(.task-row) {
+  border-color: var(--line);
+}
+:global(:root[data-theme="dark"]) .shell :global(.task-row:hover) {
+  background: #394635;
+}
+:global(:root[data-theme="dark"]) .shell :global(.entry-panel.paper-index .task-row) {
+  border-top-color: transparent;
+}
+:global(:root[data-theme="dark"]) .shell :global(.checkbox) {
+  background: var(--paper);
+  border-color: var(--line);
+}
+:global(:root[data-theme="dark"]) .shell :global(.person-tag) {
+  color: var(--green);
+  background: #394635;
+  border-color: var(--line);
+}
+:global(:root[data-theme="dark"]) .shell :global(.empty) {
+  color: var(--muted);
+  background: #394635;
+}
+:global(:root[data-theme="dark"]) .shell :global(.notes-grid .notice-board) {
+  background: color-mix(in oklab, var(--member-paper, #fbf2d7) 15%, var(--paper));
+  border-color: var(--line);
+}
+:global(:root[data-theme="dark"]) .shell :global(.note-preview h3) {
+  color: var(--ink);
+}
+:global(:root[data-theme="dark"]) .shell :global(.note-preview p) {
+  color: var(--muted);
+}
+:global(:root[data-theme="dark"]) .shell :global(.note-preview > span) {
+  color: var(--muted);
+  border-top-color: var(--line);
 }

@@ -117,8 +117,27 @@ export default function HomeBoard({
   const { now, today, timezone } = useHouseholdClock();
   const hour = householdHour(now, timezone);
   const seasonMonth = parseDate(today).getMonth();
+  // The app theme carries a night mode the household clock can't see (a
+  // manual dark toggle, or the 7pm default before the wall's own 10pm), and
+  // it lives on <html data-theme> with no React state, so watch the attribute.
+  const [appTheme, setAppTheme] = useState<"light" | "dark">("light");
+  useEffect(() => {
+    const root = document.documentElement;
+    const sync = () => {
+      setAppTheme(
+        root.getAttribute("data-theme") === "dark" ? "dark" : "light",
+      );
+    };
+    sync();
+    const observer = new MutationObserver(sync);
+    observer.observe(root, {
+      attributes: true,
+      attributeFilter: ["data-theme"],
+    });
+    return () => observer.disconnect();
+  }, []);
   const tone =
-    hour >= 22 || hour < 6
+    appTheme === "dark" || hour >= 22 || hour < 6
       ? "night"
       : hour >= 17
         ? "evening"

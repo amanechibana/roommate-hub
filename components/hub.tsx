@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useState, type CSSProperties } from "react";
 import { HouseholdClockProvider } from "@/lib/household-clock";
 import AttentionView from "./attention-view";
 import ChoreCoverage from "./chore-coverage";
@@ -1447,11 +1447,13 @@ function HubContent({ house }: { house: ReturnType<typeof useHousehold> }) {
                       key={entry.id}
                       paper={entry.id}
                       index={index}
-                      style={{
-                        backgroundColor: memberPaper(
-                          entry.assignee || entry.created_by,
-                        ),
-                      }}
+                      style={
+                        {
+                          "--member-paper": memberPaper(
+                            entry.assignee || entry.created_by,
+                          ),
+                        } as CSSProperties
+                      }
                       layoutId={reduced ? undefined : `note-${entry.id}`}
                     >
                       <span className="tape" />

@@ -442,7 +442,8 @@
 :where(:root[data-theme="dark"]) .fridge-message > span {
   color: #b6a378;
 }
-/* The wall display stays in daytime colors no matter the theme. */
+/* Day palette for the wall; delight's night-tone block re-pins these when
+   data-tone="night" engages. */
 .wall-display .fridge-card {
   background: #f5e1b5;
   border-color: #e7d1a5;
@@ -497,8 +498,8 @@
   flex-direction: column;
   background: radial-gradient(#986e4420 0.8px, transparent 0.8px), #efe4d3;
   background-size: 7px 7px;
-  /* The wall display is a paper surface in both themes; anchor the tokens
-     here so night mode never leaks into it. */
+  /* The wall's day-tone token anchors; delight's night-tone block re-pins
+     these when the board goes dark. */
   --paper: #fffdf7;
   --ink: #453d33;
   --muted: #807467;
@@ -842,8 +843,8 @@
 .wall-display .board-date small {
   font-size: clamp(9px, 0.8vw, 17px);
 }
-/* The wall display keeps its cream paper in both themes; these classes
-   carry theme tokens for the dark board, so re-pin them here. */
+/* Day-tone re-pins for the card text; delight's night-tone block overrides
+   these when data-tone="night" engages. */
 .wall-display .board-card-heading h2 {
   color: #5d4939;
 }
