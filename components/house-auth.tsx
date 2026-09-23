@@ -65,8 +65,8 @@ export default function Auth({ onSuccess }: { onSuccess: () => void }) {
         </form>
         <p className="auth-footnote">
           <ShieldCheck size={15} />
-          We’ll remember this device for 30 days. The code grants household
-          access; selecting a person does not authenticate them.
+          The code opens a read-only household view. Your personal password is
+          required to view private items or make changes.
         </p>
       </section>
     </main>

@@ -87,6 +87,9 @@ test("noticeboard greets the selected person and moves their chores first after 
     .getByRole("button", { name: "Overview", exact: true })
     .click();
   await page.getByRole("button", { name: "Switch person" }).click();
+  await page
+    .getByRole("textbox", { name: "Barnatt", exact: true })
+    .fill("test-password-123");
   await page.getByRole("button", { name: "Barnatt", exact: true }).click();
   await expect(page.locator(".board-welcome h1")).toHaveText(/\S/);
   await expect(page.locator(".board-task .board-entry-title")).toHaveText([

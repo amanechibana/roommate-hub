@@ -4,13 +4,19 @@ import { useDragControls, useMotionValue } from "motion/react";
 import { GripVertical } from "lucide-react";
 import { PresenceRow } from "./presence";
 import { useHouseMotion } from "./motion-provider";
+import { homeRequest } from "@/lib/home-client";
+import { TAB_ID } from "@/lib/realtime";
 
 /** Personal arrangement is stored per household on this device. */
-export function useListOrder(key: string) {
+export function useListOrder(
+  key: string,
+  shared?: { list: "tasks" | "shopping"; enabled: boolean; writable: boolean },
+) {
   const [saved, setSaved] = useState<{ key: string; ids: string[] }>({
     key,
     ids: [],
   });
+  const moving = useRef(false);
   useEffect(() => {
     try {
       const ids: unknown = JSON.parse(localStorage.getItem(key) || "[]");
@@ -24,6 +30,61 @@ export function useListOrder(key: string) {
       setSaved({ key, ids: [] });
     }
   }, [key]);
+  useEffect(() => {
+    if (!shared?.enabled) return;
+    let active = true;
+    const refresh = async () => {
+      if (moving.current) return;
+      try {
+        let result = await homeRequest(`/api/list-order?list=${shared.list}`);
+        if (
+          active &&
+          shared.writable &&
+          Array.isArray(result.ids) &&
+          !result.ids.length
+        ) {
+          let local: unknown = [];
+          try {
+            local = JSON.parse(localStorage.getItem(key) || "[]");
+          } catch {
+            /* Ignore damaged local order. */
+          }
+          if (
+            Array.isArray(local) &&
+            local.some(
+              (id) => typeof id === "string" && /^[0-9a-f-]{36}$/.test(id),
+            )
+          ) {
+            moving.current = true;
+            try {
+              result = await homeRequest("/api/list-order", "POST", {
+                list: shared.list,
+                ids: local.filter(
+                  (id) => typeof id === "string" && /^[0-9a-f-]{36}$/.test(id),
+                ),
+                sender: TAB_ID,
+              });
+              localStorage.setItem(key, JSON.stringify(result.ids || []));
+            } finally {
+              moving.current = false;
+            }
+          }
+        }
+        if (active && Array.isArray(result.ids))
+          setSaved({ key, ids: result.ids });
+      } catch {
+        /* Keep the last known order while disconnected. */
+      }
+    };
+    void refresh();
+    const timer = window.setInterval(refresh, 15000);
+    window.addEventListener("focus", refresh);
+    return () => {
+      active = false;
+      window.clearInterval(timer);
+      window.removeEventListener("focus", refresh);
+    };
+  }, [key, shared?.enabled, shared?.list, shared?.writable]);
   const ids = saved.key === key ? saved.ids : [];
   return {
     // Whether this device has ever arranged this list by hand. Until it has,
@@ -44,6 +105,21 @@ export function useListOrder(key: string) {
       ordered.splice(to, 0, ordered.splice(from, 1)[0]);
       const next = [...ordered, ...ids.filter((id) => !ordered.includes(id))];
       setSaved({ key, ids: next });
+      if (shared?.enabled && shared.writable) {
+        moving.current = true;
+        void homeRequest("/api/list-order", "POST", {
+          list: shared.list,
+          ids: next,
+          sender: TAB_ID,
+        })
+          .then((result) => {
+            if (Array.isArray(result.ids)) setSaved({ key, ids: result.ids });
+          })
+          .catch(() => setSaved({ key, ids }))
+          .finally(() => {
+            moving.current = false;
+          });
+      }
       try {
         localStorage.setItem(key, JSON.stringify(next));
       } catch {
@@ -112,7 +188,7 @@ export function DraggableRow({
         className="drag-handle"
         aria-label={`Reorder ${title}`}
         title="Drag to reorder, or use arrow keys"
-        aria-description="Use Up and Down arrow keys to move this item. Order is saved on this device."
+        aria-description="Use Up and Down arrow keys to move this item. Order is shared across devices."
         onPointerDown={(event) => {
           listRef.current = ref.current?.parentElement ?? null;
           controls.start(event);

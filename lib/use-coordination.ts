@@ -34,7 +34,7 @@ export function useCoordination({
     try {
       const next = await homeRequest("/api/coordination");
       if (version === generation.current) {
-        setData(next);
+        setData({ ...emptyPlanning(entries, today), ...next });
         setError("");
       }
     } catch (err) {
@@ -42,7 +42,7 @@ export function useCoordination({
     } finally {
       if (version === generation.current) setLoaded(true);
     }
-  }, [demo]);
+  }, [demo, entries, today]);
   useEffect(() => {
     void refresh();
     const timer = window.setInterval(() => {

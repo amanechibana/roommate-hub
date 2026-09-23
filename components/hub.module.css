@@ -1025,6 +1025,14 @@
     padding: 6px;
   }
 }
+@media (max-width: 360px) {
+  .shell :global(.topbar) {
+    padding-inline: 6px;
+  }
+  .shell :global(.topbar > div) {
+    gap: 2px;
+  }
+}
 
 @media (max-width: 650px) {
   .shell :global(.topbar .avatar-stack .avatar ~ .avatar) {
@@ -1086,10 +1094,14 @@
 :global(:root[data-theme="dark"]) .shell :global(.subtitle),
 :global(:root[data-theme="dark"]) .shell :global(.entry-label small),
 :global(:root[data-theme="dark"]) .shell :global(.list-progress),
-:global(:root[data-theme="dark"]) .shell :global(.entry-panel .panel-heading .subtle),
+:global(:root[data-theme="dark"])
+  .shell
+  :global(.entry-panel .panel-heading .subtle),
 :global(:root[data-theme="dark"]) .shell :global(.settings-panel > p),
 :global(:root[data-theme="dark"]) .shell :global(.settings-panel .subtle),
-:global(:root[data-theme="dark"]) .shell :global(.completed .entry-label > span),
+:global(:root[data-theme="dark"])
+  .shell
+  :global(.completed .entry-label > span),
 :global(:root[data-theme="dark"]) .shell :global(.completed .entry-label h2) {
   color: var(--muted);
 }
@@ -1133,7 +1145,9 @@
   border-color: var(--line);
 }
 :global(:root[data-theme="dark"]) .shell :global(.list-progress progress),
-:global(:root[data-theme="dark"]) .shell :global(.list-progress progress::-webkit-progress-bar) {
+:global(:root[data-theme="dark"])
+  .shell
+  :global(.list-progress progress::-webkit-progress-bar) {
   background: var(--line);
 }
 :global(:root[data-theme="dark"]) .shell :global(.quick-add input),
@@ -1142,7 +1156,9 @@
   border-color: var(--line);
 }
 :global(:root[data-theme="dark"]) .shell :global(.quick-add input::placeholder),
-:global(:root[data-theme="dark"]) .shell :global(.quick-add textarea::placeholder) {
+:global(:root[data-theme="dark"])
+  .shell
+  :global(.quick-add textarea::placeholder) {
   color: var(--muted);
 }
 :global(:root[data-theme="dark"]) .shell :global(.task-row) {
@@ -1151,7 +1167,9 @@
 :global(:root[data-theme="dark"]) .shell :global(.task-row:hover) {
   background: #394635;
 }
-:global(:root[data-theme="dark"]) .shell :global(.entry-panel.paper-index .task-row) {
+:global(:root[data-theme="dark"])
+  .shell
+  :global(.entry-panel.paper-index .task-row) {
   border-top-color: transparent;
 }
 :global(:root[data-theme="dark"]) .shell :global(.checkbox) {
@@ -1168,7 +1186,11 @@
   background: #394635;
 }
 :global(:root[data-theme="dark"]) .shell :global(.notes-grid .notice-board) {
-  background: color-mix(in oklab, var(--member-paper, #fbf2d7) 15%, var(--paper));
+  background: color-mix(
+    in oklab,
+    var(--member-paper, #fbf2d7) 15%,
+    var(--paper)
+  );
   border-color: var(--line);
 }
 :global(:root[data-theme="dark"]) .shell :global(.note-preview h3) {

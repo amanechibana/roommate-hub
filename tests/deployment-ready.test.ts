@@ -6,6 +6,8 @@ const env = {
   NEXT_PUBLIC_SUPABASE_URL: "https://mock.example.test",
   NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: "mock",
   HOUSEHOLD_DATA_TOKEN: "mock",
+  SUPABASE_SERVICE_ROLE_KEY: "mock",
+  HOUSEHOLD_OWNER_SETUP_SECRET: "mock-setup-secret-123",
 };
 test("production waits for the required schema while previews and demos continue", async () => {
   const response = (version: string) => async () =>
@@ -14,7 +16,9 @@ test("production waits for the required schema while previews and demos continue
   assert.equal(await deploymentReady(env, response("026")), false);
   assert.equal(await deploymentReady(env, response("027")), false);
   assert.equal(await deploymentReady(env, response("028")), false);
-  assert.equal(await deploymentReady(env, response("029")), true);
+  assert.equal(await deploymentReady(env, response("029")), false);
+  assert.equal(await deploymentReady(env, response("036")), false);
+  assert.equal(await deploymentReady(env, response("037")), true);
   assert.equal(await deploymentReady(env, response("invalid")), false);
   assert.equal(
     await deploymentReady(

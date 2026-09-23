@@ -250,6 +250,20 @@ export function useHouseholdLife({
       } else if (operation === "maintenance_delete") {
         next.maintenance = data.maintenance.filter((r) => r.id !== id);
         next.photos = data.photos.filter((p) => p.request_id !== id);
+        next.updates = data.updates.filter((u) => u.request_id !== id);
+      } else if (operation === "maintenance_followup") {
+        if (!String(payload.note || "").trim())
+          throw new Error("Write a follow-up update.");
+        next.updates = [
+          ...data.updates,
+          {
+            id: crypto.randomUUID(),
+            request_id: id,
+            actor: uid!,
+            note: String(payload.note).trim(),
+            created_at: now,
+          },
+        ];
       } else if (operation === "meal_save") {
         const old = data.meals.find((m) => m.id === id);
         const calendarId = await syncDemoMeal(

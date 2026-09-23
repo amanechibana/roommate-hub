@@ -511,6 +511,9 @@ test("anonymous poll totals survive voting, reload, and switching people without
   await page
     .getByRole("button", { name: "Switch person (now Alex)", exact: true })
     .click();
+  await page
+    .getByRole("textbox", { name: "Sam", exact: true })
+    .fill("test-password-123");
   await page.getByRole("button", { name: "Sam", exact: true }).click();
   await expect(
     poll.getByRole("button", { name: "Yes 1", exact: true }),

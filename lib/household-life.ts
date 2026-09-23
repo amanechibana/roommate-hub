@@ -28,6 +28,14 @@ export type MaintenanceRequest = {
   created_by: string;
   created_at: string;
   updated_at: string;
+  due_date?: string | null;
+};
+export type MaintenanceUpdate = {
+  id: string;
+  request_id: string;
+  actor: string;
+  note: string;
+  created_at: string;
 };
 export type MaintenancePhoto = {
   id: string;
@@ -63,6 +71,7 @@ export type LifeSnapshot = {
   votes: PollVoteCount[];
   pantry: PantryItem[];
   maintenance: MaintenanceRequest[];
+  updates: MaintenanceUpdate[];
   photos: MaintenancePhoto[];
   meals: Meal[];
   targets: BudgetTarget[];
@@ -73,6 +82,7 @@ export const emptyLife = (): LifeSnapshot => ({
   votes: [],
   pantry: [],
   maintenance: [],
+  updates: [],
   photos: [],
   meals: [],
   targets: [],
@@ -92,7 +102,9 @@ export const lifeAllowlists = {
     "assignee",
     "status",
     "resolution",
+    "due_date",
   ],
+  maintenance_followup: ["id", "note"],
   maintenance_delete: ["id"],
   meal_save: ["id", "title", "date", "cook", "ingredients", "notes"],
   meal_delete: ["id"],

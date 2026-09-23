@@ -1,4 +1,8 @@
-import { configured, homeSnapshotServer } from "@/lib/shared-server";
+import {
+  configured,
+  homeSnapshotServer,
+  sharedDatabase,
+} from "@/lib/shared-server";
 import { calendarFeedToken, equalSecret } from "@/lib/session-token";
 import { calendarFile, type Entry, type Member } from "@/lib/model";
 
@@ -7,7 +11,7 @@ export const runtime = "nodejs";
 // on the calendar app's own schedule. The path segment is the only key, so
 // a wrong one gets the same 404 as a path that doesn't exist.
 export async function GET(
-  _request: Request,
+  request: Request,
   ctx: { params: Promise<{ token: string }> },
 ) {
   const { token } = await ctx.params;
@@ -25,11 +29,15 @@ export async function GET(
     return new Response("Not found", { status: 404 });
   try {
     const data = await homeSnapshotServer();
+    const planning = await sharedDatabase("get", {}, "shared_coordination");
     return new Response(
       calendarFile(
         data.entries as Entry[],
         data.household?.name,
         data.members as Member[],
+        planning.bookings,
+        planning.resources,
+        new URL(request.url).searchParams.get("reservation_reminders") === "1",
       ),
       {
         headers: {

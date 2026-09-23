@@ -42,6 +42,7 @@ import { paymentNote, venmoPaymentUrl } from "@/lib/settle-up";
 import type { ExpensesController } from "@/lib/use-expenses";
 import { expenseCSV, expenseJSON } from "@/lib/expense-export";
 import SearchField from "./search-field";
+import RecurringExpenses from "./recurring-expenses";
 import { matchesSearch } from "@/lib/search";
 import styles from "./expenses-tab.module.css";
 
@@ -586,6 +587,11 @@ export default function ExpensesTab({
           )}
         </>
       )}
+      <RecurringExpenses
+        expenses={expenses}
+        readOnly={readOnly}
+        onPost={controller.refresh}
+      />
       <footer className={styles.exports} aria-label="Export expense ledger">
         {exportError && (
           <p className="error" role="alert">

@@ -1,5 +1,6 @@
 "use client";
 import { useHouseholdClock } from "@/lib/household-clock";
+import { householdDateTime, householdTimeToIso } from "@/lib/household-time";
 import { agreementDocuments, renderTokens } from "@/lib/agreements-content";
 import type { HouseTerms } from "@/lib/agreements";
 import { useState } from "react";
@@ -58,12 +59,14 @@ export default function HousePlanning({
   members,
   uid,
   readOnly,
+  timezone,
 }: {
   demo: boolean;
   entries: Entry[];
   members: Member[];
   uid: string | null;
   readOnly: boolean;
+  timezone: string;
 }) {
   const { today } = useHouseholdClock();
   const { data, loaded, busy, error, run, refresh } = useCoordination({
@@ -73,6 +76,7 @@ export default function HousePlanning({
   });
   const [section, setSection] = useState("Check-in");
   const [draft, setDraft] = useState<string | null>(null);
+  const [timeError, setTimeError] = useState("");
   const disabled = readOnly || busy;
   const people = [...members, ...data.former_members].filter(
     (m) => m.name !== "Housemates",
@@ -87,8 +91,15 @@ export default function HousePlanning({
     e.preventDefault();
     const form = e.currentTarget;
     const f = new FormData(form);
-    if (await run(operation, transform ? transform(f) : Object.fromEntries(f)))
-      form.reset();
+    setTimeError("");
+    try {
+      if (
+        await run(operation, transform ? transform(f) : Object.fromEntries(f))
+      )
+        form.reset();
+    } catch (err) {
+      setTimeError((err as Error).message);
+    }
   }
   if (!loaded) return <p role="status">Loading house planning…</p>;
   return (
@@ -108,6 +119,11 @@ export default function HousePlanning({
             Try again
           </Button>
         </div>
+      )}
+      {timeError && (
+        <p className={styles.error} role="alert">
+          {timeError}
+        </p>
       )}
       {section === "Check-in" && (
         <section className={`panel settings-panel ${styles.checkin}`}>
@@ -257,8 +273,8 @@ export default function HousePlanning({
         <section className="panel settings-panel">
           <h2>Shared resource bookings</h2>
           <p className="subtle">
-            Reserve a resource for up to 24 hours. Times use this device’s time
-            zone ({Intl.DateTimeFormat().resolvedOptions().timeZone}).
+            Reserve a resource for up to 24 hours. Times use the household time
+            zone ({timezone}).
           </p>
           {!readOnly && (
             <details className={styles.composer}>
@@ -267,10 +283,14 @@ export default function HousePlanning({
                 onSubmit={(e) =>
                   void submit(e, "book", (f) => ({
                     resource_id: f.get("resource_id"),
-                    starts_at: new Date(
+                    starts_at: householdTimeToIso(
                       String(f.get("starts_at")),
-                    ).toISOString(),
-                    ends_at: new Date(String(f.get("ends_at"))).toISOString(),
+                      timezone,
+                    ),
+                    ends_at: householdTimeToIso(
+                      String(f.get("ends_at")),
+                      timezone,
+                    ),
                     notes: f.get("notes"),
                   }))
                 }
@@ -314,8 +334,9 @@ export default function HousePlanning({
                     {data.resources.find((r) => r.id === b.resource_id)?.name}
                   </strong>
                   <small>
-                    {name(b.member)} · {new Date(b.starts_at).toLocaleString()}{" "}
-                    – {new Date(b.ends_at).toLocaleString()}
+                    {name(b.member)} ·{" "}
+                    {householdDateTime(b.starts_at, timezone).replace("T", " ")}{" "}
+                    – {householdDateTime(b.ends_at, timezone).replace("T", " ")}
                   </small>
                   {b.notes && <p>{b.notes}</p>}
                   {!readOnly && b.member === uid && (

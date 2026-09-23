@@ -66,10 +66,11 @@ async function home(page: Page, picked: string | null = "you") {
         ...body.payload,
         date,
         id: index ? `saved-${posts.length}-${index}` : `saved-${posts.length}`,
-        assignee:
-          body.payload.rotation_members?.length
-            ? body.payload.rotation_members[index % body.payload.rotation_members.length]
-            : body.payload.assignee,
+        assignee: body.payload.rotation_members?.length
+          ? body.payload.rotation_members[
+              index % body.payload.rotation_members.length
+            ]
+          : body.payload.assignee,
         rotation_members: body.payload.rotation_members ?? [],
         payment_members:
           body.payload.kind === "event" &&
@@ -239,6 +240,9 @@ test("person picker persists the choice, enables Mine, and allows switching", as
   await expect(
     page.getByRole("heading", { name: "Who’s this?" }),
   ).toBeVisible();
+  await page
+    .getByRole("textbox", { name: "Barnatt", exact: true })
+    .fill("test-password-123");
   await page.getByRole("button", { name: "Barnatt" }).click();
   await tasks(page);
   await page.getByRole("button", { name: "Mine", exact: true }).click();
@@ -259,6 +263,9 @@ test("person picker persists the choice, enables Mine, and allows switching", as
     page.getByRole("button", { name: "Switch person" }),
   ).toHaveAttribute("aria-label", "Switch person (now Barnatt)");
   await page.getByRole("button", { name: "Switch person" }).click();
+  await page
+    .getByRole("textbox", { name: "Amane", exact: true })
+    .fill("test-password-123");
   await page.getByRole("button", { name: "Amane" }).click();
   await expect(
     page.getByRole("button", { name: "Switch person" }),
@@ -329,6 +336,9 @@ test("compact shopping and person picker fit desktop and phone", async ({
 }) => {
   await home(page, null);
   await page.screenshot({ path: "test-results/person-picker.png" });
+  await page
+    .getByRole("textbox", { name: "Amane", exact: true })
+    .fill("test-password-123");
   await page.getByRole("button", { name: "Amane" }).click();
   await page
     .getByRole("navigation")
@@ -361,7 +371,10 @@ async function addAlternatingChore(page: Page) {
     .selectOption("weekly");
   await page.getByLabel("Repeat until").fill("2026-10-15");
   await page.getByLabel("Alternate each occurrence").check();
-  await page.getByRole("group", { name: "Take turns with" }).getByLabel("Barnatt", { exact: true }).check();
+  await page
+    .getByRole("group", { name: "Take turns with" })
+    .getByLabel("Barnatt", { exact: true })
+    .check();
   await page.getByRole("button", { name: "Save to our home" }).click();
 }
 
@@ -443,6 +456,9 @@ test("bill check-offs are instant and each person changes only their own check",
   });
   await page.getByRole("button", { name: "Close dialog" }).click();
   await page.getByRole("button", { name: "Switch person" }).click();
+  await page
+    .getByRole("textbox", { name: "Barnatt", exact: true })
+    .fill("test-password-123");
   await page.getByRole("button", { name: "Barnatt", exact: true }).click();
   await page.getByRole("button", { name: "Rent is due", exact: true }).click();
   await page

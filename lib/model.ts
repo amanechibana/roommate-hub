@@ -1,4 +1,5 @@
 import { householdDate } from "./household-time";
+import type { Booking, Resource } from "./coordination";
 export type Kind = "task" | "event" | "request" | "note";
 export type Entry = {
   id: string;
@@ -197,6 +198,9 @@ export function calendarFile(
   entries: Entry[],
   name = "",
   members: Member[] = [],
+  bookings: Booking[] = [],
+  resources: Resource[] = [],
+  reservationReminder = false,
 ): string {
   const people = members.filter((m) => m.name !== "Housemates");
   const lines = [
@@ -243,6 +247,41 @@ export function calendarFile(
       `DESCRIPTION:${escapeICS(calendarNotes(entry, people))}`,
       "END:VEVENT",
     );
+  }
+  for (const booking of bookings) {
+    const resource =
+      resources.find((item) => item.id === booking.resource_id)?.name ||
+      "Shared resource";
+    const member =
+      people.find((item) => item.user_id === booking.member)?.name ||
+      "Housemate";
+    lines.push(
+      "BEGIN:VEVENT",
+      `UID:booking-${booking.id}@common-ground`,
+      `DTSTAMP:${new Date()
+        .toISOString()
+        .replace(/[-:]/g, "")
+        .replace(/\.\d{3}/, "")}`,
+      `DTSTART:${new Date(booking.starts_at)
+        .toISOString()
+        .replace(/[-:]/g, "")
+        .replace(/\.\d{3}/, "")}`,
+      `DTEND:${new Date(booking.ends_at)
+        .toISOString()
+        .replace(/[-:]/g, "")
+        .replace(/\.\d{3}/, "")}`,
+      `SUMMARY:${escapeICS(`${resource} — ${member}`)}`,
+      `DESCRIPTION:${escapeICS(booking.notes || "Household reservation")}`,
+    );
+    if (reservationReminder)
+      lines.push(
+        "BEGIN:VALARM",
+        "ACTION:DISPLAY",
+        "TRIGGER:-PT30M",
+        `DESCRIPTION:${escapeICS(`${resource} reservation begins in 30 minutes`)}`,
+        "END:VALARM",
+      );
+    lines.push("END:VEVENT");
   }
   return [...lines, "END:VCALENDAR"].map(foldLine).join("\r\n") + "\r\n";
 }
