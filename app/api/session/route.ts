@@ -146,7 +146,8 @@ export async function PATCH(request: Request) {
     } else {
       if (
         typeof enrollment_code !== "string" ||
-        enrollment_code.length < 16 ||
+        enrollment_code.length <
+          (member_id === data.household.owner_id ? 8 : 16) ||
         enrollment_code.length > 128
       )
         return json(
