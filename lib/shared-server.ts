@@ -3,13 +3,26 @@ import { createHmac } from "node:crypto";
 import { cookies } from "next/headers";
 import { after } from "next/server";
 import { createClient } from "@supabase/supabase-js";
-import { validSession } from "./session-token";
+import { memberFromSession, validSession } from "./session-token";
 import { collectEntryPages } from "./home-pages";
 
 export const COOKIE_NAME = "common_ground_home";
 export const MEMBER_COOKIE = "common_ground_person";
 export async function selectedMember() {
-  return (await cookies()).get(MEMBER_COOKIE)?.value || null;
+  return memberFromSession(
+    (await cookies()).get(MEMBER_COOKIE)?.value,
+    process.env.HOUSEHOLD_SESSION_SECRET || "",
+    process.env.HOUSEHOLD_ACCESS_CODE || "",
+  );
+}
+export function accountDatabase() {
+  if (!process.env.SUPABASE_SERVICE_ROLE_KEY)
+    throw new Error("Account storage is not configured.");
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY,
+    { auth: { persistSession: false, autoRefreshToken: false } },
+  );
 }
 export function configured() {
   return Boolean(
@@ -47,7 +60,10 @@ export async function sharedDatabase(
     | "shared_coordination"
     | "shared_household_life"
     | "shared_search"
-    | "shared_shopping" = "shared_home",
+    | "shared_shopping"
+    | "shared_list_order"
+    | "shared_expense_rules"
+    | "shared_household_backup" = "shared_home",
 ) {
   const db = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,

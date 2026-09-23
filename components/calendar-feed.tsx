@@ -9,6 +9,10 @@ export default function CalendarFeed() {
   const [url, setUrl] = useState("");
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
+  const [reservationReminders, setReservationReminders] = useState(false);
+  const feedUrl = url
+    ? `${url}${reservationReminders ? "?reservation_reminders=1" : ""}`
+    : "";
 
   async function reveal() {
     setBusy(true);
@@ -24,7 +28,7 @@ export default function CalendarFeed() {
   }
   async function copy() {
     try {
-      await navigator.clipboard.writeText(url);
+      await navigator.clipboard.writeText(feedUrl);
       setMessage(
         "Link copied. Paste it where your calendar app asks for a subscription URL.",
       );
@@ -38,17 +42,25 @@ export default function CalendarFeed() {
       <h3>Subscribe on your phone</h3>
       <p className="subtle">
         A private link your calendar app checks on its own, so new plans and
-        chores show up without another export. Anyone with the link can read the
-        household calendar, including bill amounts but excluding Personal items.
-        Signing out does not revoke a subscription; changing the household code
-        does. On Android, paste it into Google Calendar on the web under Other
-        calendars → From URL.
+        chores and reservations show up without another export. Anyone with the
+        link can read the household calendar, including bill amounts but
+        excluding Personal items. Signing out does not revoke a subscription;
+        changing the household code does. On Android, paste it into Google
+        Calendar on the web under Other calendars → From URL.
       </p>
+      <label>
+        <input
+          type="checkbox"
+          checked={reservationReminders}
+          onChange={(event) => setReservationReminders(event.target.checked)}
+        />{" "}
+        Remind me 30 minutes before reservations
+      </label>
       {url ? (
         <div className="feed-link">
           <input
             readOnly
-            value={url}
+            value={feedUrl}
             aria-label="Calendar subscription link"
             onFocus={(e) =>
               e.currentTarget.setSelectionRange(0, e.currentTarget.value.length)
@@ -62,7 +74,7 @@ export default function CalendarFeed() {
           </Button>
           <a
             className="button secondary small"
-            href={url
+            href={feedUrl
               .replace(/^https:/, "webcals:")
               .replace(/^http:/, "webcal:")}
           >

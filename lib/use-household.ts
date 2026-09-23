@@ -168,9 +168,14 @@ export function useHousehold() {
       },
     },
   );
-  const taskOrder = useListOrder(`common-ground-order:${household?.id}:tasks`);
+  const taskOrder = useListOrder(`common-ground-order:${household?.id}:tasks`, {
+    list: "tasks",
+    enabled: !demo && !!household,
+    writable: !!uid,
+  });
   const shoppingOrder = useListOrder(
     `common-ground-order:${household?.id}:shopping`,
+    { list: "shopping", enabled: !demo && !!household, writable: !!uid },
   );
   useEffect(() => {
     if (!household || !(demo || loaded)) return;
@@ -1065,6 +1070,38 @@ export function useHousehold() {
         });
     }
   }
+  async function purchasePartial(
+    entry: Entry,
+    quantity: number,
+    amountCents: number,
+  ) {
+    if (!uid || demo || entry.done) return;
+    setBusy(true);
+    setError("");
+    try {
+      await writes.current;
+      await expenseController.flush();
+      const result = await homeRequest("/api/shopping/purchase", "POST", {
+        id: savedIds.current.get(entry.id) || entry.id,
+        quantity,
+        amount_cents: amountCents,
+        purchase_id: crypto.randomUUID(),
+        sender: TAB_ID,
+      });
+      setEntries((current) =>
+        current.map((item) => (item.id === entry.id ? result.entry : item)),
+      );
+      await refresh(true);
+      await expenseController.refresh();
+      setNotice(
+        `Recorded ${quantity} ${entry.unit || ""} for ${expenseMoney(amountCents)}. ${result.entry.done ? "Item completed." : "The remainder stays on the list."}`,
+      );
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
   // Rebuying a staple is a fresh request, not a reopen: the bought row and
   // its logged expense stay put, and a new open item carries the details.
   function needAgain(entry: Entry) {
@@ -1291,7 +1328,11 @@ export function useHousehold() {
     persist("restore", { undo_token: token });
   }
   const houseIdentity = members.find((m) => m.name === "Housemates");
-  async function choosePerson(member: Member) {
+  async function choosePerson(
+    member: Member,
+    password?: string,
+    enrollmentCode?: string,
+  ) {
     ++loadSequence.current;
     setBusy(true);
     setError("");
@@ -1301,6 +1342,8 @@ export function useHousehold() {
       if (!demo) {
         await homeRequest("/api/session", "PATCH", {
           member_id: member.user_id,
+          password,
+          enrollment_code: enrollmentCode,
         });
         // Morning reminders belong to the person, not the handset.
         await movePushSubscription(member.name !== "Housemates");
@@ -1325,10 +1368,35 @@ export function useHousehold() {
       setBusy(false);
     }
   }
-  function exportCalendar() {
-    const blob = new Blob([calendarFile(entries, household?.name, members)], {
-      type: "text/calendar;charset=utf-8",
-    });
+  async function exportCalendar(reservationReminder = false) {
+    let bookings = [],
+      resources = [];
+    if (!demo) {
+      try {
+        const planning = await homeRequest("/api/coordination");
+        bookings = planning.bookings;
+        resources = planning.resources;
+      } catch {
+        setNotice(
+          "Reservations could not be loaded; export includes plans and chores.",
+        );
+      }
+    }
+    const blob = new Blob(
+      [
+        calendarFile(
+          entries,
+          household?.name,
+          members,
+          bookings,
+          resources,
+          reservationReminder,
+        ),
+      ],
+      {
+        type: "text/calendar;charset=utf-8",
+      },
+    );
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
@@ -1600,6 +1668,7 @@ export function useHousehold() {
     expenseController,
     taskOrder,
     shoppingOrder,
+    purchasePartial,
     today,
     weeks,
     changeDisplay,

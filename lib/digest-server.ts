@@ -62,7 +62,7 @@ export async function sendDigests(
   const today = localDateKey(new Date(), roster.household.timezone);
   // Sunday evening looks back over the week as well as at tomorrow.
   const sunday = edition === "evening" && parseDate(today).getDay() === 0;
-  const [home, push, ledger] = await Promise.all([
+  const [home, push, ledger, life, planning] = await Promise.all([
     homeSnapshotServer(),
     sharedDatabase("get", {}, "shared_push"),
     // The ledger is a nicety here: a digest still goes out if it can't load.
@@ -70,6 +70,12 @@ export async function sendDigests(
       ? collectExpensePages((cursor) =>
           sharedDatabase("get", { cursor }, "shared_expenses"),
         ).catch(() => null)
+      : null,
+    edition === "morning"
+      ? sharedDatabase("get", {}, "shared_household_life").catch(() => null)
+      : null,
+    edition === "morning"
+      ? sharedDatabase("get", {}, "shared_coordination").catch(() => null)
       : null,
   ]);
   const entries: Entry[] = home.entries;
@@ -126,7 +132,7 @@ export async function sendDigests(
       (m) => m.user_id === sub.member && m.name !== "Housemates",
     );
     if (!member) continue;
-    const digest =
+    let digest =
       (edition === "morning"
         ? memberDigest(
             filtered,
@@ -138,6 +144,34 @@ export async function sendDigests(
           )
         : eveningDigest(filtered, member, today, recap)) ??
       (onlyMember && edition === "morning" ? quietDigest(member.name) : null);
+    if (edition === "morning") {
+      const extras: string[] = [];
+      if (preferences.topics.includes("chores"))
+        for (const request of life?.maintenance || [])
+          if (
+            request.status !== "resolved" &&
+            request.due_date &&
+            request.due_date <= today &&
+            (!request.assignee || request.assignee === member.user_id)
+          )
+            extras.push(
+              `Repair follow-up ${request.due_date < today ? "overdue" : "due today"}: ${request.title}`,
+            );
+      if (preferences.topics.includes("plans"))
+        for (const booking of planning?.bookings || [])
+          if (
+            booking.member === member.user_id &&
+            Date.parse(booking.starts_at) > Date.now() &&
+            Date.parse(booking.starts_at) <= Date.now() + 86400000
+          )
+            extras.push(
+              `Upcoming reservation: ${planning.resources?.find((resource: { id: string; name: string }) => resource.id === booking.resource_id)?.name || "Shared resource"}`,
+            );
+      if (extras.length)
+        digest = digest
+          ? { ...digest, lines: [...digest.lines, ...extras] }
+          : { title: `Good morning, ${member.name}`, lines: extras };
+    }
     if (!digest) continue;
     deliveries.push({ sub, digest, hash, deliveryDate });
   }

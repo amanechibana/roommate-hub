@@ -1,5 +1,6 @@
 import { logApiFailure } from "@/lib/api-log";
 import {
+  accountDatabase,
   broadcastChange,
   json,
   sameOrigin,
@@ -62,6 +63,22 @@ export async function POST(request: Request) {
         fields[operation].includes(key),
       ),
     );
+    if (operation === "transfer_owner") {
+      const { data: account, error } = await accountDatabase()
+        .from("member_accounts")
+        .select("member_id")
+        .eq("member_id", values.member)
+        .maybeSingle();
+      if (error) throw error;
+      if (!account)
+        return json(
+          {
+            error:
+              "Ask this housemate to create their account before transferring ownership.",
+          },
+          400,
+        );
+    }
     const result = await sharedDatabase(
       operation,
       { ...values, actor },

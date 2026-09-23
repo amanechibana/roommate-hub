@@ -1,0 +1,36 @@
+begin;
+do $$
+declare hid uuid; owner uuid; other_member uuid; item uuid:=gen_random_uuid(); purchase uuid:=gen_random_uuid(); repair uuid; source uuid; draft uuid; backup jsonb; result jsonb; private_item uuid:=gen_random_uuid();
+begin
+ select household_id into hid from public.shared_home_config;
+ select owner_id into owner from public.households where id=hid;
+ select user_id into other_member from public.members where household_id=hid and user_id<>owner and active and name<>'Housemates' limit 1;
+ if has_table_privilege('anon','public.member_accounts','select') or has_table_privilege('anon','public.member_enrollments','select') then raise exception 'Account secrets are accessible to anonymous clients'; end if;
+ perform public.shared_home('test-gateway','create',jsonb_build_object('actor',owner,'kind','request','title','Bulk rice','category','Need','quantity',3,'client_ids',jsonb_build_array(item)));
+ perform public.shared_list_order('test-gateway','save',jsonb_build_object('actor',owner,'list','shopping','ids',jsonb_build_array(item)));
+ if public.shared_list_order('test-gateway','get',jsonb_build_object('list','shopping'))->'ids'<>jsonb_build_array(item) then raise exception 'Shopping order did not sync'; end if;
+ perform public.shared_shopping('test-gateway','purchase_partial',jsonb_build_object('actor',owner,'id',item,'quantity',1,'amount_cents',250,'purchase_id',purchase));
+ perform public.shared_shopping('test-gateway','purchase_partial',jsonb_build_object('actor',owner,'id',item,'quantity',1,'amount_cents',250,'purchase_id',purchase));
+ if (select quantity from public.entries where id=item)<>2 or (select count(*) from public.household_expenses where id=purchase)<>1 then raise exception 'Partial purchase or retry failed'; end if;
+ perform public.shared_household_life('test-gateway','maintenance_save',jsonb_build_object('actor',owner,'title','Test faucet','status','open','due_date',current_date+1));
+ select id into repair from public.house_maintenance where household_id=hid and title='Test faucet';
+ result:=public.shared_household_life('test-gateway','maintenance_followup',jsonb_build_object('actor',owner,'id',repair,'note','Plumber called'));
+ if not exists(select 1 from public.house_maintenance_updates where request_id=repair and note='Plumber called') or not (result ? 'updates') then raise exception 'Repair trail missing'; end if;
+ select id into source from public.household_expenses where id=purchase;
+ perform public.shared_expense_rules('test-gateway','create',jsonb_build_object('actor',owner,'expense_id',source,'frequency','monthly'));
+ update public.house_expense_rules set anchor_date=current_date-interval '2 months' where household_id=hid and title like 'Bulk rice%';
+ result:=public.shared_expense_rules('test-gateway','get',jsonb_build_object('actor',owner));
+ select (d->>'id')::uuid into draft from jsonb_array_elements(result->'drafts') d limit 1;
+ if draft is null then raise exception 'Repeating charge draft missing'; end if;
+ perform public.shared_expense_rules('test-gateway','review',jsonb_build_object('actor',owner,'id',draft,'decision','post'));
+ if not exists(select 1 from public.household_expenses where id=draft) then raise exception 'Reviewed charge not posted'; end if;
+ perform public.shared_home('test-gateway','create',jsonb_build_object('actor',other_member,'kind','task','title','Private secret','category','Personal','visibility','private','client_ids',jsonb_build_array(private_item)));
+ backup:=public.shared_household_backup('test-gateway','export',jsonb_build_object('actor',owner));
+ if exists(select 1 from jsonb_array_elements(backup->'tables'->'entries') e where e->>'id'=private_item::text) then raise exception 'Owner backup leaked another member private entry'; end if;
+ delete from public.entries where id=item;
+ result:=public.shared_household_backup('test-gateway','restore',jsonb_build_object('actor',owner,'household_id',hid,'tables',backup->'tables'));
+ if not exists(select 1 from public.entries where id=item) or (result->'restored'->>'entries')::integer<1 then raise exception 'Backup did not restore missing shopping item'; end if;
+ begin perform public.shared_household_backup('test-gateway','export',jsonb_build_object('actor',other_member)); raise exception 'Non-owner backup allowed' using errcode='P0002'; exception when raise_exception then null; end;
+ if public.shared_household_ops('test-gateway','status','{}')->>'schema_version'<>'037' then raise exception 'Schema readiness outdated'; end if;
+end $$;
+rollback;

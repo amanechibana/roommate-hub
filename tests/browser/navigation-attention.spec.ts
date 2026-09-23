@@ -251,7 +251,7 @@ test("visibility choice and person picker explain shared-code access on a phone"
     page.getByRole("checkbox", { name: /Personal view only/ }),
   ).toBeVisible();
   await expect(page.getByRole("dialog")).toContainText(
-    "Anyone with the household code can switch to your name",
+    "Only your signed-in account can open this item",
   );
   await page.keyboard.press("Escape");
   await page
@@ -260,9 +260,7 @@ test("visibility choice and person picker explain shared-code access on a phone"
   await page
     .getByRole("button", { name: "Change person on this device", exact: true })
     .click();
-  await expect(
-    page.getByText(/This selects a person; it does not verify their identity/),
-  ).toBeVisible();
+  await expect(page.getByText(/Enter your own password/)).toBeVisible();
   await expect(page.locator("body")).toHaveJSProperty("scrollWidth", 390);
 });
 

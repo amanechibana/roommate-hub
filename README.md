@@ -2,6 +2,12 @@
 
 A warm, private roommate hub built with Next.js, React, TypeScript, and Supabase. Designed for Vercel. The home screen is a kitchen noticeboard with warm paper, soft sage, terracotta, and a taped fridge note.
 
+## Account and data upgrade (migrations 031–037)
+
+Apply migrations 031–037 before deploying this release. Set `SUPABASE_SERVICE_ROLE_KEY` and a new `HOUSEHOLD_OWNER_SETUP_SECRET` of at least 16 random characters in the server environment. The production build gate waits for migration 037 and these settings. The owner enters the household code, chooses their name, then enters the setup secret and a personal password on first sign-in. In **Our household**, the owner creates a one-time invitation for each other person. Share the household code and invitation privately. Existing accounts sign in with their own password; choosing another name requires that person's password. The shared-screen option remains read-only. Treat the owner setup secret as an enrollment credential and rotate it after owner enrollment if it was exposed.
+
+Maintenance requests now have due dates, a dated follow-up trail, and morning reminders for due or overdue assigned requests. To-dos and shopping order synchronize across devices. Reservations use the configured household time zone, appear on the in-app and subscribed calendars, and can carry a 30-minute calendar reminder. Shopping purchases can record a partial quantity and actual total price while leaving the remainder open; the ledger posts the purchased portion once. The Budget panel shows six months of grocery and utility totals and remaining target amounts. Expenses can create weekly or monthly rules from an existing charge; each new cycle creates a draft that must be posted or skipped, with possible duplicates flagged. The owner can download a JSON household backup and restore missing records to the same household. The backup includes shared plans, chores, shopping, handbook text, planning records, and the owner's private entries; it excludes other members' private entries and file blobs. Back up handbook files, maintenance photos, and receipts separately from private storage.
+
 ## Home and display mode
 
 The overview opens with the date and one sentence about what the house needs today: chores that have come due, the nearest unpaid bill within the week — nearest by distance from today, so an old bill nobody ticked off never hides the rent that is actually coming up, and a tie goes to the overdue one — and what is on the shopping list ("One thing to do, rent in 5 days, and olive oil to grab."). Each card is a different piece of paper: a calendar leaf for plans, an index card for chores, receipt paper for shopping, and the taped fridge note; the To-dos, Shopping, and Expenses pages carry the same papers. The homepage and calendar fit the available viewport without page scrolling. Home cards adapt their item count to the space; a "See all" link on each card opens the full tab when more items exist. A repeating chore or plan takes one row on the overview — its next turn, plus anything overdue — while the full tab still lists every occurrence. Complete chores or mark purchases directly, or use the To-do / Item / Plan shortcuts. Calendar rows resize to fit even six-week months; crowded days open a detail dialog. On phones, navigation stays at the bottom and the calendar becomes a paginated monthly agenda.
@@ -16,7 +22,7 @@ Controls use Radix UI primitives and Motion, styled to match the house: sliding 
 
 Lists and undo notices animate out while writes continue in the background. Surviving rows move into place; dialog closes preserve focus and keyboard dismissal. Notes and expense editors share a transition with their source card or row. Reduced motion removes these transitions.
 
-The To-dos and Shopping lists open with whatever is waiting on you — your own unfinished chores and the items you said you'd grab — the way the overview already puts your chores first. Anything done, or belonging to your housemate, keeps the order it had, and a shared screen with nobody signed in reorders nothing. To-dos and shopping rows have drag handles: use a pointer or focus the handle and press Up/Down (Home/End also work). Arranging a list by hand replaces that opening order for good on this device. Order is remembered **on this device, per household**, including across reloads. It does not change the household's due dates or synchronize a new order to other devices. Row menus offer edit and delete; the usual undo still works. A to-do or shopping item can be filed as **Personal** — yours rather than the house's, like renewing renters insurance or buying your own shampoo. It keeps off the overview, wall display, shared shopping message, and morning and evening digests, and waits under the relevant **Personal** filter instead. It is the entry's category, so the editor can set it and anything added while Personal is on show is filed there for you. A personal item's estimate is charged only to the person it is for when someone marks it bought. The other person can still open that filter and see it, so it is a quieter lane, not a locked drawer. House notes have a quick composer, member-colored paper, individual tilts, and crumpling exits. A note's menu offers **Pin to the top**: a pinned note stays first on the fridge card, the notes board, and the wall, so the Wi-Fi password or the house rules never scroll away under newer notes (it is the note's category, so the editor can set it too). The menu also offers **Take down**: it leaves the fridge, the notes board, and the wall, and waits under "Taken down" at the foot of House notes, where it can be put back up or thrown out. In household settings, hover or focus a member magnet for their open chore count and balance; a repeating chore counts once there, as it does on the overview.
+The To-dos and Shopping lists open with whatever is waiting on you — your own unfinished chores and the items you said you'd grab — the way the overview already puts your chores first. Anything done, or belonging to your housemate, keeps the order it had, and a shared screen with nobody signed in reorders nothing. To-dos and shopping rows have drag handles: use a pointer or focus the handle and press Up/Down (Home/End also work). Arranging a list by hand replaces that opening order for good on this device. Shared list order synchronizes across devices. It does not change the household's due dates. Row menus offer edit and delete; the usual undo still works. A to-do or shopping item can be filed as **Personal** — yours rather than the house's, like renewing renters insurance or buying your own shampoo. It keeps off the overview, wall display, shared shopping message, and morning and evening digests, and waits under the relevant **Personal** filter instead. It is the entry's category, so the editor can set it and anything added while Personal is on show is filed there for you. A personal item's estimate is charged only to the person it is for when someone marks it bought. The other person can still open that filter and see it, so it is a quieter lane, not a locked drawer. House notes have a quick composer, member-colored paper, individual tilts, and crumpling exits. A note's menu offers **Pin to the top**: a pinned note stays first on the fridge card, the notes board, and the wall, so the Wi-Fi password or the house rules never scroll away under newer notes (it is the note's category, so the editor can set it too). The menu also offers **Take down**: it leaves the fridge, the notes board, and the wall, and waits under "Taken down" at the foot of House notes, where it can be put back up or thrown out. In household settings, hover or focus a member magnet for their open chore count and balance; a repeating chore counts once there, as it does on the overview.
 
 The home greeting highlights a recent action by another housemate. “Lately at
 home” in household settings shows the latest 20 completed chores, purchases,
@@ -575,9 +581,7 @@ start empty rather than inventing prices.
 Personal items remain visible to housemates by default. Optional private
 personal chores/shopping items are returned only for their creator’s selected
 identity. Private actions stay out of shared activity, calendar feeds, boards and digests; earlier activity created while an item was shared remains visible.
-The household still uses one shared code and a selectable person, so private
-visibility is **not separate account authentication**: someone with the code can
-select that person. Private shopping purchases are not automatically posted to
+Each person signs in with a password. First-time owner enrollment requires a separate setup secret; other members need an owner-issued one-time invitation. The household code alone opens a read-only view. Private shopping purchases are not automatically posted to
 the shared ledger. Shared screens remain read-only and receive no private entries.
 
 Offline support saves previously opened boards, expenses, handbook and agreement
@@ -618,7 +622,7 @@ the current Monday-based household week (New York time); the previous twelve
 reviews remain available. Personal tasks stay outside the review.
 
 Reserve Laundry, Parking spot, Shared workspace, or a custom resource, using
-this device's local time zone. Reservations may last up to 24 hours and start
+the household time zone. Reservations appear on the calendar and its feed, with optional 30-minute reminders. Reservations may last up to 24 hours and start
 within 180 days. Database row locks prevent overlapping reservations even when
 two devices save together; adjacent slots are allowed. Each housemate cancels
 their own reservations. Move-in and move-out checklists keep keys, deposits,
@@ -639,9 +643,7 @@ checklists remain, and final repayments can still name a former housemate.
 A roster change archives signed/proposed agreements, cancels unfinished future
 generated obligations, closes pending agreement decisions, and returns live
 agreements to draft for review with the new housemate. The original terms and
-signatures remain readable in House planning. Member selection is attribution,
-not independent authentication: anyone holding the shared code can select a
-current person. To revoke a departed person's household access, rotate
+signatures remain readable in House planning. Member actions require that person's password; an owner issues invitations for new accounts. To revoke a departed person's household access, rotate
 `HOUSEHOLD_ACCESS_CODE` in the hosting settings and redeploy; this invalidates
 existing sessions and the calendar subscription link.
 
@@ -740,12 +742,7 @@ completed directly, and the receiving housemate can approve or decline coverage.
 Shared screens do not have personal actions. Failed request loads are shown as
 an incomplete list with a retry action.
 
-Personal visibility is a convenience filter under shared household-code access.
-The sign-in screen, person picker, visibility choice, and household settings
-explain that selecting a name does not authenticate a member: any code holder
-can switch people and view their personal items or act in their name. The UI
-labels this “Personal view only”, rather than promising account-level privacy.
-Separate member authentication is not part of this change.
+Personal visibility restricts an item to its creator's signed-in account. A shared-code session has read-only household access. New accounts require the owner setup secret or an owner-issued invitation before a password can be set.
 
 Apply migration 028 before production deployment. It updates server posting
 dates, check-in weeks, schedule maintenance, and agreement history windows to

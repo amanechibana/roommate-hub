@@ -8,7 +8,9 @@ import { billPaid, dayOrder, isBill } from "@/lib/household-actions";
 import { gymEventColors } from "@/lib/household-config";
 import { clockLabel, dateKey, parseDate } from "@/lib/model";
 import { ArrowDownToLine, ChevronLeft, ChevronRight } from "lucide-react";
-import { type CSSProperties } from "react";
+import { useState, type CSSProperties } from "react";
+import { useCoordination } from "@/lib/use-coordination";
+import { householdDateTime } from "@/lib/household-time";
 
 import type { useHousehold } from "@/lib/use-household";
 type Props = Pick<
@@ -31,6 +33,7 @@ type Props = Pick<
   | "exportCalendar"
   | "monthEntries"
   | "person"
+  | "demo"
 >;
 export default function CalendarTab({
   members,
@@ -51,7 +54,12 @@ export default function CalendarTab({
   exportCalendar,
   monthEntries,
   person,
-}: Props) {
+  demo,
+  timezone,
+}: Props & { timezone: string }) {
+  const planning = useCoordination({ demo, entries, uid });
+  const reservations = planning.data.bookings;
+  const [reservationReminder, setReservationReminder] = useState(false);
   return (
     <section className="panel calendar-panel">
       <div className="panel-heading">
@@ -88,12 +96,52 @@ export default function CalendarTab({
           >
             Today
           </Button>
-          <Button className="button secondary small" onClick={exportCalendar}>
+          <Button
+            className="button secondary small"
+            onClick={() => void exportCalendar(reservationReminder)}
+          >
             <ArrowDownToLine size={16} /> Export .ics
           </Button>
+          <label>
+            <input
+              type="checkbox"
+              checked={reservationReminder}
+              onChange={(event) => setReservationReminder(event.target.checked)}
+            />{" "}
+            Reservation reminder
+          </label>
         </div>
       </div>
       <GymStrip entries={entries} members={members} uid={uid} today={today} />
+      {reservations.filter(
+        (booking) =>
+          householdDateTime(booking.starts_at, timezone).slice(0, 7) ===
+          dateKey(month).slice(0, 7),
+      ).length > 0 && (
+        <div className="subtle" aria-label="This month’s reservations">
+          {reservations
+            .filter(
+              (booking) =>
+                householdDateTime(booking.starts_at, timezone).slice(0, 7) ===
+                dateKey(month).slice(0, 7),
+            )
+            .map((booking) => (
+              <p key={booking.id}>
+                Reservation:{" "}
+                {
+                  planning.data.resources.find(
+                    (resource) => resource.id === booking.resource_id,
+                  )?.name
+                }{" "}
+                ·{" "}
+                {householdDateTime(booking.starts_at, timezone).replace(
+                  "T",
+                  " ",
+                )}
+              </p>
+            ))}
+        </div>
+      )}
       <p className="calendar-help desktop-calendar-help">
         All-day plans and dated chores. Select a day to add a plan, or an entry
         to edit it.
@@ -229,6 +277,15 @@ export default function CalendarTab({
                         e.date === key && ["task", "event"].includes(e.kind),
                     ),
                   );
+              const dayBookings = outside
+                ? []
+                : reservations.filter(
+                    (booking) =>
+                      householdDateTime(booking.starts_at, timezone).slice(
+                        0,
+                        10,
+                      ) === key,
+                  );
               return (
                 <div
                   className={`calendar-cell ${outside ? "outside" : ""} ${key === today ? "is-today" : ""}`}
@@ -282,6 +339,18 @@ export default function CalendarTab({
                           : ", payment due"
                         : ""}
                     </Button>
+                  ))}
+                  {dayBookings.map((booking) => (
+                    <span className="calendar-event" key={booking.id}>
+                      Reserved:{" "}
+                      {
+                        planning.data.resources.find(
+                          (resource) => resource.id === booking.resource_id,
+                        )?.name
+                      }{" "}
+                      ·{" "}
+                      {householdDateTime(booking.starts_at, timezone).slice(11)}
+                    </span>
                   ))}
                 </div>
               );

@@ -14,6 +14,7 @@ import AgreementsSection from "@/components/agreements-section";
 import HouseholdReliability from "@/components/household-reliability";
 import HouseholdHistory from "@/components/household-history";
 import { AmbientToggle } from "@/components/ui/display-button";
+import { homeRequest } from "@/lib/home-client";
 import { type Member } from "@/lib/model";
 import { ArrowDownToLine, Plus, ShieldCheck, Users } from "lucide-react";
 
@@ -63,11 +64,111 @@ export default function HouseholdSettings({
     member?: string;
     name: string;
   } | null>(null);
+  const [backupStatus, setBackupStatus] = useState("");
+  const [invite, setInvite] = useState<{
+    name: string;
+    code: string;
+    expires_at: string;
+  } | null>(null);
+  const [backupBusy, setBackupBusy] = useState(false);
+  async function exportBackup() {
+    setBackupBusy(true);
+    setBackupStatus("");
+    try {
+      const backup = await homeRequest("/api/backup");
+      const blob = new Blob([JSON.stringify(backup, null, 2)], {
+        type: "application/json",
+      });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `common-ground-household-${new Date().toISOString().slice(0, 10)}.json`;
+      link.click();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+      setBackupStatus("Household backup downloaded.");
+    } catch (err) {
+      setBackupStatus((err as Error).message);
+    } finally {
+      setBackupBusy(false);
+    }
+  }
+  async function restoreBackup(file: File) {
+    setBackupBusy(true);
+    setBackupStatus("");
+    try {
+      if (file.size > 10_000_000) throw new Error("Backup is too large.");
+      const backup = JSON.parse(await file.text());
+      if (
+        backup?.format !== "common-ground-household" ||
+        backup?.household_id !== household?.id
+      )
+        throw new Error("Choose a backup from this household.");
+      const result = await homeRequest("/api/backup", "POST", backup);
+      const count = Object.values(result.restored || {}).reduce(
+        (total: number, value) => total + Number(value || 0),
+        0,
+      );
+      setBackupStatus(
+        `Restored ${count} missing records. Refreshing household data…`,
+      );
+      await refresh(true);
+    } catch (err) {
+      setBackupStatus((err as Error).message);
+    } finally {
+      setBackupBusy(false);
+    }
+  }
   if (!household) return null;
   const owner = uid === household.owner_id;
+  async function createAccountInvite(member: Member) {
+    try {
+      const result = await homeRequest("/api/account-invite", "POST", {
+        member_id: member.user_id,
+      });
+      setInvite({
+        name: member.name,
+        code: result.code,
+        expires_at: result.expires_at,
+      });
+    } catch (err) {
+      setBackupStatus((err as Error).message);
+    }
+  }
 
   return (
     <div className="settings-grid">
+      {owner && !demo && (
+        <section className="panel settings-panel">
+          <h2>Household backup</h2>
+          <p className="subtle">
+            Download shared plans, chores, shopping, handbook entries, and
+            planning records, plus your own private entries. Restore adds
+            missing records to this household. Other members’ private entries
+            and file attachments need separate backups.
+          </p>
+          <Button
+            className="button secondary"
+            disabled={backupBusy}
+            onClick={() => void exportBackup()}
+          >
+            Download backup
+          </Button>
+          <label>
+            Restore from backup
+            <input
+              type="file"
+              accept="application/json,.json"
+              disabled={backupBusy}
+              onChange={(event) => {
+                const file = event.target.files?.[0];
+                if (file) void restoreBackup(file);
+                event.target.value = "";
+              }}
+            />
+          </label>
+          {backupStatus && <p role="status">{backupStatus}</p>}
+        </section>
+      )}
       <HouseholdSetup
         members={members}
         entries={entries}
@@ -116,6 +217,14 @@ export default function HouseholdSettings({
             <div className="member-row" key={member.user_id}>
               {avatar(member, i)}
               <strong>{member.name}</strong>
+              {owner && uid !== member.user_id && !demo && (
+                <Button
+                  className="text-button"
+                  onClick={() => void createAccountInvite(member)}
+                >
+                  Create sign-in invitation
+                </Button>
+              )}
               <span className="subtle">
                 {member.user_id === household.owner_id ? "Owner" : "Housemate"}
               </span>
@@ -152,6 +261,13 @@ export default function HouseholdSettings({
             </div>
           ),
         )}
+        {invite && (
+          <p role="status">
+            Invitation for {invite.name}: <code>{invite.code}</code>. Share it
+            privately; it expires{" "}
+            {new Date(invite.expires_at).toLocaleDateString()}.
+          </p>
+        )}
         {sharedScreen ? (
           <p className="subtle">
             This device is signed in as the household, so it reads the house but
@@ -161,10 +277,10 @@ export default function HouseholdSettings({
           <>
             <h3>Invite a housemate</h3>
             <p className="subtle">
-              Add their name, then share the household code with them privately.
-              They can open this site and choose their name after signing in.
-              Adding a housemate returns existing agreements to draft so
-              everyone can review and sign them together.
+              Add their name, create a sign-in invitation above, then share the
+              household code and invitation with them privately. Adding a
+              housemate returns existing agreements to draft so everyone can
+              review and sign them together.
             </p>
             <form onSubmit={addMember}>
               <label>
@@ -234,12 +350,9 @@ export default function HouseholdSettings({
         <h3>Personal visibility</h3>
         <p className="subtle">
           Personal items stay off shared boards and reminders. “Personal view
-          only” filters an item to its creator’s selected person, but anyone
-          with the household code can switch to that person, see the item, and
-          make changes in their name. This home uses a shared code, not separate
-          member sign-ins. Do not store information here that needs to be kept
-          secret from other code holders. Offline copies stay on this device
-          until sign-out or a person change.
+          only” restricts an item to its creator’s signed-in account. The
+          household code alone opens a read-only view. Offline copies stay on
+          this device until sign-out or an account change.
         </p>
         {!demo && !sharedScreen && <PushSettings />}
         <h3>Display motion</h3>
@@ -253,7 +366,10 @@ export default function HouseholdSettings({
           Download your dated chores and events for Apple Calendar, Google
           Calendar, or Outlook.
         </p>
-        <Button className="button secondary" onClick={exportCalendar}>
+        <Button
+          className="button secondary"
+          onClick={() => void exportCalendar()}
+        >
           <ArrowDownToLine size={16} /> Export calendar
         </Button>
         {!demo && <CalendarFeed />}

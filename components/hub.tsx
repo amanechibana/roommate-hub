@@ -131,6 +131,7 @@ function HubContent({ house }: { house: ReturnType<typeof useHousehold> }) {
     expenseController,
     taskOrder,
     shoppingOrder,
+    purchasePartial,
     today,
     changeDisplay,
     refresh,
@@ -546,16 +547,23 @@ function HubContent({ house }: { house: ReturnType<typeof useHousehold> }) {
         <section className="auth-card">
           <p className="eyebrow">MAKE YOURSELF AT HOME</p>
           <h1>Who’s this?</h1>
-          <p className="subtitle">Pick who’s using this device.</p>
-          <p className="subtle">
-            This selects a person; it does not verify their identity. Anyone
-            with the household code can switch people, view personal items, and
-            make changes in their name.
+          <p className="subtitle">
+            {demo
+              ? "Pick who’s using this device."
+              : "Sign in to your personal account."}
           </p>
+          {!demo && (
+          <p className="subtle">
+              Enter your own password. On first sign-in, enter the owner setup
+              secret or the one-time invitation from your owner to create your
+              account. Use at least 10 characters for your password.
+          </p>
+          )}
           <div className="person-picker">
             {members
               .filter((m) => m.name !== "Housemates")
-              .map((member, i) => (
+              .map((member, i) =>
+                demo ? (
                 <Button
                   className="button secondary"
                   key={member.user_id}
@@ -568,7 +576,53 @@ function HubContent({ house }: { house: ReturnType<typeof useHousehold> }) {
                   </span>
                   {member.name}
                 </Button>
-              ))}
+                ) : (
+                  <form
+                    key={member.user_id}
+                    onSubmit={(event) => {
+                      event.preventDefault();
+                      const values = new FormData(event.currentTarget);
+                      void choosePerson(
+                        member,
+                        String(values.get("password") || ""),
+                        String(values.get("enrollment_code") || ""),
+                      );
+                    }}
+                  >
+                    <label>
+                      {member.name}
+                      <input
+                        name="password"
+                        type="password"
+                        required
+                        minLength={10}
+                        maxLength={128}
+                        autoComplete="current-password"
+                      />
+                    </label>
+                    <label>
+                      First sign-in code for {member.name}
+                      <input
+                        name="enrollment_code"
+                        type="password"
+                        maxLength={128}
+                        autoComplete="one-time-code"
+                        placeholder="Only needed when creating an account"
+                      />
+                    </label>
+                    <Button
+                      className="button secondary"
+                      disabled={busy}
+                      aria-label={member.name}
+                    >
+                      <span className={`avatar tone-${i % 3}`}>
+                        {member.name.slice(0, 1).toUpperCase()}
+                      </span>
+                      Sign in
+                    </Button>
+                  </form>
+                ),
+              )}
           </div>
           {!demo && houseIdentity && (
             <Button
@@ -1121,7 +1175,12 @@ function HubContent({ house }: { house: ReturnType<typeof useHousehold> }) {
               openShopping={() => setTab("Shopping list")}
             />
           )}
-          {tab === "Calendar" && <CalendarTab {...house} />}
+            {tab === "Calendar" && (
+              <CalendarTab
+                {...house}
+                timezone={improvements.household.timezone}
+              />
+            )}
           {tab === "To-dos" && (
             <>
               <section className="panel entry-panel paper-index">
@@ -1331,6 +1390,65 @@ function HubContent({ house }: { house: ReturnType<typeof useHousehold> }) {
                             {money(entry.amount)}
                           </strong>
                         )}
+                          {!entry.done &&
+                            !readOnly &&
+                            entry.visibility !== "private" && (
+                              <details className="shopping-purchase">
+                                <summary>Buy part / actual price</summary>
+                                <form
+                                  onSubmit={(event) => {
+                                    event.preventDefault();
+                                    const form = event.currentTarget;
+                                    const values = new FormData(form);
+                                    const quantity = Number(
+                                      values.get("quantity"),
+                                    );
+                                    const price = Number(values.get("price"));
+                                    if (
+                                      Number.isFinite(quantity) &&
+                                      quantity > 0 &&
+                                      quantity <= (entry.quantity ?? 1) &&
+                                      Number.isFinite(price) &&
+                                      price > 0
+                                    )
+                                      void purchasePartial(
+                                        entry,
+                                        quantity,
+                                        Math.round(price * 100),
+                                      );
+                                  }}
+                                >
+                                  <label>
+                                    Quantity
+                                    <input
+                                      name="quantity"
+                                      type="number"
+                                      min="0.01"
+                                      max={entry.quantity ?? 1}
+                                      step="any"
+                                      defaultValue={entry.quantity ?? 1}
+                                      required
+                                    />
+                                  </label>
+                                  <label>
+                                    Actual total ($)
+                                    <input
+                                      name="price"
+                                      type="number"
+                                      min="0.01"
+                                      step="0.01"
+                                      required
+                                    />
+                                  </label>
+                                  <Button
+                                    className="button secondary"
+                                    disabled={busy}
+                                  >
+                                    Record purchase
+                                  </Button>
+                                </form>
+                              </details>
+                            )}
                         {!entry.done && uid && !isPersonal(entry) && (
                           <Button
                             className="icon-button claim-button"
@@ -1559,6 +1677,7 @@ function HubContent({ house }: { house: ReturnType<typeof useHousehold> }) {
 
           {tab === "House planning" && (
             <HousePlanning
+                timezone={improvements.household.timezone}
               demo={demo}
               entries={entries}
               members={members}

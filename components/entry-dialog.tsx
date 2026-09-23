@@ -678,13 +678,11 @@ export default function EntryDialog({
                   if (event.target.checked && uid) setAssignee(uid);
                 }}
               />
-              Personal view only (household code holders can access)
+              Personal view only
             </label>
             <p className="subtle">
-              This hides the item from other selected people and shared screens.
-              Anyone with the household code can switch to your name, see this
-              item, and make changes in your name. Selecting a person is not a
-              separate sign-in. Earlier shared activity remains visible.
+              Only your signed-in account can open this item. Earlier shared
+              activity remains visible.
             </p>
           </div>
         )}

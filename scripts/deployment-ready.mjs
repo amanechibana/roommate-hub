@@ -7,7 +7,14 @@ export async function deploymentReady(env = process.env, request = fetch) {
   const key = env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
   const token = env.HOUSEHOLD_DATA_TOKEN;
   if (!url && !key && !token) return true; // Demo deployment.
-  if (!url || !key || !token) return false;
+  if (
+    !url ||
+    !key ||
+    !token ||
+    !env.SUPABASE_SERVICE_ROLE_KEY ||
+    !env.HOUSEHOLD_OWNER_SETUP_SECRET
+  )
+    return false;
   try {
     const response = await request(`${url}/rest/v1/rpc/shared_household_ops`, {
       method: "POST",
@@ -21,7 +28,7 @@ export async function deploymentReady(env = process.env, request = fetch) {
     });
     if (!response.ok) return false;
     const status = await response.json();
-    return Number(status.schema_version) >= 29;
+    return Number(status.schema_version) >= 37;
   } catch {
     return false;
   }
@@ -34,7 +41,7 @@ if (
     console.log(
       ready
         ? "Database supports this release; build continues."
-        : "Production build held: apply migration 029 and verify database access, then redeploy.",
+        : "Production build held: apply migration 037 and configure account enrollment, then redeploy.",
     );
     process.exit(ready ? 1 : 0);
   });

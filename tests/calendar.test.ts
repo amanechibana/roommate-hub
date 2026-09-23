@@ -1,4 +1,5 @@
 import { test } from "node:test";
+import { householdDateTime, householdTimeToIso } from "../lib/household-time";
 import assert from "node:assert/strict";
 import {
   calendarFile,
@@ -25,6 +26,44 @@ const entry: Entry = {
   created_by: "me",
   created_at: "2026-01-01T00:00:00Z",
 };
+test("reservation times follow the household zone when the device travels", () => {
+  assert.equal(
+    householdTimeToIso("2026-09-23T18:30", "America/New_York"),
+    "2026-09-23T22:30:00.000Z",
+  );
+  assert.equal(
+    householdDateTime("2026-09-23T22:30:00.000Z", "America/New_York"),
+    "2026-09-23T18:30",
+  );
+  assert.throws(() =>
+    householdTimeToIso("2026-03-08T02:30", "America/New_York"),
+  );
+});
+test("reservation calendar events include optional reminders", () => {
+  const booking = {
+    id: "booking-1",
+    resource_id: "laundry",
+    member: "me",
+    starts_at: "2026-09-23T22:30:00Z",
+    ends_at: "2026-09-23T23:30:00Z",
+    notes: "Wash bedding",
+  };
+  const text = calendarFile(
+    [],
+    "Home",
+    [{ user_id: "me", household_id: "home", name: "Amane" }],
+    [booking],
+    [{ id: "laundry", name: "Laundry" }],
+    true,
+  );
+  assert.match(text, /SUMMARY:Laundry — Amane/);
+  assert.match(text, /DTSTART:20260923T223000Z/);
+  assert.match(text, /TRIGGER:-PT30M/);
+  assert.doesNotMatch(
+    calendarFile([], "Home", [], [booking], [], false),
+    /BEGIN:VALARM/,
+  );
+});
 
 test("exports all-day events with exclusive end dates across year boundaries", () => {
   const text = calendarFile([entry]);

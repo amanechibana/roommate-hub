@@ -408,7 +408,67 @@ export default function HouseholdLifeTab({
                       : "Open"}{" "}
                   · Follow-up: {person(request.assignee)}
                 </p>
+                {request.due_date && (
+                  <p className={styles.meta}>
+                    Due {request.due_date}
+                    {request.status !== "resolved" && request.due_date < today
+                      ? " · overdue"
+                      : ""}
+                  </p>
+                )}
                 <p className={styles.details}>{request.description}</p>
+                <details>
+                  <summary>
+                    Updates (
+                    {
+                      data.updates.filter(
+                        (update) => update.request_id === request.id,
+                      ).length
+                    }
+                    )
+                  </summary>
+                  {data.updates
+                    .filter((update) => update.request_id === request.id)
+                    .map((update) => (
+                      <p key={update.id}>
+                        {update.note} · {person(update.actor)} ·{" "}
+                        {new Date(update.created_at).toLocaleDateString()}
+                      </p>
+                    ))}
+                </details>
+                {writable && (
+                  <form
+                    onSubmit={(event) => {
+                      event.preventDefault();
+                      const form = event.currentTarget;
+                      const note = String(
+                        new FormData(form).get("note") || "",
+                      ).trim();
+                      if (note)
+                        void life
+                          .mutate("maintenance_followup", {
+                            id: request.id,
+                            note,
+                          })
+                          .then((saved) => {
+                            if (saved) form.reset();
+                          });
+                    }}
+                  >
+                    <label>
+                      Add follow-up
+                      <input
+                        name="note"
+                        maxLength={2000}
+                        required
+                        placeholder="What changed?"
+                      />
+                    </label>
+                    <Button className="button secondary" disabled={busy}>
+                      Add update
+                    </Button>
+                  </form>
+                )}
                 <small className={styles.meta}>
                   Reported by {person(request.created_by)} on{" "}
                   {new Date(request.created_at).toLocaleDateString()}
@@ -680,6 +740,60 @@ export default function HouseholdLifeTab({
                   );
                 })}
               </div>
+              <div className={styles.card} aria-label="Budget trends">
+                <h3>Six-month spending trend</h3>
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Month</th>
+                      <th>Groceries</th>
+                      <th>Utilities</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {Array.from({ length: 6 }, (_, offset) => {
+                      const start = new Date(`${month}-01T12:00:00Z`);
+                      start.setUTCMonth(start.getUTCMonth() - (5 - offset));
+                      const key = start.toISOString().slice(0, 7);
+                      const totals = budgetSpending(
+                        expenses,
+                        data.categories,
+                        key,
+                        data.spending,
+                      );
+                      return (
+                        <tr key={key}>
+                          <th>{key}</th>
+                          {(["groceries", "utilities"] as const).map(
+                            (category) => {
+                              const target = data.targets.find(
+                                (item) =>
+                                  item.month === `${key}-01` &&
+                                  item.category === category,
+                              )?.target_cents;
+                              return (
+                                <td key={category}>
+                                  {expenseMoney(totals[category])}
+                                  {target !== undefined && (
+                                    <small>
+                                      {" "}
+                                      ·{" "}
+                                      {expenseMoney(
+                                        Math.max(0, target - totals[category]),
+                                      )}{" "}
+                                      left
+                                    </small>
+                                  )}
+                                </td>
+                              );
+                            },
+                          )}
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
               <p className={styles.meta}>
                 {expenseMoney(
                   budgetSpending(
@@ -863,6 +977,7 @@ function LifeEditor({
         assignee: text("assignee") || null,
         status,
         resolution: text("resolution"),
+        due_date: text("due_date") || null,
       });
     } else {
       if (
@@ -985,6 +1100,14 @@ function LifeEditor({
               "assignee",
               repair?.assignee,
             )}
+            <label>
+              Follow-up due date
+              <input
+                name="due_date"
+                type="date"
+                defaultValue={repair?.due_date || ""}
+              />
+            </label>
             <label>
               Repair status
               <select
