@@ -114,6 +114,15 @@ const house: DocSection[] = [
     ],
   },
   {
+    heading: "ARTICLE 10 — THE ARBITER",
+    paragraphs: [
+      '10.1 Appointment. Bryan Chan is appointed as independent third-party validator and judge of this Agreement (the "Arbiter"). The Arbiter is not a Party and holds no account in the App.',
+      "10.2 Purpose. The Arbiter ensures the Parties do not abuse the relief this Agreement grants — Skips in particular — by using it to get out of a chore rather than because the chore genuinely cannot be done.",
+      "10.3 Referral. Either Party may refer suspected abuse, including a pattern under Section 6.4, to the Arbiter. The App's record is the evidence.",
+      "10.4 Ruling. The Arbiter's ruling is final. A Skip the Arbiter finds was taken in bad faith is treated as an Unexcused Miss under Article 7.",
+    ],
+  },
+  {
     heading: "SCHEDULE A — BUNDLE A: KITCHEN & TRASH (weekly)",
     paragraphs: [],
     checklist: [...BUNDLE_A.items],
@@ -251,6 +260,15 @@ const gym: DocSection[] = [
       "10.1 Spirit. This is a social agreement between training partners. Its purpose is that the Parties actually go. Health outranks streaks: no Party shall train through an injury to avoid a paper consequence, and the other Party shall not let them.",
       "10.2 Severability. If any provision proves unworkable, the rest survives, and the Parties shall amend rather than abandon.",
       "10.3 Effective Date. This Agreement takes effect when every current housemate agrees in the App, and remains in effect until replaced or dissolved by mutual agreement.",
+    ],
+  },
+  {
+    heading: "ARTICLE 11 — THE ARBITER",
+    paragraphs: [
+      '11.1 Appointment. Bryan Chan is appointed as independent third-party validator and judge of this Agreement (the "Arbiter"). The Arbiter is not a Party and holds no account in the App.',
+      "11.2 Purpose. The Arbiter ensures the Parties do not abuse the time off this Agreement grants — PTO, sick days, and Reschedules — by using it simply to skip the Gym rather than because a Session genuinely cannot be attended.",
+      "11.3 Referral. Either Party may refer suspected abuse, including a sick day claimed under Section 7.5, to the Arbiter. The App's record is the evidence.",
+      "11.4 Ruling. The Arbiter's ruling is final. Time off the Arbiter finds was taken in bad faith is treated as an Unexcused Miss under Article 8.",
     ],
   },
   {
