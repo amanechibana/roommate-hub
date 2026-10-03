@@ -70,7 +70,8 @@ export type AgreementEventKind =
   | "reschedule"
   | "pto"
   | "sick"
-  | "cover_repaid";
+  | "cover_repaid"
+  | "shift";
 export type AgreementEvent = {
   id: string;
   agreement_id: string;
@@ -252,10 +253,13 @@ export function unexcusedGymMisses(
       .filter(
         (event) =>
           event.entry_id &&
-          event.actor === memberId &&
-          (((event.kind === "pto" || event.kind === "sick") &&
-            event.status === "done") ||
-            (event.kind === "reschedule" && event.status === "accepted")),
+          // A split shift excuses the session for everyone, not just its actor.
+          ((event.kind === "shift" && event.status === "done") ||
+            (event.actor === memberId &&
+              (((event.kind === "pto" || event.kind === "sick") &&
+                event.status === "done") ||
+                (event.kind === "reschedule" &&
+                  event.status === "accepted")))),
       )
       .map((event) => event.entry_id),
   );

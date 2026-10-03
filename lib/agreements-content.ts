@@ -226,6 +226,7 @@ const gym: DocSection[] = [
     paragraphs: [
       "6.1 Grant. Any Party may request to move a Session to a different time on the same day, or to another day in the same week. A Reschedule takes effect when every other current housemate accepts it in the App, and consumes no PTO.",
       "6.2 Conditions. A Reschedule must be requested at least ____ hours before the Session (suggested: 12), and each Party is limited to ____ Reschedules per week (suggested: 2). A request outside these conditions may still be accepted, but acceptance is a favor, not an entitlement.",
+      "6.3 Split Shift. Any Party may shift the split from a missed Session in the App, at any time and without acceptance. The missed Session's Day Type moves to the next Session and the rotation continues from there. A shifted Session is not an Unexcused Miss for any Party and consumes no PTO.",
     ],
   },
   {
