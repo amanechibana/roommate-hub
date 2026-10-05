@@ -8,6 +8,7 @@ export const reliefLabels: Record<string, string> = {
   sick: "sick day",
   skip_rollover: "chore rollover",
   cover_repaid: "repaid chore cover",
+  shift: "gym split shift",
 };
 
 // Only committed gateway rows determine notification content and recipients.

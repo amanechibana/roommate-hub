@@ -18,7 +18,8 @@ test("production waits for the required schema while previews and demos continue
   assert.equal(await deploymentReady(env, response("028")), false);
   assert.equal(await deploymentReady(env, response("029")), false);
   assert.equal(await deploymentReady(env, response("036")), false);
-  assert.equal(await deploymentReady(env, response("037")), true);
+  assert.equal(await deploymentReady(env, response("037")), false);
+  assert.equal(await deploymentReady(env, response("038")), true);
   assert.equal(await deploymentReady(env, response("invalid")), false);
   assert.equal(
     await deploymentReady(
