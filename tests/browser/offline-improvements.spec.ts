@@ -180,10 +180,9 @@ test("changing person removes the previous person's private items before the nex
     page.locator(".task-row").filter({ hasText: "Private appointment" }),
   ).toBeVisible();
   await page.getByRole("button", { name: "Switch person" }).click();
-  await page
-    .getByRole("textbox", { name: "Barnatt", exact: true })
-    .fill("test-password-123");
   await page.getByRole("button", { name: "Barnatt", exact: true }).click();
+  await page.getByLabel("Password", { exact: true }).fill("test-password-123");
+  await page.getByRole("button", { name: "Sign in", exact: true }).click();
   await expect(
     page.getByRole("button", { name: "Switch person" }),
   ).toHaveAttribute("aria-label", "Switch person (now Barnatt)");
