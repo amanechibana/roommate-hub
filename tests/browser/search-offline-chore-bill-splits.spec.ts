@@ -89,6 +89,9 @@ test("custom bill shares validate totals and are sent to the server as cents", a
   page,
 }) => {
   const data = await mock(page);
+  // Demo rent is dated today+5, which leaves the opening Calendar month late in the month; pin both.
+  await page.clock.setFixedTime(new Date("2026-09-10T12:00:00"));
+  data.entries.find((e) => e.category === "Rent")!.date = "2026-09-15";
   let payload: any;
   await page.route("**/api/home", (route) => {
     if (route.request().method() === "POST") {
