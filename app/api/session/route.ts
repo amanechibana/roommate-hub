@@ -73,7 +73,7 @@ export async function POST(request: Request) {
       {
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
-        sameSite: "strict",
+        sameSite: "lax",
         path: "/",
         maxAge: SESSION_DURATION,
       },
@@ -214,7 +214,7 @@ export async function PATCH(request: Request) {
       {
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
-        sameSite: "strict",
+        sameSite: "lax",
         path: "/",
         maxAge: SESSION_DURATION,
       },
@@ -233,7 +233,7 @@ export async function DELETE(request: Request) {
   (await cookies()).set(COOKIE_NAME, "", {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
-    sameSite: "strict",
+    sameSite: "lax",
     path: "/",
     maxAge: 0,
   });

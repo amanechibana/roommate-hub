@@ -335,6 +335,7 @@ export function useHousehold() {
       .then((data) => {
         if (active) {
           setSession(data.authenticated);
+          if (data.member_id) setIdentity(data.member_id);
           setReady(true);
         }
       })
