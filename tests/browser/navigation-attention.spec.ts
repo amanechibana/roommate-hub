@@ -260,7 +260,7 @@ test("visibility choice and person picker explain shared-code access on a phone"
   await page
     .getByRole("button", { name: "Change person on this device", exact: true })
     .click();
-  await expect(page.getByText(/Enter your own password/)).toBeVisible();
+  await expect(page.getByText("Sign in to your personal account.")).toBeVisible();
   await expect(page.locator("body")).toHaveJSProperty("scrollWidth", 390);
 });
 

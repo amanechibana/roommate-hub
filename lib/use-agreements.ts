@@ -468,6 +468,7 @@ export function useAgreements({
       "sick",
       "skip_rollover",
       "cover_repaid",
+      "shift",
     ].includes(kind);
     setEvents((current) => [
       {

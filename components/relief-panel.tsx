@@ -345,6 +345,8 @@ export default function ReliefPanel({
         ? `${nameOf(e.actor)} spent ${e.hours ?? 0}h PTO`
         : e.kind === "sick"
           ? `${nameOf(e.actor)} marked a sick day`
+          : e.kind === "shift"
+            ? `${nameOf(e.actor)} shifted the split from ${what || "a session"}`
           : e.kind === "reschedule"
             ? e.status === "accepted"
               ? `${nameOf(e.actor)} moved ${what || "a session"} to ${String(e.details.new_date ?? "")} ${String(e.details.new_time ?? "")}`
@@ -358,8 +360,8 @@ export default function ReliefPanel({
     <section className={styles.subPanel}>
       <h4>Relief valves</h4>
       <p className="subtle">
-        PTO, sick days, and reschedules, per Articles 6 and 7. Reschedules need
-        acceptance from every other housemate.
+        PTO, sick days, reschedules, and split shifts, per Articles 6 and 7.
+        Reschedules need acceptance from every other housemate.
       </p>
       <h5>PTO remaining</h5>
       <p className={styles.statLine}>
@@ -422,10 +424,24 @@ export default function ReliefPanel({
         >
           Mark a sick day
         </Button>
+        <Button
+          className="button secondary small"
+          disabled={!session}
+          onClick={() => {
+            controller.createEvent(agreement.id, "shift", {
+              entry_id: session,
+            });
+            refreshEntries();
+          }}
+        >
+          Shift split
+        </Button>
       </div>
       <p className="subtle">
         Pick the session it covers so the miss count knows. PTO spends in
-        0.25-hour steps.
+        0.25-hour steps. Shift split excuses a missed session for everyone and
+        moves its workout to the next session; the rotation continues from
+        there.
       </p>
       <h5>Next 7 days</h5>
       {!upcoming.length && (

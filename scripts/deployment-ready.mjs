@@ -28,7 +28,7 @@ export async function deploymentReady(env = process.env, request = fetch) {
     });
     if (!response.ok) return false;
     const status = await response.json();
-    return Number(status.schema_version) >= 37;
+    return Number(status.schema_version) >= 38;
   } catch {
     return false;
   }

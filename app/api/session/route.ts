@@ -24,10 +24,26 @@ import {
 
 export const runtime = "nodejs";
 export async function GET() {
+  const authenticated = await signedIn();
   return json({
-    authenticated: await signedIn(),
+    authenticated,
     member_id: await selectedAccount(),
+    accounts: authenticated ? await accountIds() : [],
   });
+}
+// Lets the sign-in screen offer setup only to people without a password yet.
+// null tells the client to fall back to its manual "first time" toggle.
+async function accountIds(): Promise<string[] | null> {
+  try {
+    const { data, error } = await accountDatabase()
+      .from("member_accounts")
+      .select("member_id");
+    if (error) throw error;
+    return data.map((row: { member_id: string }) => row.member_id);
+  } catch (err) {
+    console.error("GET /api/session accounts", err);
+    return null;
+  }
 }
 async function selectedAccount() {
   if (!(await signedIn())) return null;

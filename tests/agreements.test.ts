@@ -6,9 +6,11 @@ import {
   pendingForMember,
   ptoRemaining,
   ptoSpent,
+  unexcusedGymMisses,
 } from "../lib/agreements";
 import type { Agreement, AgreementEvent, GymTerms } from "../lib/agreements";
 import { gymSessions, houseChores } from "../lib/gym-schedule";
+import { demoData } from "../lib/model";
 
 const MONDAY = new Date(2026, 8, 14); // 2026-09-14 is a Monday
 
@@ -141,4 +143,24 @@ test("pendingForMember counts only items awaiting this member", () => {
   const openEvent = ptoEvent({ kind: "swap", status: "open", actor: "barnatt" });
   assert.equal(pendingForMember([agreement], [], [openEvent], "amane"), 2);
   assert.equal(pendingForMember([agreement], [], [openEvent], "barnatt"), 0);
+});
+
+test("a split shift excuses the missed session for every housemate", () => {
+  const session = {
+    ...demoData("2026-09-30").entries[0],
+    id: "s1",
+    kind: "event" as const,
+    category: "Gym",
+    title: "Push day",
+    date: "2026-09-30",
+  };
+  const misses = (events: AgreementEvent[], member: string) =>
+    unexcusedGymMisses([session], [], events, member, new Date(2026, 8, 1), "2026-10-01");
+  assert.equal(misses([], "amane"), 1);
+  const shift = ptoEvent({ kind: "shift", entry_id: "s1", hours: null, actor: "barnatt" });
+  assert.equal(misses([shift], "amane"), 0);
+  assert.equal(misses([shift], "barnatt"), 0);
+  // PTO still only covers the person who spent it.
+  const pto = ptoEvent({ entry_id: "s1", actor: "barnatt" });
+  assert.equal(misses([pto], "amane"), 1);
 });

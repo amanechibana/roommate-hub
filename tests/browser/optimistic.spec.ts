@@ -240,10 +240,9 @@ test("person picker persists the choice, enables Mine, and allows switching", as
   await expect(
     page.getByRole("heading", { name: "Who’s this?" }),
   ).toBeVisible();
-  await page
-    .getByRole("textbox", { name: "Barnatt", exact: true })
-    .fill("test-password-123");
   await page.getByRole("button", { name: "Barnatt" }).click();
+  await page.getByLabel("Password", { exact: true }).fill("test-password-123");
+  await page.getByRole("button", { name: "Sign in", exact: true }).click();
   await tasks(page);
   await page.getByRole("button", { name: "Mine", exact: true }).click();
   await expect(
@@ -263,13 +262,42 @@ test("person picker persists the choice, enables Mine, and allows switching", as
     page.getByRole("button", { name: "Switch person" }),
   ).toHaveAttribute("aria-label", "Switch person (now Barnatt)");
   await page.getByRole("button", { name: "Switch person" }).click();
-  await page
-    .getByRole("textbox", { name: "Amane", exact: true })
-    .fill("test-password-123");
   await page.getByRole("button", { name: "Amane" }).click();
+  await page.getByLabel("Password", { exact: true }).fill("test-password-123");
+  await page.getByRole("button", { name: "Sign in", exact: true }).click();
   await expect(
     page.getByRole("button", { name: "Switch person" }),
   ).toHaveAttribute("aria-label", "Switch person (now Amane)");
+});
+
+test("a housemate without a password gets the invitation setup form", async ({
+  page,
+}) => {
+  await home(page, null);
+  let patch: Record<string, string> | undefined;
+  await page.route("**/api/session", async (route) => {
+    if (route.request().method() === "PATCH") {
+      patch = route.request().postDataJSON();
+      return route.fulfill({ json: { member_id: patch!.member_id } });
+    }
+    await route.fulfill({
+      json: { authenticated: true, member_id: null, accounts: ["you"] },
+    });
+  });
+  await page.reload();
+  await page.getByRole("button", { name: "Amane" }).click();
+  await expect(page.getByLabel("Invitation code")).toHaveCount(0);
+  await page.getByRole("button", { name: "Not Amane?" }).click();
+  await page.getByRole("button", { name: "Barnatt" }).click();
+  await expect(
+    page.getByText("Ask Amane to create a sign-in invitation"),
+  ).toBeVisible();
+  await page.getByLabel("Invitation code").fill("invite-code-123456");
+  await page.getByLabel("New password").fill("test-password-123");
+  await page.screenshot({ path: "test-results/person-setup.png" });
+  await page.getByRole("button", { name: "Create account" }).click();
+  await expect.poll(() => patch?.enrollment_code).toBe("invite-code-123456");
+  expect(patch?.member_id).toBe("alex");
 });
 
 test("delete disappears before save, unpriced shopping hides total", async ({
@@ -336,10 +364,9 @@ test("compact shopping and person picker fit desktop and phone", async ({
 }) => {
   await home(page, null);
   await page.screenshot({ path: "test-results/person-picker.png" });
-  await page
-    .getByRole("textbox", { name: "Amane", exact: true })
-    .fill("test-password-123");
   await page.getByRole("button", { name: "Amane" }).click();
+  await page.getByLabel("Password", { exact: true }).fill("test-password-123");
+  await page.getByRole("button", { name: "Sign in", exact: true }).click();
   await page
     .getByRole("navigation")
     .getByRole("button", { name: /Shopping list/ })
@@ -456,10 +483,9 @@ test("bill check-offs are instant and each person changes only their own check",
   });
   await page.getByRole("button", { name: "Close dialog" }).click();
   await page.getByRole("button", { name: "Switch person" }).click();
-  await page
-    .getByRole("textbox", { name: "Barnatt", exact: true })
-    .fill("test-password-123");
   await page.getByRole("button", { name: "Barnatt", exact: true }).click();
+  await page.getByLabel("Password", { exact: true }).fill("test-password-123");
+  await page.getByRole("button", { name: "Sign in", exact: true }).click();
   await page.getByRole("button", { name: "Rent is due", exact: true }).click();
   await page
     .getByRole("button", { name: "Mark paid: Barnatt", exact: true })

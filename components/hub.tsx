@@ -71,6 +71,7 @@ import ActivityFeed from "./activity-feed";
 import CalendarTab from "./calendar-tab";
 import EntryDialog from "./entry-dialog";
 import Auth from "./house-auth";
+import PersonSignIn from "./person-sign-in";
 import { DayDialog, Empty, ShortcutsDialog } from "./house-dialogs";
 import HouseholdSettings from "./household-settings";
 import SearchField from "./search-field";
@@ -552,78 +553,35 @@ function HubContent({ house }: { house: ReturnType<typeof useHousehold> }) {
               ? "Pick who’s using this device."
               : "Sign in to your personal account."}
           </p>
-          {!demo && (
-          <p className="subtle">
-              Enter your own password. On first sign-in, enter the owner setup
-              secret or the one-time invitation from your owner to create your
-              account. Use at least 10 characters for your password.
-          </p>
-          )}
-          <div className="person-picker">
-            {members
-              .filter((m) => m.name !== "Housemates")
-              .map((member, i) =>
-                demo ? (
-                <Button
-                  className="button secondary"
-                  key={member.user_id}
-                  aria-label={member.name}
-                  disabled={busy}
-                  onClick={() => void choosePerson(member)}
-                >
-                  <span className={`avatar tone-${i % 3}`}>
-                    {member.name.slice(0, 1).toUpperCase()}
-                  </span>
-                  {member.name}
-                </Button>
-                ) : (
-                  <form
+          {demo ? (
+            <div className="person-picker">
+              {members
+                .filter((m) => m.name !== "Housemates")
+                .map((member, i) => (
+                  <Button
+                    className="button secondary"
                     key={member.user_id}
-                    onSubmit={(event) => {
-                      event.preventDefault();
-                      const values = new FormData(event.currentTarget);
-                      void choosePerson(
-                        member,
-                        String(values.get("password") || ""),
-                        String(values.get("enrollment_code") || ""),
-                      );
-                    }}
+                    aria-label={member.name}
+                    disabled={busy}
+                    onClick={() => void choosePerson(member)}
                   >
-                    <label>
-                      {member.name}
-                      <input
-                        name="password"
-                        type="password"
-                        required
-                        minLength={10}
-                        maxLength={128}
-                        autoComplete="current-password"
-                      />
-                    </label>
-                    <label>
-                      First sign-in code for {member.name}
-                      <input
-                        name="enrollment_code"
-                        type="password"
-                        maxLength={128}
-                        autoComplete="one-time-code"
-                        placeholder="Only needed when creating an account"
-                      />
-                    </label>
-                    <Button
-                      className="button secondary"
-                      disabled={busy}
-                      aria-label={member.name}
-                    >
-                      <span className={`avatar tone-${i % 3}`}>
-                        {member.name.slice(0, 1).toUpperCase()}
-                      </span>
-                      Sign in
-                    </Button>
-                  </form>
-                ),
-              )}
-          </div>
+                    <span className={`avatar tone-${i % 3}`}>
+                      {member.name.slice(0, 1).toUpperCase()}
+                    </span>
+                    {member.name}
+                  </Button>
+                ))}
+            </div>
+          ) : (
+            <PersonSignIn
+              members={members}
+              ownerId={household?.owner_id}
+              busy={busy}
+              onSignIn={(member, password, code) =>
+                void choosePerson(member, password, code)
+              }
+            />
+          )}
           {!demo && houseIdentity && (
             <Button
               className="button secondary"
